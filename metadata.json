@@ -1,0 +1,6 @@
+{
+  "name": "Cuộc sống 24 giờ (24-Hour Life)",
+  "description": "Game mô phỏng đưa ra quyết định thực tế về quản lý thời gian, năng lượng, tài chính và bẫy dopamine trong 24 giờ mỗi ngày.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
