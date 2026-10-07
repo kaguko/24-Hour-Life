@@ -98,6 +98,8 @@ export interface RunTracePrimitive {
   collapseReason: 'burnout_energy' | 'burnout_mental' | 'bankrupt' | null;
   finalStats: PlayerStatsPrimitive;
   timeline: DayTimelineEntry[];
+  /** Hành vi đã làm mỗi ngày (id) - dùng để tính kết cục */
+  history: string[][];
 }
 
 /** Chơi 1 ván headless và ghi lại chỉ số cuối mỗi ngày (sau khi qua đêm). */
@@ -108,6 +110,7 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePr
   let collapseDay: number | null = null;
   let collapseReason: RunTracePrimitive['collapseReason'] = null;
   const timeline: DayTimelineEntry[] = [];
+  const history: string[][] = [];
 
   for (let day = 1; day <= daysPerRun; day++) {
     let hoursLeft = 24;
@@ -147,6 +150,7 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePr
     currentStats = nightRes.newStats;
     sleepDebt = nightRes.newSleepDebt;
     survivedDays = day;
+    history.push(actionsToday);
     timeline.push({ day, stats: currentStats });
 
     const lifeStatus = evaluateLifeStatus(currentStats);
@@ -169,6 +173,7 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePr
     collapseReason,
     finalStats: currentStats,
     timeline,
+    history,
   };
 }
 

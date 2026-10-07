@@ -109,3 +109,30 @@ export interface SimulationResultPrimitive {
   avgFinalWillpower: number;
   avgSurvivalDays: number;
 }
+
+export type EndingId =
+  | 'dog_whisperer'
+  | 'dopamine_slave'
+  | 'workaholic'
+  | 'hermit'
+  | 'party_broke'
+  | 'fragile'
+  | 'balanced_master'
+  | 'edge_survivor'
+  | 'hustler'
+  | 'steady';
+
+export type EndingPalette = 'rose' | 'fuchsia' | 'orange' | 'sky' | 'amber' | 'slate' | 'emerald' | 'violet' | 'teal' | 'indigo';
+
+export interface EndingPrimitive {
+  id: EndingId;
+  emoji: string;
+  title: string;
+  tagline: string;
+  description: string;
+  lesson: string;
+  palette: EndingPalette;
+  outcome: 'survived' | 'bankrupt' | 'burnout';
+  daysSurvived: number;
+  score: number;
+}
