@@ -19,6 +19,7 @@ import {
 } from '../domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
+import { AvatarId, DEFAULT_AVATAR, isAvatarId } from '../lib/avatars';
 
 export function useGameAdapter() {
   const [day, setDay] = useState<number>(1);
@@ -28,6 +29,7 @@ export function useGameAdapter() {
   const [actionsTodayIds, setActionsTodayIds] = useState<string[]>([]);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [history, setHistory] = useState<string[][]>([]);
+  const [avatarId, setAvatarId] = useState<AvatarId>(DEFAULT_AVATAR);
   const [finished, setFinished] = useState<boolean>(false);
   const [isIntroOpen, setIsIntroOpen] = useState<boolean>(() => !storageAdapter.hasSeenIntro());
 
@@ -48,6 +50,7 @@ export function useGameAdapter() {
       setSoundEnabled(saved.soundEnabled);
       setHistory(saved.history ?? []);
       setFinished(saved.finished ?? false);
+      if (isAvatarId(saved.avatarId)) setAvatarId(saved.avatarId);
       audioAdapter.enabled = saved.soundEnabled;
     }
   }, []);
@@ -63,8 +66,9 @@ export function useGameAdapter() {
       soundEnabled,
       history,
       finished,
+      avatarId,
     });
-  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished]);
+  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId]);
 
   const hoursRemaining = Math.max(0, 24 - hoursUsed);
 
@@ -205,6 +209,8 @@ export function useGameAdapter() {
     morningReport,
     activeEvent,
     ending,
+    avatarId,
+    setAvatarId,
     isIntroOpen,
     soundEnabled,
     takeAction,

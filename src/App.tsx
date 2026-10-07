@@ -31,6 +31,8 @@ export default function App() {
     morningReport,
     activeEvent,
     ending,
+    avatarId,
+    setAvatarId,
     isIntroOpen,
     dismissIntro,
     soundEnabled,
@@ -50,6 +52,7 @@ export default function App() {
         currentTab={currentTab}
         onTabChange={setCurrentTab}
         day={day}
+        avatarId={avatarId}
         soundEnabled={soundEnabled}
         onToggleSound={toggleSound}
         onResetGame={resetGame}
@@ -149,13 +152,14 @@ export default function App() {
         <EndingModal
           ending={ending}
           stats={stats}
+          avatarId={avatarId}
           onRestart={resetGame}
-          onShare={() => shareAdapter.share(ending, stats)}
+          onShare={() => shareAdapter.share(ending, stats, avatarId)}
           onCopy={() => shareAdapter.copy(ending)}
         />
       )}
 
-      {isIntroOpen && !ending && <IntroModal onStart={dismissIntro} />}
+      {isIntroOpen && !ending && <IntroModal avatarId={avatarId} onSelectAvatar={setAvatarId} onStart={dismissIntro} />}
     </div>
   );
 }

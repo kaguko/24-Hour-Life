@@ -1,11 +1,13 @@
 import React from 'react';
 import { getWeekdayLabel } from '../domain';
+import { AvatarId, avatarUrl } from '../lib/avatars';
 import { Volume2, VolumeX, RotateCcw, Activity, Play, HelpCircle } from 'lucide-react';
 
 interface TopNavProps {
   currentTab: 'game' | 'simulate' | 'guide';
   onTabChange: (tab: 'game' | 'simulate' | 'guide') => void;
   day: number;
+  avatarId: AvatarId;
   soundEnabled: boolean;
   onToggleSound: () => void;
   onResetGame: () => void;
@@ -15,6 +17,7 @@ export const TopNav: React.FC<TopNavProps> = ({
   currentTab,
   onTabChange,
   day,
+  avatarId,
   soundEnabled,
   onToggleSound,
   onResetGame,
@@ -24,6 +27,7 @@ export const TopNav: React.FC<TopNavProps> = ({
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         {/* Zone 1: Single Brand element */}
         <div className="flex items-center gap-3">
+          <img src={avatarUrl(avatarId)} alt="" width={32} height={32} className="w-8 h-8 -ml-1" draggable={false} />
           <span className="text-base sm:text-lg font-bold tracking-tight text-stone-900 font-sans">
             Cuộc Sống 24 Giờ
           </span>

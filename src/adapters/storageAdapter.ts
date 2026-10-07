@@ -14,6 +14,8 @@ export interface SerializedGameState {
   soundEnabled: boolean;
   /** Hành vi đã làm của các ngày đã qua (để tính kết cục) */
   history?: string[][];
+  /** Nhân vật người chơi đã chọn */
+  avatarId?: string;
   /** Ván đã kết thúc (sụp đổ hoặc đủ 7 ngày) */
   finished?: boolean;
 }

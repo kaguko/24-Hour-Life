@@ -1,11 +1,14 @@
 import React from 'react';
 import { Clock, Zap, Sprout, Moon } from 'lucide-react';
+import { AVATAR_IDS, AvatarId, avatarUrl } from '../lib/avatars';
 
 interface IntroModalProps {
+  avatarId: AvatarId;
+  onSelectAvatar: (id: AvatarId) => void;
   onStart: () => void;
 }
 
-export const IntroModal: React.FC<IntroModalProps> = ({ onStart }) => (
+export const IntroModal: React.FC<IntroModalProps> = ({ avatarId, onSelectAvatar, onStart }) => (
   <div className="fixed inset-0 z-[60] bg-stone-900/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
     <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
       <div className="text-center space-y-1">
@@ -42,6 +45,26 @@ export const IntroModal: React.FC<IntroModalProps> = ({ onStart }) => (
           </span>
         </li>
       </ul>
+
+      <div>
+        <p className="text-xs font-semibold text-stone-700 mb-2 text-center">Chọn nhân vật của bạn</p>
+        <div className="grid grid-cols-6 gap-1.5" role="radiogroup" aria-label="Chọn nhân vật">
+          {AVATAR_IDS.map((id) => (
+            <button
+              key={id}
+              role="radio"
+              aria-checked={avatarId === id}
+              aria-label={`Nhân vật ${id}`}
+              onClick={() => onSelectAvatar(id)}
+              className={`rounded-xl p-0.5 border-2 transition-all bg-stone-100 ${
+                avatarId === id ? 'border-indigo-600 bg-indigo-50 scale-105' : 'border-transparent hover:border-stone-300'
+              }`}
+            >
+              <img src={avatarUrl(id)} alt="" width={48} height={48} className="w-full h-auto" draggable={false} />
+            </button>
+          ))}
+        </div>
+      </div>
 
       <button
         onClick={onStart}

@@ -6,6 +6,7 @@
 
 import { EndingPrimitive, PlayerStatsPrimitive, buildShareText } from '../domain';
 import { ENDING_PALETTES } from '../lib/endingPalette';
+import { AvatarId, avatarUrl } from '../lib/avatars';
 
 const CARD_W = 1080;
 const CARD_H = 1350;
@@ -52,6 +53,15 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
 function getGameUrl(): string {
   if (typeof window === 'undefined') return '';
   return `${window.location.origin}${window.location.pathname}`;
@@ -59,7 +69,8 @@ function getGameUrl(): string {
 
 export async function renderShareCard(
   ending: EndingPrimitive,
-  stats: PlayerStatsPrimitive
+  stats: PlayerStatsPrimitive,
+  avatarId: AvatarId
 ): Promise<Blob | null> {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
@@ -69,6 +80,7 @@ export async function renderShareCard(
   if (!ctx) return null;
 
   const pal = ENDING_PALETTES[ending.palette];
+  const avatar = await loadImage(avatarUrl(avatarId));
 
   // Nền gradient
   const bg = ctx.createLinearGradient(0, 0, CARD_W, CARD_H);
@@ -93,14 +105,24 @@ export async function renderShareCard(
   ctx.fillText('CUỘC SỐNG 24 GIỜ', CARD_W / 2, 90);
 
   // Emoji
-  ctx.font = `170px ${FONT}`;
+  if (avatar) {
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(avatar, CARD_W / 2 - 135, 110, 270, 270);
+  }
+  // Huy hiệu emoji của kết cục
+  ctx.fillStyle = 'rgba(0,0,0,0.32)';
+  ctx.beginPath();
+  ctx.arc(CARD_W / 2 + 130, 345, 48, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = `64px ${FONT}`;
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(ending.emoji, CARD_W / 2, 300);
+  ctx.fillText(ending.emoji, CARD_W / 2 + 130, 368);
 
   // Nhãn "Bạn là"
   ctx.fillStyle = pal.accent;
   ctx.font = `600 38px ${FONT}`;
-  ctx.fillText('BẠN LÀ', CARD_W / 2, 385);
+  ctx.fillText('BẠN LÀ', CARD_W / 2, 420);
 
   // Tên kết cục (tự thu nhỏ nếu quá dài)
   ctx.fillStyle = '#ffffff';
@@ -110,15 +132,15 @@ export async function renderShareCard(
     size -= 4;
     ctx.font = `800 ${size}px ${FONT}`;
   }
-  ctx.fillText(ending.title, CARD_W / 2, 485);
+  ctx.fillText(ending.title, CARD_W / 2, 510);
 
   // Tagline
   ctx.fillStyle = 'rgba(255,255,255,0.92)';
   ctx.font = `italic 500 44px ${FONT}`;
-  const afterTagline = drawWrapped(ctx, `"${ending.tagline}"`, CARD_W / 2, 565, CARD_W - 200, 54);
+  const afterTagline = drawWrapped(ctx, `"${ending.tagline}"`, CARD_W / 2, 585, CARD_W - 200, 54);
 
   // Thẻ điểm + số ngày
-  const cardY = Math.max(afterTagline + 10, 690);
+  const cardY = Math.max(afterTagline + 8, 700);
   ctx.fillStyle = 'rgba(0,0,0,0.28)';
   roundRect(ctx, 90, cardY, CARD_W - 180, 180, 36);
   ctx.fill();
@@ -204,10 +226,10 @@ export const shareAdapter = {
   },
 
   /** Chia sẻ ảnh + văn bản bằng Web Share (mobile). Không hỗ trợ -> tải ảnh xuống và chép văn bản. */
-  async share(ending: EndingPrimitive, stats: PlayerStatsPrimitive): Promise<ShareResult> {
+  async share(ending: EndingPrimitive, stats: PlayerStatsPrimitive, avatarId: AvatarId): Promise<ShareResult> {
     const text = buildShareText(ending, getGameUrl());
     try {
-      const blob = await renderShareCard(ending, stats);
+      const blob = await renderShareCard(ending, stats, avatarId);
       if (blob && typeof navigator !== 'undefined' && navigator.canShare && navigator.share) {
         const file = new File([blob], '24h-life-ket-cuc.png', { type: 'image/png' });
         if (navigator.canShare({ files: [file] })) {

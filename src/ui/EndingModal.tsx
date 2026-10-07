@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { EndingPrimitive, PlayerStatsPrimitive } from '../domain';
 import { ENDING_PALETTES } from '../lib/endingPalette';
+import { AvatarId, avatarUrl } from '../lib/avatars';
 import { Share2, RotateCcw, Check, Copy } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface EndingModalProps {
   ending: EndingPrimitive;
   stats: PlayerStatsPrimitive;
+  avatarId: AvatarId;
   onRestart: () => void;
   onShare: () => Promise<'shared' | 'downloaded' | 'copied' | 'cancelled' | 'failed'>;
   onCopy: () => Promise<boolean>;
@@ -18,7 +20,7 @@ const OUTCOME_LABEL: Record<EndingPrimitive['outcome'], string> = {
   burnout: 'Gục ngã vì kiệt quệ',
 };
 
-export const EndingModal: React.FC<EndingModalProps> = ({ ending, stats, onRestart, onShare, onCopy }) => {
+export const EndingModal: React.FC<EndingModalProps> = ({ ending, stats, avatarId, onRestart, onShare, onCopy }) => {
   const pal = ENDING_PALETTES[ending.palette];
   const [reflection, setReflection] = useState<'less' | 'same' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -57,8 +59,14 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, stats, onResta
           style={{ background: `linear-gradient(145deg, ${pal.from}, ${pal.to})` }}
         >
           <p className="text-[11px] font-semibold tracking-[0.2em] text-white/70">CUỘC SỐNG 24 GIỜ</p>
-          <div className="text-7xl my-3 leading-none" aria-hidden>
-            {ending.emoji}
+          <div className="relative w-36 h-36 mx-auto my-2">
+            <img src={avatarUrl(avatarId)} alt="Nhân vật của bạn" className="w-full h-full drop-shadow-lg" draggable={false} />
+            <span
+              className="absolute -right-1 bottom-0 text-3xl leading-none bg-black/30 rounded-full w-11 h-11 flex items-center justify-center"
+              aria-hidden
+            >
+              {ending.emoji}
+            </span>
           </div>
           <p className="text-xs font-semibold tracking-widest" style={{ color: pal.accent }}>
             BẠN LÀ
