@@ -118,17 +118,7 @@ export interface SimulationResultPrimitive {
   avgSurvivalDays: number;
 }
 
-export type EndingId =
-  | 'dog_whisperer'
-  | 'dopamine_slave'
-  | 'workaholic'
-  | 'hermit'
-  | 'party_broke'
-  | 'fragile'
-  | 'balanced_master'
-  | 'edge_survivor'
-  | 'hustler'
-  | 'steady';
+export type EndingId = string;
 
 export type EndingPalette = 'rose' | 'fuchsia' | 'orange' | 'sky' | 'amber' | 'slate' | 'emerald' | 'violet' | 'teal' | 'indigo';
 
@@ -143,4 +133,20 @@ export interface EndingPrimitive {
   outcome: 'survived' | 'bankrupt' | 'burnout';
   daysSurvived: number;
   score: number;
+}
+
+export interface JourneyDayPrimitive {
+  day: number;
+  /** Số giờ theo từng nhóm trong ngày */
+  fast: number;
+  slow: number;
+  work: number;
+  rest: number;
+  other: number;
+}
+
+export interface JourneyPrimitive {
+  days: JourneyDayPrimitive[];
+  topActions: Array<{ id: string; title: string; count: number }>;
+  insights: string[];
 }

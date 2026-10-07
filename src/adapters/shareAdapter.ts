@@ -4,7 +4,8 @@
  * Không có tracking, không cần server: ảnh được vẽ hoàn toàn trên máy người chơi.
  */
 
-import { EndingPrimitive, PlayerStatsPrimitive, buildShareText } from '../domain';
+import { EndingPrimitive, JourneyPrimitive, PlayerStatsPrimitive, buildShareText } from '../domain';
+import { JOURNEY_SERIES, WEEKDAY_SHORT } from '../lib/journeyColors';
 import { ENDING_PALETTES } from '../lib/endingPalette';
 import { AvatarId, avatarUrl } from '../lib/avatars';
 
@@ -70,7 +71,8 @@ function getGameUrl(): string {
 export async function renderShareCard(
   ending: EndingPrimitive,
   stats: PlayerStatsPrimitive,
-  avatarId: AvatarId
+  avatarId: AvatarId,
+  journey: JourneyPrimitive
 ): Promise<Blob | null> {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
@@ -159,33 +161,62 @@ export async function renderShareCard(
   ctx.font = `600 28px ${FONT}`;
   ctx.fillText(ending.outcome === 'survived' ? 'NGÀY SỐNG SÓT' : 'NGÀY TRƯỚC KHI GỤC', CARD_W / 2 + 220, cardY + 152);
 
-  // Thanh chỉ số cuối
-  const bars: Array<[string, number]> = [
-    ['Năng lượng', stats.energy],
-    ['Tinh thần', stats.mental],
-    ['Ý chí', stats.willpower],
-    ['Kết nối', stats.social],
-  ];
-  let by = cardY + 255;
-  ctx.textAlign = 'left';
-  for (const [label, value] of bars) {
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.font = `500 30px ${FONT}`;
-    ctx.fillText(label, 110, by);
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    roundRect(ctx, 330, by - 24, 640, 26, 13);
+  // Biểu đồ hành trình: mỗi người một hình khác nhau
+  const chartTop = cardY + 205;
+  const chartH = 150;
+  const chartLeft = 110;
+  const chartW = CARD_W - 220;
+  const days = journey.days;
+  const slot = chartW / 7;
+  const barW = slot * 0.62;
+  ctx.textAlign = 'center';
+  days.forEach((d, i) => {
+    const x = chartLeft + i * slot + (slot - barW) / 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    roundRect(ctx, x, chartTop, barW, chartH, 14);
     ctx.fill();
-    ctx.fillStyle = pal.accent;
-    roundRect(ctx, 330, by - 24, Math.max(26, (640 * Math.max(0, Math.min(100, value))) / 100), 26, 13);
-    ctx.fill();
-    by += 48;
+    ctx.save();
+    roundRect(ctx, x, chartTop, barW, chartH, 14);
+    ctx.clip();
+    let y = chartTop + chartH;
+    for (const s of JOURNEY_SERIES) {
+      const h = (d[s.key] / 24) * chartH;
+      if (h <= 0) continue;
+      ctx.fillStyle = s.color;
+      ctx.fillRect(x, y - h, barW, h);
+      y -= h;
+    }
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.font = `600 24px ${FONT}`;
+    ctx.fillText(WEEKDAY_SHORT[i % 7], x + barW / 2, chartTop + chartH + 32);
+  });
+  if (ending.outcome !== 'survived' && days.length > 0) {
+    const i = days.length - 1;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 30px ${FONT}`;
+    ctx.fillText('✕', chartLeft + i * slot + slot / 2, chartTop - 12);
   }
+  // Chú thích
+  const legend = JOURNEY_SERIES.filter((s) => s.key !== 'other');
+  ctx.font = `500 24px ${FONT}`;
+  const itemW = chartW / legend.length;
+  legend.forEach((s, i) => {
+    const lx = chartLeft + i * itemW;
+    ctx.fillStyle = s.color;
+    roundRect(ctx, lx, chartTop + chartH + 52, 20, 20, 5);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.textAlign = 'left';
+    ctx.fillText(s.label.replace('Dopamine ', 'DP '), lx + 28, chartTop + chartH + 69);
+  });
+  const by = chartTop + chartH + 52 + 20;
 
   // Lời nhắn bài học
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(255,255,255,0.78)';
   ctx.font = `italic 400 32px ${FONT}`;
-  drawWrapped(ctx, ending.lesson, CARD_W / 2, by + 30, CARD_W - 220, 42);
+  drawWrapped(ctx, ending.lesson, CARD_W / 2, by + 54, CARD_W - 220, 40);
 
   // Chân thẻ
   ctx.fillStyle = '#ffffff';
@@ -226,10 +257,15 @@ export const shareAdapter = {
   },
 
   /** Chia sẻ ảnh + văn bản bằng Web Share (mobile). Không hỗ trợ -> tải ảnh xuống và chép văn bản. */
-  async share(ending: EndingPrimitive, stats: PlayerStatsPrimitive, avatarId: AvatarId): Promise<ShareResult> {
+  async share(
+    ending: EndingPrimitive,
+    stats: PlayerStatsPrimitive,
+    avatarId: AvatarId,
+    journey: JourneyPrimitive
+  ): Promise<ShareResult> {
     const text = buildShareText(ending, getGameUrl());
     try {
-      const blob = await renderShareCard(ending, stats, avatarId);
+      const blob = await renderShareCard(ending, stats, avatarId, journey);
       if (blob && typeof navigator !== 'undefined' && navigator.canShare && navigator.share) {
         const file = new File([blob], '24h-life-ket-cuc.png', { type: 'image/png' });
         if (navigator.canShare({ files: [file] })) {

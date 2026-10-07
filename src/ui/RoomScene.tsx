@@ -38,17 +38,21 @@ const WALK_SPEED = 2.8;
 /** Giờ thức dậy trong cảnh 3D: ngày bắt đầu lúc 07:00 */
 const WAKE_HOUR = 7;
 
-function skyColor(hour: number): THREE.Color {
+const SKY_A = new THREE.Color();
+const SKY_B = new THREE.Color();
+
+/** Ghi màu bầu trời theo giờ vào `out` (không tạo đối tượng mới mỗi khung hình). */
+function skyColor(hour: number, out: THREE.Color): THREE.Color {
   const h = ((hour % 24) + 24) % 24;
   for (let i = 0; i < SKY_KEYS.length - 1; i++) {
     const [h0, c0] = SKY_KEYS[i];
     const [h1, c1] = SKY_KEYS[i + 1];
     if (h >= h0 && h <= h1) {
       const t = (h - h0) / (h1 - h0 || 1);
-      return new THREE.Color(c0).lerp(new THREE.Color(c1), t);
+      return out.copy(SKY_A.set(c0)).lerp(SKY_B.set(c1), t);
     }
   }
-  return new THREE.Color(SKY_KEYS[0][1]);
+  return out.set(SKY_KEYS[0][1]);
 }
 
 function uniqueMaterials(root: THREE.Object3D): THREE.MeshStandardMaterial[] {
@@ -86,7 +90,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastA
       setFailed(true);
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     mount.appendChild(renderer.domElement);
@@ -239,18 +243,25 @@ const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastA
     const clock = new THREE.Clock();
     let raf = 0;
     const tmpColor = new THREE.Color();
+    const skyNow = new THREE.Color();
+    scene.background = skyNow;
+    let sinceRender = 0;
 
     const frame = () => {
       raf = requestAnimationFrame(frame);
       if (document.hidden) return;
-      const dt = Math.min(clock.getDelta(), 0.05);
+      const delta = clock.getDelta();
+      // Giới hạn ~30 khung/giây: đủ mượt cho cảnh này và tiết kiệm pin
+      sinceRender += delta;
+      if (sinceRender < 1 / 30) return;
+      const dt = Math.min(sinceRender, 0.08);
+      sinceRender = 0;
       const time = clock.elapsedTime;
       const { stats: st, hoursUsed: used } = liveRef.current;
       const hrs = used + WAKE_HOUR;
 
       // Ánh sáng theo giờ & chỉ số
-      const sky = skyColor(hrs);
-      scene.background = sky;
+      const sky = skyColor(hrs, skyNow);
       const daylight = Math.max(0, Math.sin(((hrs - 6) / 12) * Math.PI));
       hemi.intensity = 0.5 + 0.55 * daylight;
       sun.intensity = 0.35 + 1.25 * daylight;

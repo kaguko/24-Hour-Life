@@ -103,7 +103,8 @@ Những thay đổi cân bằng đã áp dụng: chiến lược mô phỏng nay
 
 ### ✅ GIAI ĐOẠN "KẾT CỤC & CHIA SẺ" (ĐÃ HOÀN THÀNH)
 Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, không dùng cơ chế giữ chân kiểu mạng xã hội (không streak/leaderboard/ads).
-- [x] **`domain/ending.ts`**: 10 kết cục (Bậc Thầy Cân Bằng, Nô Lệ Dopamine, Cỗ Máy Kiệt Sức, Ẩn Sĩ Ngủ Đông, Linh Hồn Tiệc Tùng, Pha Lê Dễ Vỡ, Kẻ Sống Sót Trên Lằn Ranh, Chiến Binh Cày Cuốc, Người Bền Bỉ, Kẻ Thách Thức Loài Chó) + điểm 0–100; pure domain, có `buildShareText`.
+- [x] **`domain/ending.ts`** (v2): kết cục = kiểu chơi chủ đạo × sống sót/gục ngã → ~20 kết cục (Nô Lệ Dopamine, Tín Đồ Flash Sale, Cỗ Máy Kiệt Sức, Mọt Sách Quá Tải, Học Giả Kiên Định, Cầu Nối Của Mọi Người…). Mô phỏng người chơi pha trộn ra 17 kết cục khác nhau (trước đó ~8, và 40–50% là "Chọc chó"). `domain/journey.ts` + biểu đồ **Hành trình 7 ngày** (thời gian mỗi ngày theo dopamine nhanh/chậm/công việc/nghỉ) trên màn kết quả và ảnh chia sẻ.
+- [x] (cũ) 10 kết cục (Bậc Thầy Cân Bằng, Nô Lệ Dopamine, Cỗ Máy Kiệt Sức, Ẩn Sĩ Ngủ Đông, Linh Hồn Tiệc Tùng, Pha Lê Dễ Vỡ, Kẻ Sống Sót Trên Lằn Ranh, Chiến Binh Cày Cuốc, Người Bền Bỉ, Kẻ Thách Thức Loài Chó) + điểm 0–100; pure domain, có `buildShareText`.
 - [x] **Luồng kết thúc ván**: gục giữa chừng (kiệt quệ/phá sản) hoặc đủ 7 ngày đều ra `EndingModal`; trạng thái `finished` + `history` lưu qua reload. Bỏ nút "Tiếp tục tuần 2" (trước đây kẹt ở ngày 7).
 - [x] **`adapters/shareAdapter.ts`**: vẽ ảnh 1080×1350 bằng Canvas, Web Share API trên mobile, tải ảnh + chép nội dung trên desktop. Không tracking, không server.
 - [x] **`IntroModal`** cho lần chơi đầu (hiểu game trong 30 giây).

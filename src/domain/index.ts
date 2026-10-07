@@ -13,3 +13,4 @@ export * from './events';
 export * from './simulate';
 export * from './quotes';
 export * from './ending';
+export * from './journey';

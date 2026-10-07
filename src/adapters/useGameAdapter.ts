@@ -16,6 +16,7 @@ import {
   rollDomainEvent,
   resolveDomainChoice,
   evaluateEnding,
+  buildJourney,
 } from '../domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
@@ -78,6 +79,7 @@ export function useGameAdapter() {
 
   // Kết cục chỉ có ý nghĩa khi ván đã kết thúc
   const ending = useMemo(() => (finished ? evaluateEnding(history, stats) : null), [finished, history, stats]);
+  const journey = useMemo(() => (finished ? buildJourney(history) : null), [finished, history]);
 
   const actionsToday = useMemo(() => {
     return actionsTodayIds
@@ -220,6 +222,7 @@ export function useGameAdapter() {
     morningReport,
     activeEvent,
     ending,
+    journey,
     avatarId,
     lastAction,
     setAvatarId: selectAvatar,

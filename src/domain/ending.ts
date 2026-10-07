@@ -1,31 +1,76 @@
-import { PlayerStatsPrimitive, EndingPrimitive, EndingId } from './types';
+import { PlayerStatsPrimitive, EndingPrimitive, EndingPalette } from './types';
 import { evaluateLifeStatus } from './stats';
 import { DOMAIN_ACTIONS } from './actions';
 
 /**
- * Kho "kết cục" (archetype): mỗi ván kết thúc bằng một kiểu người chơi dễ nhớ, dễ chia sẻ.
+ * Hệ kết cục: kiểu chơi chiếm ưu thế (theme) x kết quả (sống sót / gục ngã).
  * Pure domain: nhận lịch sử hành vi (string[][]) + chỉ số cuối, trả về EndingPrimitive.
  */
-const ENDINGS: Record<EndingId, Omit<EndingPrimitive, 'id' | 'score' | 'daysSurvived' | 'outcome'>> = {
-  dog_whisperer: {
-    emoji: '🐕',
-    title: 'Kẻ Thách Thức Loài Chó',
-    tagline: 'Sống nguy hiểm vì một cú hit dopamine.',
-    description:
-      'Bạn đã chọc chó không chỉ một lần. Cảm giác mạnh rẻ tiền luôn có giá của nó, và hàng xóm đã nhớ mặt bạn.',
-    lesson: 'Cảm giác mạnh tức thì không phải là sự tự do - nó chỉ là cái bẫy được ngụy trang.',
-    palette: 'rose',
-  },
-  dopamine_slave: {
+
+type Theme =
+  | 'scroll'
+  | 'shopper'
+  | 'party'
+  | 'hustle'
+  | 'scholar'
+  | 'athlete'
+  | 'social'
+  | 'rest'
+  | 'dog'
+  | 'balanced'
+  | 'generic';
+
+type Tier = 'survived' | 'collapsed';
+
+interface EndingText {
+  emoji: string;
+  title: string;
+  tagline: string;
+  description: string;
+  lesson: string;
+  palette: EndingPalette;
+}
+
+const THEME_ACTIONS: Record<Exclude<Theme, 'rest' | 'dog' | 'balanced' | 'generic'>, string[]> = {
+  scroll: ['scroll_social', 'binge_gaming', 'caffeine_spike'],
+  shopper: ['impulse_shopping', 'fast_food'],
+  party: ['beer_party'],
+  hustle: ['work_focused', 'work_overtime'],
+  scholar: ['study_deep', 'learn_skill', 'learn_soft_skills'],
+  athlete: ['exercise', 'short_walk', 'meditate_breathe', 'cook_tyrosine'],
+  social: ['deep_talk', 'call_family', 'pet_bonding'],
+};
+
+const ENDINGS: Record<string, EndingText> = {
+  // --- Gục ngã ---
+  scroll_collapsed: {
     emoji: '📱',
     title: 'Nô Lệ Dopamine',
     tagline: 'Vui rất nhanh, sập cũng rất nhanh.',
     description:
-      'Những cú hit từ video ngắn, game và đồ ngọt cho bạn niềm vui tức thì, nhưng não bộ đã hạ ngưỡng thỏa mãn và đòi liều cao hơn mỗi ngày.',
+      'Video ngắn, game và cà phê cho bạn niềm vui tức thì, nhưng não bộ đã hạ ngưỡng thỏa mãn và đòi liều cao hơn mỗi ngày cho đến khi cạn kiệt.',
     lesson: 'Dopamine rẻ tiền vay khoái cảm của ngày mai với lãi suất cực cao.',
     palette: 'fuchsia',
   },
-  workaholic: {
+  shopper_collapsed: {
+    emoji: '🛍️',
+    title: 'Tín Đồ Flash Sale',
+    tagline: 'Chốt đơn nhanh hơn nghĩ.',
+    description:
+      'Mỗi lần bấm "mua ngay" là một cú hit nhỏ. Ví tiền và ý chí của bạn đã cạn trước khi bạn kịp nhận ra mình cần gì.',
+    lesson: 'Cảm giác sung sướng nằm ở lúc chốt đơn, không phải lúc món hàng đến.',
+    palette: 'rose',
+  },
+  party_collapsed: {
+    emoji: '🎉',
+    title: 'Linh Hồn Tiệc Tùng',
+    tagline: 'Bạn bè đầy nhà, ví thì trống rỗng.',
+    description:
+      'Bạn sống nhiệt tình nhất: kết nối đầy đủ, tiếng cười khắp nơi. Chỉ có điều tiền trọ và thể lực không chịu cười cùng bạn.',
+    lesson: 'Vui chơi rất cần, nhưng nó phải nằm trong ngân sách và sức lực.',
+    palette: 'amber',
+  },
+  hustle_collapsed: {
     emoji: '🔥',
     title: 'Cỗ Máy Kiệt Sức',
     tagline: 'Kiếm được nhiều tiền, mất cả bản thân.',
@@ -34,25 +79,52 @@ const ENDINGS: Record<EndingId, Omit<EndingPrimitive, 'id' | 'score' | 'daysSurv
     lesson: 'Kiệt sức không phải huy chương. Năng suất bền vững cần được nạp lại.',
     palette: 'orange',
   },
-  hermit: {
+  scholar_collapsed: {
+    emoji: '📚',
+    title: 'Mọt Sách Quá Tải',
+    tagline: 'Học hết sức, quên mất nghỉ.',
+    description:
+      'Bạn đầu tư mọi giờ rảnh vào việc học. Tri thức đầy lên, nhưng thể lực và các mối quan hệ bị bỏ lại phía sau.',
+    lesson: 'Dopamine chậm cũng cần nhịp nghỉ. Não không học được khi đang cạn.',
+    palette: 'indigo',
+  },
+  athlete_collapsed: {
+    emoji: '🏃',
+    title: 'Vận Động Viên Quá Sức',
+    tagline: 'Chăm lành mạnh đến mức quên cả đời sống.',
+    description:
+      'Bạn tập luyện, thiền, ăn sạch rất kỷ luật. Nhưng bỏ qua tiền bạc hay công việc, và cuộc sống vẫn gục dù cơ thể săn chắc.',
+    lesson: 'Lành mạnh không chỉ là thể lực. Cân bằng mới là thứ đưa bạn đi xa.',
+    palette: 'teal',
+  },
+  social_collapsed: {
+    emoji: '💞',
+    title: 'Trái Tim Quá Tải',
+    tagline: 'Lo cho mọi người, quên mất mình.',
+    description:
+      'Bạn dành thời gian cho người thân và bạn bè nhiều nhất. Kết nối đầy, nhưng chính bạn không còn lại gì để cho đi.',
+    lesson: 'Bạn cần được nạp lại trước khi nạp cho người khác.',
+    palette: 'rose',
+  },
+  rest_collapsed: {
     emoji: '🛌',
     title: 'Ẩn Sĩ Ngủ Đông',
     tagline: 'Không làm gì cả, và vẫn cạn kiệt.',
     description:
-      'Bạn trốn vào giấc ngủ và sự im lặng. Không có thử thách nào tìm đến, nhưng không có niềm vui nào cả. Tâm trí vô cảm dần.',
+      'Bạn trốn vào giấc ngủ và sự im lặng. Không có thử thách nào tìm đến, nhưng cũng không có niềm vui nào. Tâm trí vô cảm dần.',
     lesson: 'Nghỉ ngơi không phải là biến mất. Não cần có thứ gì đó để mong chờ.',
     palette: 'sky',
   },
-  party_broke: {
-    emoji: '🎉',
-    title: 'Linh Hồn Tiệc Tùng',
-    tagline: 'Bạn bè đầy nhà, ví thì trống rỗng.',
+  dog_collapsed: {
+    emoji: '🐕',
+    title: 'Kẻ Thách Thức Loài Chó',
+    tagline: 'Sống nguy hiểm vì một cú hit dopamine.',
     description:
-      'Bạn là người sống nhiệt tình nhất: kết nối đầy đủ, tiếng cười khắp nơi. Chỉ có điều tiền trọ không chịu cười cùng bạn.',
-    lesson: 'Vui chơi rất cần, nhưng nó phải nằm trong ngân sách.',
-    palette: 'amber',
+      'Bạn chọc chó nhiều lần, và hàng xóm đã nhớ mặt bạn. Cảm giác mạnh rẻ tiền luôn có giá của nó.',
+    lesson: 'Cảm giác mạnh tức thì không phải sự tự do - nó chỉ là cái bẫy được ngụy trang.',
+    palette: 'rose',
   },
-  fragile: {
+  generic_collapsed: {
     emoji: '🪞',
     title: 'Pha Lê Dễ Vỡ',
     tagline: 'Mọi thứ ổn, cho đến khi không còn ổn.',
@@ -61,16 +133,9 @@ const ENDINGS: Record<EndingId, Omit<EndingPrimitive, 'id' | 'score' | 'daysSurv
     lesson: 'Hậu quả hiếm khi đến từ một quyết định lớn. Nó đến từ hàng chục quyết định nhỏ.',
     palette: 'slate',
   },
-  balanced_master: {
-    emoji: '🌿',
-    title: 'Bậc Thầy Cân Bằng',
-    tagline: 'Sống chậm lại, thắng dài hơn.',
-    description:
-      'Bạn ưu tiên giấc ngủ, vận động và kết nối thật sự. Những chiến thắng nhỏ về dopamine chậm đã nuôi dưỡng ý chí của bạn suốt cả tuần.',
-    lesson: 'Dopamine chậm xây nền tảng bền vững. Nó không ồn ào, nhưng nó thắng.',
-    palette: 'emerald',
-  },
-  edge_survivor: {
+
+  // --- Sống sót ---
+  scroll_survived: {
     emoji: '🎢',
     title: 'Kẻ Sống Sót Trên Lằn Ranh',
     tagline: 'Chạm đáy rồi, nhưng vẫn đứng được.',
@@ -79,7 +144,25 @@ const ENDINGS: Record<EndingId, Omit<EndingPrimitive, 'id' | 'score' | 'daysSurv
     lesson: 'Sống sót không có nghĩa là đang sống tốt. Hãy nhìn lại các thói quen đang rút dần của bạn.',
     palette: 'violet',
   },
-  hustler: {
+  shopper_survived: {
+    emoji: '🏷️',
+    title: 'Thợ Săn Khuyến Mãi',
+    tagline: 'Mua nhiều, nhưng vẫn kịp dừng.',
+    description:
+      'Bạn thích cảm giác chốt đơn và đã tiêu khá nhiều, nhưng cuối cùng vẫn giữ được ví và ý chí. Một cú vượt ải sát nút.',
+    lesson: 'Biết dừng đúng lúc là kỹ năng mua sắm quan trọng nhất.',
+    palette: 'amber',
+  },
+  party_survived: {
+    emoji: '🥳',
+    title: 'Chủ Tiệc Có Tiết Chế',
+    tagline: 'Vui hết mình, nhưng vẫn về nhà đúng giờ.',
+    description:
+      'Bạn là người luôn xuất hiện ở mọi cuộc vui và vẫn sống trọn 7 ngày. Hiếm ai làm được cả hai.',
+    lesson: 'Niềm vui bền vững là niềm vui mà ngày mai vẫn trả nổi.',
+    palette: 'amber',
+  },
+  hustle_survived: {
     emoji: '💼',
     title: 'Chiến Binh Cày Cuốc',
     tagline: 'Tiền vào như nước, ý chí rút như cát.',
@@ -88,7 +171,61 @@ const ENDINGS: Record<EndingId, Omit<EndingPrimitive, 'id' | 'score' | 'daysSurv
     lesson: 'Thành công bền vững cần cả sự nỗ lực và khoảng nghỉ có ý nghĩa.',
     palette: 'teal',
   },
-  steady: {
+  scholar_survived: {
+    emoji: '🧠',
+    title: 'Học Giả Kiên Định',
+    tagline: 'Mỗi ngày giỏi hơn một chút.',
+    description:
+      'Bạn dành phần lớn thời gian cho việc học và rèn kỹ năng, đồng thời vẫn giữ được sức khỏe. Dopamine chậm đang làm việc cho bạn.',
+    lesson: 'Những thứ khó làm lúc đầu thường là thứ cho bạn niềm tự hào lâu nhất.',
+    palette: 'indigo',
+  },
+  athlete_survived: {
+    emoji: '💪',
+    title: 'Chiến Binh Thể Lực',
+    tagline: 'Cơ thể khỏe, đầu óc tỉnh.',
+    description:
+      'Vận động, thiền và ăn uống lành mạnh là trục chính của bạn. Cả tuần trôi qua nhẹ nhàng nhờ nền tảng thể chất vững.',
+    lesson: 'Chăm sóc cơ thể là cách rẻ nhất để chăm sóc tâm trí.',
+    palette: 'emerald',
+  },
+  social_survived: {
+    emoji: '🤝',
+    title: 'Cầu Nối Của Mọi Người',
+    tagline: 'Có người thương là có sức mạnh.',
+    description:
+      'Bạn đầu tư vào các mối quan hệ nhiều nhất và nhận lại sự nâng đỡ tinh thần. Những cuộc nói chuyện đã giữ bạn vững vàng.',
+    lesson: 'Kết nối thật sự là một dạng dopamine chậm mà ai cũng có thể có.',
+    palette: 'sky',
+  },
+  rest_survived: {
+    emoji: '😴',
+    title: 'Người Ngủ Đông Bền Bỉ',
+    tagline: 'Ngủ nhiều, vẫn qua được.',
+    description:
+      'Bạn nghỉ ngơi gần như cả tuần mà vẫn trụ được. Hơi lạ, nhưng nhịp sống chậm cũng là một chiến lược.',
+    lesson: 'Nghỉ ngơi tốt, nhưng đừng để nó thay thế cho những điều bạn thực sự muốn làm.',
+    palette: 'sky',
+  },
+  dog_survived: {
+    emoji: '🐕',
+    title: 'Kẻ Liều Mạng May Mắn',
+    tagline: 'Chọc chó nhiều lần mà vẫn lành lặn.',
+    description:
+      'Bạn thích cảm giác mạnh và tìm đến chú chó hung dữ nhiều lần, nhưng vẫn sống sót hết tuần. Đúng là may mắn.',
+    lesson: 'May mắn không phải là chiến lược. Lần sau chó sẽ không nhân từ như vậy.',
+    palette: 'rose',
+  },
+  balanced_survived: {
+    emoji: '🌿',
+    title: 'Bậc Thầy Cân Bằng',
+    tagline: 'Sống chậm lại, thắng dài hơn.',
+    description:
+      'Bạn ưu tiên giấc ngủ, vận động và kết nối thật sự. Những chiến thắng nhỏ về dopamine chậm đã nuôi dưỡng ý chí của bạn suốt cả tuần.',
+    lesson: 'Dopamine chậm xây nền tảng bền vững. Nó không ồn ào, nhưng nó thắng.',
+    palette: 'emerald',
+  },
+  generic_survived: {
     emoji: '🧭',
     title: 'Người Bền Bỉ',
     tagline: 'Không hoàn hảo, nhưng đi được hết đường.',
@@ -99,39 +236,48 @@ const ENDINGS: Record<EndingId, Omit<EndingPrimitive, 'id' | 'score' | 'daysSurv
   },
 };
 
+const PARTY_WEIGHT = 2;
+
 interface HistoryTotals {
   daysPlayed: number;
   fastHours: number;
   slowHours: number;
-  workHours: number;
   restHours: number;
-  beerCount: number;
+  activeHours: number;
   dogTeases: number;
+  themeHours: Record<string, number>;
 }
 
 function summarizeHistory(history: string[][]): HistoryTotals {
-  const totals: HistoryTotals = {
+  const t: HistoryTotals = {
     daysPlayed: history.length,
     fastHours: 0,
     slowHours: 0,
-    workHours: 0,
     restHours: 0,
-    beerCount: 0,
+    activeHours: 0,
     dogTeases: 0,
+    themeHours: {},
   };
   for (const day of history) {
     for (const id of day) {
       const action = DOMAIN_ACTIONS.find((a) => a.id === id);
       if (!action) continue;
-      if (action.dopaminePathway === 'fast') totals.fastHours += action.hours;
-      if (action.dopaminePathway === 'slow' && action.category !== 'rest') totals.slowHours += action.hours;
-      if (action.id.startsWith('work_')) totals.workHours += action.hours;
-      if (action.category === 'rest') totals.restHours += action.hours;
-      if (action.id === 'beer_party') totals.beerCount += 1;
-      if (action.id === 'tease_dog' || action.id === 'choc_cho') totals.dogTeases += 1;
+      if (action.category === 'rest') {
+        t.restHours += action.hours;
+        continue;
+      }
+      t.activeHours += action.hours;
+      if (action.dopaminePathway === 'fast') t.fastHours += action.hours;
+      if (action.dopaminePathway === 'slow') t.slowHours += action.hours;
+      if (action.id === 'tease_dog' || action.id === 'choc_cho') t.dogTeases += 1;
+      for (const [theme, ids] of Object.entries(THEME_ACTIONS)) {
+        // Tiệc tùng tốn thể lực và tiền nhiều hơn số giờ, nên được tính trọng số cao hơn
+        const weight = theme === 'party' ? PARTY_WEIGHT : 1;
+        if (ids.includes(action.id)) t.themeHours[theme] = (t.themeHours[theme] ?? 0) + action.hours * weight;
+      }
     }
   }
-  return totals;
+  return t;
 }
 
 /** Điểm 0-100: sống được bao lâu + chỉ số cuối + tài chính. */
@@ -143,50 +289,53 @@ export function computeLifeScore(daysSurvived: number, stats: PlayerStatsPrimiti
   return Math.round(dayPart + vitalityPart + moneyPart);
 }
 
+function pickTheme(t: HistoryTotals, thriving: boolean): Theme {
+  const days = Math.max(1, t.daysPlayed);
+  // Cảnh giác với "trốn vào giấc ngủ": nghỉ ngơi quá nhiều mỗi ngày
+  if (t.restHours / days >= 11) return 'rest';
+  if (t.dogTeases >= 4) return 'dog';
+  // Kiểu chơi cân bằng: nhiều dopamine chậm, ít dopamine nhanh, đang phát triển tốt
+  if (thriving && t.slowHours / days >= 3 && t.fastHours / days < 1.5) return 'balanced';
+
+  let best: Theme = 'generic';
+  let bestHours = 0;
+  for (const [theme, hours] of Object.entries(t.themeHours)) {
+    if (hours > bestHours) {
+      bestHours = hours;
+      best = theme as Theme;
+    }
+  }
+  // Phải chiếm ít nhất ~30% thời gian chủ động mới được coi là "kiểu chơi chủ đạo"
+  if (t.activeHours > 0 && bestHours / t.activeHours >= 0.3) return best;
+  return 'generic';
+}
+
 /**
  * Xác định kết cục sau khi ván kết thúc (sống hết 7 ngày hoặc sụp đổ giữa chừng).
  */
 export function evaluateEnding(history: string[][], finalStats: PlayerStatsPrimitive): EndingPrimitive {
   const t = summarizeHistory(history);
   const status = evaluateLifeStatus(finalStats).status;
-  const days = Math.max(1, t.daysPlayed);
-  const avg = (v: number) => v / days;
   const collapsed = status === 'bankrupt' || status === 'burnout';
+  const tier: Tier = collapsed ? 'collapsed' : 'survived';
 
-  let id: EndingId;
-  if (t.dogTeases >= 2) {
-    id = 'dog_whisperer';
-  } else if (status === 'bankrupt') {
-    id = t.beerCount >= 2 ? 'party_broke' : 'fragile';
-  } else if (status === 'burnout') {
-    if (avg(t.restHours) >= 12) id = 'hermit';
-    else if (avg(t.fastHours) >= 3 && t.fastHours >= t.workHours) id = 'dopamine_slave';
-    else if (avg(t.workHours) >= 7) id = 'workaholic';
-    else if (avg(t.fastHours) >= 2) id = 'dopamine_slave';
-    else id = 'fragile';
-  } else if (t.beerCount >= 4 && finalStats.money < 1500) {
-    id = 'party_broke';
-  } else if (status === 'thriving' && avg(t.slowHours) >= 3 && avg(t.fastHours) < 1.5) {
-    id = 'balanced_master';
-  } else if (avg(t.fastHours) >= 3) {
-    id = 'edge_survivor';
-  } else if (avg(t.workHours) >= 7) {
-    id = 'hustler';
-  } else {
-    id = 'steady';
-  }
+  let theme = pickTheme(t, status === 'thriving');
+  // "Cân bằng" chỉ có khi sống sót; gục ngã thì quay về kiểu chơi chung
+  if (collapsed && theme === 'balanced') theme = 'generic';
+  let key = `${theme}_${tier}`;
+  if (!ENDINGS[key]) key = `generic_${tier}`;
 
   const daysSurvived = t.daysPlayed;
   return {
-    id,
-    ...ENDINGS[id],
+    id: key,
+    ...ENDINGS[key],
     outcome: collapsed ? status : 'survived',
     daysSurvived,
     score: computeLifeScore(daysSurvived, finalStats),
   };
 }
 
-export const ALL_ENDING_IDS = Object.keys(ENDINGS) as EndingId[];
+export const ALL_ENDING_IDS = Object.keys(ENDINGS);
 
 /** Nội dung chia sẻ (văn bản thuần). `url` do adapter cung cấp. */
 export function buildShareText(ending: EndingPrimitive, url: string): string {

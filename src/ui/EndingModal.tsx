@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { EndingPrimitive, PlayerStatsPrimitive } from '../domain';
+import { EndingPrimitive, JourneyPrimitive, PlayerStatsPrimitive } from '../domain';
+import { JOURNEY_SERIES, WEEKDAY_SHORT } from '../lib/journeyColors';
 import { ENDING_PALETTES } from '../lib/endingPalette';
 import { AvatarId, avatarUrl } from '../lib/avatars';
 import { Share2, RotateCcw, Check, Copy } from 'lucide-react';
@@ -7,6 +8,7 @@ import confetti from 'canvas-confetti';
 
 interface EndingModalProps {
   ending: EndingPrimitive;
+  journey: JourneyPrimitive;
   stats: PlayerStatsPrimitive;
   avatarId: AvatarId;
   onRestart: () => void;
@@ -20,7 +22,7 @@ const OUTCOME_LABEL: Record<EndingPrimitive['outcome'], string> = {
   burnout: 'Gục ngã vì kiệt quệ',
 };
 
-export const EndingModal: React.FC<EndingModalProps> = ({ ending, stats, avatarId, onRestart, onShare, onCopy }) => {
+export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, stats, avatarId, onRestart, onShare, onCopy }) => {
   const pal = ENDING_PALETTES[ending.palette];
   const [reflection, setReflection] = useState<'less' | 'same' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -117,6 +119,58 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, stats, avatarI
             <p className="text-[11px] font-semibold text-stone-500 mb-1">{OUTCOME_LABEL[ending.outcome]}</p>
             <p className="text-sm text-stone-800 leading-relaxed">{ending.description}</p>
             <p className="text-xs italic text-stone-600 mt-2 pl-2 border-l-2 border-stone-300">{ending.lesson}</p>
+          </div>
+
+          {/* Hành trình 7 ngày: dữ liệu thật của chính người chơi */}
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-stone-900">Hành trình của bạn</p>
+            <div className="flex items-end gap-1.5 h-24" role="img" aria-label="Biểu đồ cách bạn dùng thời gian mỗi ngày">
+              {journey.days.map((d) => {
+                const total = 24;
+                return (
+                  <div key={d.day} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                    {ending.outcome !== 'survived' && d.day === journey.days.length && (
+                      <span className="text-[10px] leading-none text-rose-600" title="Ngày bạn gục ngã">
+                        ✕
+                      </span>
+                    )}
+                    <div className="w-full flex flex-col-reverse rounded-md overflow-hidden bg-stone-100" style={{ height: '100%' }}>
+                      {JOURNEY_SERIES.map((s) => {
+                        const h = d[s.key];
+                        return h > 0 ? (
+                          <div key={s.key} style={{ height: `${(h / total) * 100}%`, background: s.color }} title={`${s.label}: ${h}h`} />
+                        ) : null;
+                      })}
+                    </div>
+                    <span className="text-[10px] text-stone-500 leading-none">{WEEKDAY_SHORT[(d.day - 1) % 7]}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {JOURNEY_SERIES.filter((s) => s.key !== 'other').map((s) => (
+                <span key={s.key} className="inline-flex items-center gap-1 text-[10px] text-stone-600">
+                  <span className="w-2 h-2 rounded-sm" style={{ background: s.color }} />
+                  {s.label}
+                </span>
+              ))}
+            </div>
+            {journey.topActions.length > 0 && (
+              <p className="text-xs text-stone-700">
+                Bạn làm nhiều nhất:{' '}
+                {journey.topActions.map((a, i) => (
+                  <span key={a.id}>
+                    {i > 0 && ', '}
+                    <b>{a.title}</b> ×{a.count}
+                  </span>
+                ))}
+              </p>
+            )}
+            {journey.insights.map((t) => (
+              <p key={t} className="text-[11px] text-stone-600 bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5">
+                {t}
+              </p>
+            ))}
           </div>
 
           {/* Câu hỏi phản tư */}

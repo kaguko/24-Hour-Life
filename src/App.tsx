@@ -34,6 +34,7 @@ export default function App() {
     morningReport,
     activeEvent,
     ending,
+    journey,
     avatarId,
     lastAction,
     setAvatarId,
@@ -164,13 +165,14 @@ export default function App() {
         <EventModal event={activeEvent} onResolveChoice={resolveEvent} />
       )}
 
-      {ending && (
+      {ending && journey && (
         <EndingModal
           ending={ending}
+          journey={journey}
           stats={stats}
           avatarId={avatarId}
           onRestart={resetGame}
-          onShare={() => shareAdapter.share(ending, stats, avatarId)}
+          onShare={() => shareAdapter.share(ending, stats, avatarId, journey)}
           onCopy={() => shareAdapter.copy(ending)}
         />
       )}
