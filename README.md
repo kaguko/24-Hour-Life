@@ -27,7 +27,7 @@ Mục tiêu của game là giúp người chơi tự nhận diện khoảnh kh�
 | **⚡ Năng Lượng** *(0–100%)* | Sức lực thể chất để hoạt động trong ngày | Khi $\le 10\%$: Kiệt sức hoàn toàn (Burnout). |
 | **🧠 Tinh Thần** *(0–100%)* | Sức khỏe tâm lý, khả năng chịu đựng stress | Khi $\le 15\%$: Trầm cảm, lo âu, tê liệt quyết định. |
 | **🛡️ Ý Chí** *(0–100%)* | **Cơ chế cốt lõi mới:** Sức kháng cự trước cám dỗ | Khi $< 35\%$: Kích hoạt hiệu ứng **Ảo giác Cám dỗ**! |
-| **✨ Dopamine** *(0–100%)* | Mức độ hưng phấn và kích thích thần kinh | Nếu dồn quá cao (>80%): Gây **Dopamine Crash** vào sáng hôm sau. |
+| **✨ Dopamine** *(0–100%)* | Mức độ hưng phấn và kích thích thần kinh | Nếu hôm đó dồn nhiều **dopamine nhanh** (≈ 45 điểm từ hành vi cám dỗ hoặc ≥ 3.5 giờ): Gây **Dopamine Crash** vào sáng hôm sau. Dopamine cao nhờ học tập, vận động không bị phạt. |
 | **👥 Kết Nối** *(0–100%)* | Mối quan hệ với gia đình, bạn bè | Khi $< 25\%$: Sự cô đơn làm xói mòn tinh thần tự động mỗi ngày. |
 | **💰 Tài Chính** *(nghìn VNĐ)* | Ngân sách sinh hoạt và chi trả các nhu cầu | Tự trừ tiền trọ **120k/ngày**. Nếu âm tiền: Khủng hoảng nợ nần. |
 

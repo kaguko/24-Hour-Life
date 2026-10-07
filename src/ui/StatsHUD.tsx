@@ -6,9 +6,11 @@ interface StatsHUDProps {
   stats: PlayerStatsPrimitive;
   lifeStatus: StatusResultPrimitive;
   sleepDebt: number;
+  /** Hôm nay dồn nhiều dopamine nhanh: nguy cơ sụp vào sáng mai */
+  crashRisk: boolean;
 }
 
-export const StatsHUD: React.FC<StatsHUDProps> = ({ stats, lifeStatus, sleepDebt }) => {
+export const StatsHUD: React.FC<StatsHUDProps> = ({ stats, lifeStatus, sleepDebt, crashRisk }) => {
   const statItems = [
     {
       key: 'energy',
@@ -56,11 +58,11 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ stats, lifeStatus, sleepDebt
       max: 100,
       unit: '%',
       icon: Sparkles,
-      color: stats.dopamine >= 75 ? 'bg-fuchsia-500' : 'bg-pink-500',
-      textColor: stats.dopamine >= 75 ? 'text-fuchsia-700' : 'text-pink-700',
-      bgColor: stats.dopamine >= 75 ? 'bg-fuchsia-50' : 'bg-pink-50',
+      color: crashRisk ? 'bg-fuchsia-500' : 'bg-pink-500',
+      textColor: crashRisk ? 'text-fuchsia-700' : 'text-pink-700',
+      bgColor: crashRisk ? 'bg-fuchsia-50' : 'bg-pink-50',
       borderColor: 'border-pink-200',
-      warning: stats.dopamine >= 80 ? 'Nguy cơ sụp đổ ngày mai' : undefined,
+      warning: crashRisk ? 'Nguy cơ sụp đổ ngày mai' : undefined,
     },
     {
       key: 'social',

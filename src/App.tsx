@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { useGameAdapter } from './adapters/useGameAdapter';
 import { shareAdapter } from './adapters/shareAdapter';
-import { DOMAIN_ACTIONS } from './domain';
+import { DOMAIN_ACTIONS, summarizeFastDopamine } from './domain';
 
 import { TopNav } from './ui/TopNav';
 import { StatsHUD } from './ui/StatsHUD';
@@ -49,6 +49,9 @@ export default function App() {
     toggleSound,
     setNotice,
   } = useGameAdapter();
+
+  // Chỉ dopamine NHANH trong ngày mới gây sụp; dopamine cao nhờ hoạt động lành mạnh thì không
+  const crashRisk = summarizeFastDopamine(actionsToday.map((a) => a.id)).atRisk;
 
   return (
     <div className="min-h-screen bg-stone-100/70 text-stone-900 font-sans flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
@@ -110,12 +113,12 @@ export default function App() {
                 {/* Căn phòng 3D: nhân vật phản ứng theo hành vi và chỉ số. Trên mobile dính ngay dưới thanh trên */}
                 <div className="sticky top-14 z-30 -mx-4 px-4 py-2 bg-stone-100/90 backdrop-blur-sm sm:mx-0 sm:px-0 sm:rounded-2xl lg:static lg:z-auto lg:mx-0 lg:p-0 lg:bg-transparent lg:backdrop-blur-none">
                   <Suspense fallback={<div className="h-36 sm:h-52 lg:h-72 rounded-2xl bg-indigo-950/90 animate-pulse" />}>
-                    <RoomScene avatarId={avatarId} stats={stats} hoursUsed={hoursUsed} lastAction={lastAction} />
+                    <RoomScene avatarId={avatarId} stats={stats} hoursUsed={hoursUsed} lastAction={lastAction} crashRisk={crashRisk} />
                   </Suspense>
                 </div>
 
                 {/* 6 Stats HUD */}
-                <StatsHUD stats={stats} lifeStatus={lifeStatus} sleepDebt={sleepDebt} />
+                <StatsHUD stats={stats} lifeStatus={lifeStatus} sleepDebt={sleepDebt} crashRisk={crashRisk} />
 
                 {/* Visual 24h Time Track */}
                 <TimeTrack

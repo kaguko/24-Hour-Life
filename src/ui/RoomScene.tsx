@@ -25,6 +25,8 @@ interface RoomSceneProps {
   stats: PlayerStatsPrimitive;
   hoursUsed: number;
   lastAction: RoomAction | null;
+  /** Dồn nhiều dopamine nhanh trong ngày: phòng nháy hồng cảnh báo */
+  crashRisk: boolean;
 }
 
 interface SceneApi {
@@ -68,15 +70,15 @@ function uniqueMaterials(root: THREE.Object3D): THREE.MeshStandardMaterial[] {
   return mats;
 }
 
-const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastAction }) => {
+const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastAction, crashRisk }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<SceneApi | null>(null);
-  const liveRef = useRef({ stats, hoursUsed });
+  const liveRef = useRef({ stats, hoursUsed, crashRisk });
   const pendingRef = useRef<{ avatar: AvatarId; action: string | null }>({ avatar: avatarId, action: null });
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  liveRef.current = { stats, hoursUsed };
+  liveRef.current = { stats, hoursUsed, crashRisk };
 
   // Dựng cảnh một lần
   useEffect(() => {
@@ -257,7 +259,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastA
       const dt = Math.min(sinceRender, 0.08);
       sinceRender = 0;
       const time = clock.elapsedTime;
-      const { stats: st, hoursUsed: used } = liveRef.current;
+      const { stats: st, hoursUsed: used, crashRisk: risk } = liveRef.current;
       const hrs = used + WAKE_HOUR;
 
       // Ánh sáng theo giờ & chỉ số
@@ -269,7 +271,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastA
       renderer.toneMappingExposure = 0.62 + 0.5 * (st.energy / 100);
 
       // Dopamine cao: cả phòng nháy hồng
-      const dopa = st.dopamine > 75 ? 0.6 + 0.4 * Math.sin(time * 6) : 0;
+      const dopa = risk ? 0.6 + 0.4 * Math.sin(time * 6) : 0;
       glowLight.color.set(0xff2d95);
       glowLight.position.set(-1.2, 0.9, -1.0);
       glowLight.intensity = dopa * 2.2 + anim.glow * 1.6;

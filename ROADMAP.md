@@ -115,6 +115,9 @@ Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, kh
 - [x] **Phòng 3D (three.js, tải lười)**: căn phòng arcade từ Kenney Mini Arcade; nhân vật đã chọn đi tới đúng máy theo hành vi (game → máy arcade, đồ ăn → máy bán hàng, mua sắm → máy gắp, nhậu → máy nhảy, tập → bóng rổ, làm việc → quầy, ngủ → nằm xuống); phòng sáng/tối theo giờ và năng lượng, nháy hồng khi dopamine > 75, nhân vật xám khi tinh thần thấp. Bố cục 2 cột trên desktop, phòng dính trên cùng ở mobile. Bundle chính 110KB gzip; cảnh 3D (156KB gzip) tải riêng. Đồ thị hành vi → máy nằm ở `lib/roomStations.ts`.
 - [x] Kiểm thử UI tự động bằng Playwright (Edge headless): intro → chơi → kết cục → chia sẻ → reload → chơi lại, cả desktop và mobile.
 
+### ✅ SỬA LỖI: Sụp dopamine chỉ do dopamine NHANH
+Trước đây luật qua đêm coi `dopamine ≥ 75` từ **bất kỳ nguồn nào** là "sụp dopamine nhanh", nên chơi toàn hành vi lành mạnh vẫn bị phạt oan và HUD báo "Nguy cơ sụp đổ". Nay `domain/dopamine.ts` (`summarizeFastDopamine`) chỉ tính dopamine thu được từ hành vi **nhanh** trong ngày (≥ 45 điểm hoặc ≥ 3.5 giờ); HUD và phòng 3D dùng cùng hàm này. Đã kiểm tra 6 kịch bản (kể cả ảnh chụp lỗi gốc) + trình duyệt; số liệu mô phỏng 5 chiến lược không đổi.
+
 ### 📅 TUẦN 4: Cân Bằng Dựa Trên Dữ Liệu & Nâng Cấp Âm Thanh
 - [ ] Cân bằng lại thông số hành vi bằng cách chạy lại `simulate.ts` sau khi nhận phản hồi từ playtest.
 - [ ] Bổ sung nhạc nền nhẹ (Ambient/Lo-fi CC0, có giấy phép rõ ràng).

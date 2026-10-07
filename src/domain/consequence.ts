@@ -2,6 +2,7 @@ import { PlayerStatsPrimitive, NightResultPrimitive } from './types';
 import { DAILY_RENT_COST, MIN_SLEEP_HOURS, applyStatDeltas } from './stats';
 import { DOMAIN_ACTIONS } from './actions';
 import { PhilosophicalQuote, getContextualQuote } from './quotes';
+import { summarizeFastDopamine } from './dopamine';
 
 const OVERSLEEP_THRESHOLD_HOURS = 9;
 const OVERSLEEP_MENTAL_PER_HOUR = 2;
@@ -33,6 +34,7 @@ export function processOvernightCycle(
     .filter((a): a is (typeof DOMAIN_ACTIONS)[number] => a !== undefined);
 
   // 1. Phân loại tổng giờ Dopamine Nhanh vs Dopamine Chậm
+  const fastSummary = summarizeFastDopamine(actionIdsToday);
   const fastDopamineHours = actionsToday
     .filter((a) => a.dopaminePathway === 'fast')
     .reduce((sum, a) => sum + a.hours, 0);
@@ -89,7 +91,8 @@ export function processOvernightCycle(
   }
 
   // 3. Tác động của Dopamine Nhanh (Fast Dopamine Crash)
-  if (currentStats.dopamine >= 75 || fastDopamineHours >= 3.5) {
+  // Chỉ dopamine NHANH gây sụp; dopamine cao nhờ hoạt động lành mạnh thì không bị phạt
+  if (fastSummary.atRisk) {
     notes.push(
       `Cơn sụp đổ Dopamine Nhanh (Crash): Sau ${fastDopamineHours}h ngập trong kích thích rẻ tiền (mạng xã hội, game, đồ ngọt), thụ thể dopamine bị trơ lì (down-regulation). Sáng nay bạn thấy trống rỗng, vô vị và bồn chồn.`
     );
@@ -162,7 +165,7 @@ export function processOvernightCycle(
   let quoteTheme: PhilosophicalQuote['theme'] = 'balance_moderation';
   if (actionIdsToday.includes('tease_dog') || actionIdsToday.includes('choc_cho')) {
     quoteTheme = 'folly_recklessness';
-  } else if (fastDopamineHours >= 3 || currentStats.dopamine >= 75) {
+  } else if (fastDopamineHours >= 3 || fastSummary.atRisk) {
     quoteTheme = 'fast_dopamine';
   } else if (sleepHours < 5 || currentStats.energy <= 20) {
     quoteTheme = 'burnout_rest';

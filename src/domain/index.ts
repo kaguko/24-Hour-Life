@@ -8,6 +8,7 @@
 export * from './types';
 export * from './stats';
 export * from './actions';
+export * from './dopamine';
 export * from './consequence';
 export * from './events';
 export * from './simulate';
