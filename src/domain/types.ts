@@ -15,10 +15,13 @@ export interface PlayerStatsPrimitive {
 
 export type ActionCategory = 'rest' | 'work' | 'wellness' | 'social' | 'temptation';
 
+export type DopaminePathway = 'fast' | 'slow' | 'none';
+
 export interface ActionPrimitive {
   id: string;
   title: string;
   category: ActionCategory;
+  dopaminePathway: DopaminePathway;
   hours: number;
   description: string;
   isTemptation: boolean;

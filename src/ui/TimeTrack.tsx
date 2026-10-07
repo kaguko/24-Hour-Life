@@ -21,15 +21,20 @@ const CATEGORY_COLORS: Record<string, string> = {
   work_overtime: 'bg-amber-700 text-white',
   learn_skill: 'bg-teal-600 text-white',
   exercise: 'bg-emerald-600 text-white',
-  cook_healthy: 'bg-green-600 text-white',
-  meditate_walk: 'bg-teal-500 text-white',
+  short_walk: 'bg-emerald-500 text-white',
+  pet_bonding: 'bg-teal-500 text-white',
+  deep_talk: 'bg-cyan-600 text-white',
+  meditate_breathe: 'bg-sky-600 text-white',
+  cook_tyrosine: 'bg-green-600 text-white',
+  listen_music: 'bg-teal-600 text-white',
   clean_room: 'bg-slate-500 text-white',
-  meet_friend: 'bg-cyan-600 text-white',
   call_family: 'bg-sky-600 text-white',
   beer_party: 'bg-rose-600 text-white',
   scroll_social: 'bg-fuchsia-600 text-white',
   binge_gaming: 'bg-purple-600 text-white',
   fast_food: 'bg-orange-500 text-white',
+  impulse_shopping: 'bg-rose-500 text-white',
+  caffeine_spike: 'bg-amber-500 text-white',
 };
 
 export const TimeTrack: React.FC<TimeTrackProps> = ({

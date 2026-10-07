@@ -67,12 +67,12 @@ export const DOMAIN_STRATEGIES: DomainStrategy[] = [
     decideActionId: (stats, hoursLeft, actionsToday) => {
       const slept = actionsToday.includes('sleep_deep');
       const worked = actionsToday.some((id) => id.startsWith('work_'));
-      const wellness = actionsToday.some((id) => ['exercise', 'cook_healthy'].includes(id));
+      const wellness = actionsToday.some((id) => ['exercise', 'cook_tyrosine', 'short_walk'].includes(id));
 
       if (!slept && hoursLeft >= 8) return 'sleep_deep';
       if (!worked && hoursLeft >= 4) return 'work_focused';
       if (!wellness && hoursLeft >= 1.5 && stats.energy > 35) return 'exercise';
-      if (hoursLeft >= 1.5 && stats.energy < 50) return 'cook_healthy';
+      if (hoursLeft >= 1.5 && stats.energy < 50) return 'cook_tyrosine';
       if (stats.social < 50 && hoursLeft >= 1) return 'call_family';
       if (hoursLeft >= 2 && stats.willpower >= 30) return 'learn_skill';
       if (hoursLeft >= 1.5) return 'sleep_nap';

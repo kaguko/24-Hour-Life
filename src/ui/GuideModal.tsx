@@ -1,89 +1,151 @@
 import React from 'react';
-import { Shield, Sparkles, Clock, AlertCircle, Heart, DollarSign } from 'lucide-react';
+import { Zap, Sprout, Brain, Shield, Clock, Heart, Award, Sparkles } from 'lucide-react';
 
 export const GuideModal: React.FC = () => {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Overview */}
       <div className="p-6 bg-white rounded-2xl border border-stone-200 shadow-xs space-y-3">
-        <h2 className="text-lg font-bold text-stone-900">
-          Nguyên Lý Thiết Kế & Hướng Dẫn: &quot;Cuộc Sống 24 Giờ&quot;
-        </h2>
+        <div className="flex items-center gap-2">
+          <Brain className="w-5 h-5 text-indigo-600" />
+          <h2 className="text-lg font-bold text-stone-900">
+            Khoa Học Não Bộ: Hai Con Đường Dopamine & Triết Lý Thiết Kế
+          </h2>
+        </div>
         <p className="text-xs text-stone-600 leading-relaxed">
-          Game không dạy bạn đạo lý hay bắt bạn sống như một cỗ máy. Game đưa bạn vào một môi trường
-          mô phỏng chân thực: Bạn có 24 giờ mỗi ngày, đối mặt với các áp lực sinh hoạt, deadline và những
-          cơn thèm dopamine ngắn hạn của não bộ.
+          Dopamine không phải là &quot;hormone hạnh phúc&quot; đơn thuần, mà là <strong>phân tử của sự khao khát (craving) và động lực</strong>.
+          Trong &quot;Cuộc sống 24 giờ&quot;, trò chơi mô phỏng chính xác sự giằng xé giữa hai cơ chế giải phóng dopamine trong não bộ người:
         </p>
+
+        {/* 2 Core Pathways Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+            <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+              <Zap className="w-4 h-4 text-amber-600 fill-amber-500" />
+              <span>1. Dopamine Nhanh (Fast / Cheap Dopamine)</span>
+            </div>
+            <p className="text-xs text-amber-900/80 leading-relaxed">
+              Đến từ những hoạt động mang lại phần thưởng tức thì, đòi hỏi ít hoặc không có nỗ lực. Nó tạo ra cảm giác &quot;phê&quot; ngắn nhưng tụt dốc rất nhanh (crash), khiến não bộ đòi hỏi liều kích thích cao hơn và làm cạn kiệt ý chí.
+            </p>
+            <div className="text-[11px] text-amber-800 bg-amber-100/60 p-2 rounded-lg font-medium">
+              Ví dụ: Doomscrolling TikTok, cày game gacha, đồ ăn ngọt béo, mua sắm bốc đồng, nhậu đêm, caffeine ép tỉnh.
+            </div>
+          </div>
+
+          <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-2">
+            <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
+              <Sprout className="w-4 h-4 text-emerald-600" />
+              <span>2. Dopamine Chậm (Slow / Healthy Dopamine)</span>
+            </div>
+            <p className="text-xs text-emerald-900/80 leading-relaxed">
+              Đến từ những nỗ lực có chủ đích, đòi hỏi thời gian, công sức và sự kiên nhẫn. Nó mang lại cảm giác thỏa mãn và tự hào sâu sắc, nâng cao ngưỡng dopamine cơ bản (baseline) và nuôi dưỡng ý chí vững bền.
+            </p>
+            <div className="text-[11px] text-emerald-800 bg-emerald-100/60 p-2 rounded-lg font-medium">
+              Ví dụ: Chạy bộ, đi bộ phơi nắng, vuốt ve thú cưng, học đàn, trò chuyện sâu với tri kỷ, thiền định, ngủ đủ 8h.
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* 6 Stats Explanation */}
+      {/* Comparison Table */}
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-stone-100">
+          <h3 className="text-sm font-bold text-stone-900">
+            Bảng Đối Chiếu Hai Con Đường Dopamine Trong Game
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-stone-700">
+            <thead className="bg-stone-50 text-stone-600 uppercase font-semibold border-b border-stone-200">
+              <tr>
+                <th className="p-3">Tiêu chí</th>
+                <th className="p-3 text-amber-800">Dopamine Nhanh (Fast)</th>
+                <th className="p-3 text-emerald-800">Dopamine Chậm (Slow)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100">
+              <tr>
+                <td className="p-3 font-semibold text-stone-900">Nỗ lực ban đầu</td>
+                <td className="p-3 text-stone-600">Gần như bằng 0 (quẹt ngón tay, mở app, gọi đồ ăn)</td>
+                <td className="p-3 text-stone-600">Cần vượt qua sức ì tâm lý và tính kỷ luật</td>
+              </tr>
+              <tr>
+                <td className="p-3 font-semibold text-stone-900">Thời gian nhận thưởng</td>
+                <td className="p-3 text-stone-600">Tức thì trong vài giây</td>
+                <td className="p-3 text-stone-600">Chậm, tích lũy sau 20 phút đến vài tiếng</td>
+              </tr>
+              <tr>
+                <td className="p-3 font-semibold text-stone-900">Ảnh hưởng hôm sau</td>
+                <td className="p-3 text-rose-700 font-medium">
+                  Trống rỗng, tụt dốc cảm xúc (Crash), uể oải, mất tập trung
+                </td>
+                <td className="p-3 text-emerald-700 font-medium">
+                  Tâm trí sảng khoái, tăng năng lượng, ý chí hồi phục vững chãi
+                </td>
+              </tr>
+              <tr>
+                <td className="p-3 font-semibold text-stone-900">Khi Ý chí thấp (&lt;35%)</td>
+                <td className="p-3 text-amber-700 font-semibold">
+                  Phóng đại ảo giác: Trông hấp dẫn gấp đôi, cực kỳ khó cưỡng lại
+                </td>
+                <td className="p-3 text-stone-500">
+                  Bị não bộ phản kháng, đòi hỏi trả thêm chi phí ý chí để bắt đầu
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 4 Nhóm Nguồn Kích Thích Chi Tiết */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-4 bg-white rounded-xl border border-stone-200 space-y-2">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
-              1
-            </div>
-            <h3 className="text-sm font-bold text-stone-900">Ý Chí (Willpower) - Cơ Chế Cốt Lõi Mới</h3>
+            <Award className="w-4 h-4 text-emerald-600" />
+            <h4 className="text-xs font-bold text-stone-900 uppercase tracking-wider">
+              Vận Động & Thể Chất Lành Mạnh
+            </h4>
           </div>
           <p className="text-xs text-stone-600 leading-relaxed">
-            Ý chí là nguồn tài nguyên có hạn tiêu hao khi bạn làm việc, tập thể dục hoặc cưỡng lại cám dỗ.
-            <strong> Khi Ý chí dưới 35%: </strong> Não bạn rơi vào trạng thái &quot;đói khoái cảm&quot;. Lúc này,
-            các hành vi xấu (lướt TikTok, chơi game) sẽ được hiển thị to hơn, sáng hơn và hấp dẫn hơn,
-            trong khi các việc tốt sẽ bị cản trở bởi sức ì tâm lý lớn!
+            Các bài tập aerobic như chạy bộ kích hoạt cơ chế giải phóng dopamine và beta-endorphin tự nhiên. Thậm chí chỉ cần đi bộ 20 phút dưới ánh nắng mặt trời buổi sáng cũng giúp tái thiết lập nhịp sinh học và tạo ra &quot;bữa tiệc dopamine&quot; nhẹ nhàng cho hệ thần kinh.
           </p>
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-stone-200 space-y-2">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-fuchsia-100 text-fuchsia-700 flex items-center justify-center font-bold text-xs">
-              2
-            </div>
-            <h3 className="text-sm font-bold text-stone-900">Dopamine & Cơn Sụp Đổ Cảm Xúc (Crash)</h3>
+            <Heart className="w-4 h-4 text-emerald-600" />
+            <h4 className="text-xs font-bold text-stone-900 uppercase tracking-wider">
+              Gắn Kết & Dinh Dưỡng Tyrosine
+            </h4>
           </div>
           <p className="text-xs text-stone-600 leading-relaxed">
-            Dopamine không phải là kẻ thù, nhưng dopamine rẻ tiền (từ video ngắn, thức ăn nhanh) làm tăng
-            ngưỡng kích thích của não. Nếu bạn dồn dopamine lên quá cao trong ngày hôm trước, sáng hôm sau
-            bạn sẽ hứng chịu hậu quả trễ: Trống rỗng, mất động lực và thèm lướt điện thoại ngay khi mở mắt.
+            Khoa học chứng minh việc vuốt ve thú cưng, trò chuyện chất lượng với bạn bè và ăn thực phẩm giàu axit amin tyrosine (thịt gà, trứng, bơ, chuối, hạt) cung cấp nguyên liệu tự nhiên để não bộ sản sinh dopamine bền vững mà không gây chai lì thụ thể.
           </p>
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-stone-200 space-y-2">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs">
-              3
-            </div>
-            <h3 className="text-sm font-bold text-stone-900">Năng Lượng & Nợ Ngủ Lũy Kế</h3>
+            <Zap className="w-4 h-4 text-amber-600" />
+            <h4 className="text-xs font-bold text-stone-900 uppercase tracking-wider">
+              Mạng Xã Hội & Cạm Bẫy Doomscrolling
+            </h4>
           </div>
           <p className="text-xs text-stone-600 leading-relaxed">
-            Chuẩn mực sinh học là 7-8 giờ ngủ sâu mỗi ngày. Thiếu ngủ 1-2 tiếng trông có vẻ vô hại trong
-            ngắn hạn, nhưng nợ ngủ sẽ tích lũy ngầm. Khi nợ ngủ vượt quá 6 giờ, bạn bị sương mù não (Brain
-            Fog), giảm mạnh hiệu suất và năng lượng phục hồi.
+            Các thuật toán video ngắn vận hành dựa trên cơ chế phần thưởng biến đổi không thể đoán trước (như máy đánh bạc gacha). Mỗi lần cuộn là một vé số dopamine mới, khiến não bộ bị giam cầm trong vòng lặp vô tận nhưng không hề mang lại giá trị thật.
           </p>
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-stone-200 space-y-2">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xs">
-              4
-            </div>
-            <h3 className="text-sm font-bold text-stone-900">Tài Chính & Áp Lực Sinh Hoạt</h3>
+            <Clock className="w-4 h-4 text-indigo-600" />
+            <h4 className="text-xs font-bold text-stone-900 uppercase tracking-wider">
+              Giấc Ngủ: Nhà Máy Tái Tạo Thụ Thể D2
+            </h4>
           </div>
           <p className="text-xs text-stone-600 leading-relaxed">
-            Mỗi đêm chuyển ngày, hệ thống tự động trừ tiền thuê trọ và sinh hoạt cố định (-120k VNĐ).
-            Nếu bạn chỉ lo nghỉ ngơi hoặc tiệc tùng mà không làm việc tạo thu nhập, tài khoản sẽ âm, gây
-            căng thẳng cực độ và dẫn tới thua cuộc (Bankrupt).
+            Chỉ khi bạn ngủ đủ 7-8 tiếng, các thụ thể dopamine mới có cơ hội tự phục hồi độ nhạy bén. Thiếu ngủ liên tục làm thụ thể bị thoái hóa, khiến bạn luôn trong trạng thái &quot;đói kích thích&quot; và dễ sa vào các thói quen xấu vào ngày hôm sau.
           </p>
         </div>
-      </div>
-
-      {/* Triết lý làm game */}
-      <div className="p-5 bg-stone-100 rounded-2xl space-y-2 text-stone-800">
-        <h3 className="text-sm font-bold">Triết lý thiết kế: Không phán xét, chỉ có nhân quả</h3>
-        <p className="text-xs text-stone-600 leading-relaxed">
-          Game không dùng những thủ thuật giữ chân gây nghiện như thông báo đẩy, chuỗi streak vô nghĩa hay
-          quảng cáo đổi năng lượng. Thông điệp duy nhất là giúp người chơi tự nhận diện khoảnh khắc:
-          &quot;Ơ, mình vừa chọn một quyết định tưởng như nhỏ nhặt, nhưng cái giá phải trả vào ngày mai lại lớn đến vậy!&quot;
-        </p>
       </div>
     </div>
   );

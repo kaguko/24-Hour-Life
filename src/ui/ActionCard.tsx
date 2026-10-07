@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActionPrimitive, PlayerStatsPrimitive } from '../domain';
-import { Clock, ArrowRight, AlertTriangle, Flame } from 'lucide-react';
+import { Clock, ArrowRight, AlertTriangle, Flame, Zap, Sprout } from 'lucide-react';
 
 interface ActionCardProps {
   action: ActionPrimitive;
@@ -19,8 +19,8 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   const isLowWillpower = currentStats.willpower < 35;
 
   // Ảo giác cám dỗ khi ý chí thấp
-  const isTemptationIllusion = isLowWillpower && action.isTemptation;
-  const isHealthyFriction = isLowWillpower && !action.isTemptation && action.willpowerCost >= 10;
+  const isTemptationIllusion = isLowWillpower && action.dopaminePathway === 'fast';
+  const isHealthyFriction = isLowWillpower && action.dopaminePathway === 'slow' && action.willpowerCost >= 10;
 
   // Tính số hiển thị Dopamine (nếu có ảo giác thì phóng to)
   const baseDopamine = action.baseDopamine ?? 0;
@@ -41,37 +41,45 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       }`}
     >
       <div>
-        {/* Top Badges & Category indicator */}
+        {/* Top Badges: Category & Dopamine Pathway */}
         <div className="flex items-start justify-between gap-1 mb-2">
           <div className="flex items-center gap-1.5 text-xs text-stone-500">
             <Clock className="w-3.5 h-3.5 text-stone-400" />
             <span className="font-semibold text-stone-800 tabular-nums">{action.hours}h</span>
             <span>·</span>
-            <span className="capitalize">
-              {action.category === 'rest'
-                ? 'Nghỉ ngơi'
-                : action.category === 'work'
-                ? 'Công việc'
-                : action.category === 'wellness'
-                ? 'Rèn luyện'
-                : action.category === 'social'
-                ? 'Kết nối'
-                : 'Cám dỗ'}
-            </span>
+            {action.dopaminePathway === 'fast' ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.2 rounded">
+                <Zap className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
+                <span>Dopamine Nhanh</span>
+              </span>
+            ) : action.dopaminePathway === 'slow' ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.2 rounded">
+                <Sprout className="w-2.5 h-2.5 text-emerald-600" />
+                <span>Dopamine Chậm</span>
+              </span>
+            ) : (
+              <span className="capitalize text-stone-600">
+                {action.category === 'rest'
+                  ? 'Nghỉ ngơi'
+                  : action.category === 'work'
+                  ? 'Công việc'
+                  : 'Hoạt động'}
+              </span>
+            )}
           </div>
 
           {/* Cảnh báo / ảo giác */}
           {isTemptationIllusion && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-fuchsia-700 bg-fuchsia-100 px-2 py-0.5 rounded-full animate-bounce">
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-fuchsia-700 bg-fuchsia-100 px-2 py-0.5 rounded-full animate-bounce shrink-0">
               <Flame className="w-3 h-3 text-fuchsia-600 fill-fuchsia-600" />
-              <span>Cực kỳ hấp dẫn!</span>
+              <span>Cực hấp dẫn!</span>
             </span>
           )}
 
           {isHealthyFriction && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0">
               <AlertTriangle className="w-2.5 h-2.5" />
-              <span>Sức ì nội tâm</span>
+              <span>Sức ì nỗ lực</span>
             </span>
           )}
         </div>
@@ -92,13 +100,15 @@ export const ActionCard: React.FC<ActionCardProps> = ({
               className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
                 isTemptationIllusion
                   ? 'bg-fuchsia-200 text-fuchsia-900 font-bold text-xs ring-1 ring-fuchsia-400'
-                  : displayDopamine > 0
-                  ? 'bg-pink-100 text-pink-800'
+                  : action.dopaminePathway === 'fast'
+                  ? 'bg-amber-100 text-amber-900'
+                  : action.dopaminePathway === 'slow'
+                  ? 'bg-emerald-100 text-emerald-800'
                   : 'bg-stone-100 text-stone-600'
               }`}
             >
               {displayDopamine > 0 ? `+${displayDopamine}` : displayDopamine} Dopamine
-              {isTemptationIllusion && ' 🔥'}
+              {action.dopaminePathway === 'fast' ? ' ⚡' : action.dopaminePathway === 'slow' ? ' 🌱' : ''}
             </span>
           )}
 
@@ -189,7 +199,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
             : isTemptationIllusion
             ? 'Lướt liền cho sướng!'
             : isHealthyFriction
-            ? 'Vượt qua sức ì để làm'
+            ? 'Vượt sức ì để rèn luyện'
             : 'Chọn hành vi này'}
         </span>
         {isAffordableTime && <ArrowRight className="w-3.5 h-3.5" />}

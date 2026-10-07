@@ -25,12 +25,14 @@
   - [x] 6 chỉ số: `dopamine`, `energy`, `mental`, `social`, `money`, và **`willpower`** (Ý chí).
   - [x] Bộ đánh giá trạng thái người chơi: *Cân bằng (thriving), Ổn định (stable), Căng thẳng (stressed), Kiệt quệ (burnout), Phá sản (bankrupt)*.
   - [x] Chi phí sinh hoạt cố định: Trừ tiền trọ 120k VNĐ/ngày.
-- [x] **`src/core/actions.ts`**:
-  - [x] 15 hành vi được phân loại (*rest, work, wellness, social, temptation*).
-  - [x] **Cơ chế cốt lõi - Bẫy suy giảm ý chí**: Khi `willpower < 35`, hành vi cám dỗ phóng đại dopamine, hành vi lành mạnh bị tăng sức ì ý chí.
-- [x] **`src/core/consequence.ts`**:
-  - [x] Tính toán hậu quả trễ qua đêm: Nợ ngủ (`Sleep Debt`), Cơn sụp đổ cảm xúc (`Dopamine Crash`), Cô lập xã hội, Áp lực nợ nần.
-  - [x] Hé lộ các quy luật tâm lý ẩn sau ngày 3–5.
+- [x] **`src/domain/actions.ts`**:
+  - [x] Hệ thống hành vi phân loại theo **Hai con đường Dopamine**:
+    - **⚡ Dopamine Nhanh (Fast/Cheap)**: Doomscrolling TikTok, Cày game gây nghiện, Đồ ăn siêu ngon miệng, Mua sắm bốc đồng, Nhậu đêm, Caffeine ép tỉnh.
+    - **🌱 Dopamine Chậm (Slow/Healthy)**: Chạy bộ, Đi bộ 20p phơi nắng, Vuốt ve thú cưng, Học kỹ năng & nhạc cụ, Trò chuyện sâu, Thiền định, Nấu ăn giàu Tyrosine, Nghe album nhạc, Dọn dẹp nhà cửa.
+  - [x] **Cơ chế cốt lõi - Bẫy suy giảm ý chí**: Khi `willpower < 35`, hành vi Dopamine Nhanh phóng đại khoái cảm ảo, hành vi Dopamine Chậm bị não bộ phản kháng gây sức ì ý chí.
+- [x] **`src/domain/consequence.ts`**:
+  - [x] Tính toán hậu quả trễ qua đêm: Nợ ngủ (`Sleep Debt`), Cơn sụp đổ Dopamine Nhanh (`Fast Dopamine Crash`), Tích lũy Dopamine Chậm (`Slow Dopamine Consolidation`), Cô lập xã hội, Áp lực nợ nần.
+  - [x] Hé lộ các quy luật khoa học thần kinh ẩn sau ngày 2–5.
 - [x] **`src/core/events.ts`**:
   - [x] 6 biến cố bất ngờ với các nhánh lựa chọn đánh đổi thời gian và tiền bạc.
 - [x] **`src/core/simulate.ts`**:

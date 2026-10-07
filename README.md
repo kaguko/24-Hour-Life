@@ -33,6 +33,17 @@ Mục tiêu của game là giúp người chơi tự nhận diện khoảnh kh�
 
 ---
 
+### 2. Hai Con Đường Dopamine: Nhanh vs Chậm (Neuroscience Framework)
+Game mô phỏng thực tế khoa học thần kinh về 2 cơ chế giải phóng dopamine:
+- **⚡ Dopamine Nhanh (Fast / Cheap Dopamine):**
+  - *Hoạt động:* Doomscrolling TikTok, cày game gacha, đồ ăn siêu ngon miệng, mua sắm bốc đồng, nhậu nhẹt, caffeine ép tỉnh.
+  - *Đặc điểm:* Không cần nỗ lực, kích thích tức thì, nhưng tụt dốc rất nhanh (crash), hạ thấp dopamine baseline và bào mòn ý chí.
+- **🌱 Dopamine Chậm (Slow / Healthy Dopamine):**
+  - *Hoạt động:* Chạy bộ, đi bộ phơi nắng, vuốt ve thú cưng, học kỹ năng & chơi đàn, trò chuyện sâu, thiền định, bữa ăn giàu tyrosine.
+  - *Đặc điểm:* Cần nỗ lực và thời gian, nhưng xây dựng cảm giác tự hào sâu sắc, nâng cao ngưỡng thỏa mãn tự nhiên và phục hồi ý chí.
+
+---
+
 ### 2. Cơ chế Đặc biệt: Ảo Giác khi Ý Chí Thấp (Low-Willpower Illusion)
 - Trong đời thực, khi bạn mệt mỏi và cạn kiệt ý chí, não bộ sẽ tự động tìm **đường tắt dopamine**.
 - **Trong game**: Khi chỉ số **Ý chí $< 35\%$**:
