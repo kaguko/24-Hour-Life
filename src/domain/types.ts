@@ -37,6 +37,12 @@ export interface ActionPrimitive {
 
 export type SoundCue = 'temptation' | 'healthy' | 'neutral' | 'sigh' | 'night' | 'victory';
 
+export interface QuotePrimitive {
+  quote: string;
+  author: string;
+  role: string;
+}
+
 export interface ActionResultPrimitive {
   success: boolean;
   actionId: string;
@@ -45,6 +51,7 @@ export interface ActionResultPrimitive {
   newStats: PlayerStatsPrimitive;
   notice: string | null;
   soundCue: SoundCue;
+  philosophicalQuote?: QuotePrimitive;
 }
 
 export interface NightResultPrimitive {
@@ -56,6 +63,7 @@ export interface NightResultPrimitive {
   newStats: PlayerStatsPrimitive;
   notes: string[];
   revealedMechanics: string[];
+  philosophicalQuote?: QuotePrimitive;
 }
 
 export type LifeStatus = 'thriving' | 'stable' | 'stressed' | 'burnout' | 'bankrupt';

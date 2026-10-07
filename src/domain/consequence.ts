@@ -1,6 +1,7 @@
 import { PlayerStatsPrimitive, NightResultPrimitive } from './types';
 import { DAILY_RENT_COST, MIN_SLEEP_HOURS, applyStatDeltas } from './stats';
 import { DOMAIN_ACTIONS } from './actions';
+import { PhilosophicalQuote, getContextualQuote } from './quotes';
 
 /**
  * Pure domain consequence processing
@@ -124,6 +125,26 @@ export function processOvernightCycle(
 
   const newStats = applyStatDeltas(currentStats, deltas);
 
+  // 7. Chọn câu triết lý vĩ nhân theo chủ đề nổi bật của ngày
+  let quoteTheme: PhilosophicalQuote['theme'] = 'balance_moderation';
+  if (actionIdsToday.includes('tease_dog')) {
+    quoteTheme = 'folly_recklessness';
+  } else if (fastDopamineHours >= 3 || currentStats.dopamine >= 75) {
+    quoteTheme = 'fast_dopamine';
+  } else if (sleepHours < 5 || currentStats.energy <= 20) {
+    quoteTheme = 'burnout_rest';
+  } else if (slowDopamineHours >= 2.5) {
+    quoteTheme = 'slow_dopamine';
+  } else if (currentStats.money - DAILY_RENT_COST < 0) {
+    quoteTheme = 'financial_freedom';
+  } else if (currentStats.social < 25) {
+    quoteTheme = 'social_connection';
+  } else if (actionIdsToday.includes('study_deep')) {
+    quoteTheme = 'flow_study';
+  }
+
+  const selectedQuote = getContextualQuote(quoteTheme);
+
   return {
     dayCompleted: dayNumber,
     rentPaid: DAILY_RENT_COST,
@@ -133,5 +154,10 @@ export function processOvernightCycle(
     newStats,
     notes,
     revealedMechanics,
+    philosophicalQuote: {
+      quote: selectedQuote.quote,
+      author: selectedQuote.author,
+      role: selectedQuote.role,
+    },
   };
 }

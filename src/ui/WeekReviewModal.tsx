@@ -93,6 +93,21 @@ export const WeekReviewModal: React.FC<WeekReviewModalProps> = ({
             </div>
           </div>
 
+          {/* Đúc kết triết lý vĩ nhân sau 7 ngày */}
+          <div className="p-4 bg-stone-100/80 rounded-xl border border-stone-200 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-stone-900">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>Triết lý soi chiếu sau 7 ngày thử thách</span>
+            </div>
+            <blockquote className="text-xs italic text-stone-800 leading-relaxed font-serif pl-2 border-l-2 border-stone-400">
+              {lifeStatus.status === 'thriving'
+                ? '“Sự vĩ đại không phải là một hành vi đơn lẻ, mà là một thói quen được tôi luyện bằng đức tính trung dung.” — Aristotle'
+                : lifeStatus.status === 'stable'
+                ? '“Bạn không vươn lên tới tầm của các mục tiêu; bạn tụt xuống mức của các hệ thống thói quen hàng ngày.” — James Clear'
+                : '“Kẻ nào làm nô lệ cho những dục vọng tức thời sẽ không bao giờ tìm thấy tự do đích thực.” — Seneca'}
+            </blockquote>
+          </div>
+
           {/* Câu hỏi suy ngẫm cốt lõi của tác giả */}
           <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-3">
             <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-950">

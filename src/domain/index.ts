@@ -11,3 +11,4 @@ export * from './actions';
 export * from './consequence';
 export * from './events';
 export * from './simulate';
+export * from './quotes';

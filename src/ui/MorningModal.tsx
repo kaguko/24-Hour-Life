@@ -1,6 +1,6 @@
 import React from 'react';
 import { NightResultPrimitive } from '../domain';
-import { Sunrise, Lightbulb, ArrowRight } from 'lucide-react';
+import { Sunrise, Lightbulb, ArrowRight, Quote } from 'lucide-react';
 
 interface MorningModalProps {
   report: NightResultPrimitive;
@@ -60,6 +60,22 @@ export const MorningModal: React.FC<MorningModalProps> = ({ report, onContinue }
               ))}
             </div>
           </div>
+
+          {/* Triết lý vĩ nhân đúc kết sau chuỗi hành động */}
+          {report.philosophicalQuote && (
+            <div className="p-4 bg-gradient-to-br from-indigo-50/90 via-stone-50 to-amber-50/50 border border-indigo-200/80 rounded-xl space-y-2 shadow-2xs">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900">
+                <Quote className="w-3.5 h-3.5 text-indigo-600 fill-indigo-600" />
+                <span>Lời đúc kết từ vĩ nhân</span>
+              </div>
+              <blockquote className="text-xs italic text-stone-800 leading-relaxed font-serif pl-2 border-l-2 border-indigo-400">
+                &ldquo;{report.philosophicalQuote.quote}&rdquo;
+              </blockquote>
+              <div className="text-[11px] text-right text-stone-600 font-medium pt-0.5">
+                — <strong className="text-stone-900">{report.philosophicalQuote.author}</strong> ({report.philosophicalQuote.role})
+              </div>
+            </div>
+          )}
 
           {/* Cơ chế ẩn được hé lộ (sau ngày 3-5) */}
           {report.revealedMechanics.length > 0 && (

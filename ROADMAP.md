@@ -57,6 +57,9 @@
   - [x] Bộ lọc theo danh mục (Tất cả, Nghỉ ngơi, Công việc, Rèn luyện, Kết nối, Cám dỗ).
 - [x] **`src/ui/MorningModal.tsx`**:
   - [x] Báo cáo hậu quả trễ qua đêm mỗi sáng (trừ tiền trọ, nợ ngủ, dopamine crash, quy luật ẩn).
+  - [x] **Đúc kết triết lý vĩ nhân**: Tự động trích dẫn danh ngôn tương ứng với chủ đề hành vi nổi bật trong ngày (Seneca, Marcus Aurelius, Lão Tử, Socrates, Khổng Tử, Mark Twain, v.v.).
+- [x] **`src/domain/quotes.ts`**:
+  - [x] Kho tàng triết lý vĩ nhân phân loại theo 9 chủ đề tâm lý học hành vi.
 - [x] **`src/ui/EventModal.tsx`**:
   - [x] Pop-up xử lý biến cố bất ngờ trong ngày với phản hồi chi tiết.
 - [x] **`src/ui/WeekReviewModal.tsx`**:
