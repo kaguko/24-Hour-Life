@@ -60,7 +60,12 @@ Game mô phỏng thực tế khoa học thần kinh về 2 cơ chế giải phó
 
 ---
 
-### 4. Phòng Thí Nghiệm Mô Phỏng 1000 Ván (`Simulation Bench`)
+### 4. Kết Cục & Chia Sẻ
+Mỗi ván kết thúc bằng một **kết cục** (10 kiểu người chơi, ví dụ *Bậc Thầy Cân Bằng*, *Nô Lệ Dopamine*, *Ẩn Sĩ Ngủ Đông*) cùng điểm 0–100. Người chơi có thể tạo ảnh chia sẻ ngay trên máy (Canvas, không server, không theo dõi).
+
+---
+
+### 5. Phòng Thí Nghiệm Mô Phỏng 1000 Ván (`Simulation Bench`)
 Game tích hợp sẵn công cụ mô phỏng chiến thuật tự động ngay trên giao diện:
 - Cho phép chạy **100, 500 hoặc 1000 ván chơi** cho 5 phong cách sống:
   1. **Dopamine Chaser**: Ưu tiên lướt mạng, game, đồ ăn nhanh $\rightarrow$ Vui 1–2 ngày đầu, sau đó sụp đổ vào ngày 4–5.
@@ -127,6 +132,8 @@ npm install
 # 2. Khởi chạy máy chủ phát triển
 npm run dev
 ```
+
+> Khi deploy, đặt biến môi trường `VITE_SITE_URL` (trên Vercel tự nhận) để thẻ OG có URL tuyệt đối.
 
 Mở trình duyệt tại địa chỉ: `http://localhost:3000`
 

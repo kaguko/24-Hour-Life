@@ -1,11 +1,26 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, type Plugin} from 'vite';
+
+/**
+ * Điền URL tuyệt đối vào thẻ OG/canonical (crawler của Facebook, Zalo, X cần URL đầy đủ).
+ * Ưu tiên VITE_SITE_URL; trên Vercel tự dùng domain production.
+ */
+function siteUrlPlugin(): Plugin {
+  const raw =
+    process.env.VITE_SITE_URL ??
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '');
+  const siteUrl = raw.replace(/\/$/, '');
+  return {
+    name: 'site-url',
+    transformIndexHtml: (html) => html.replaceAll('__SITE_URL__', siteUrl),
+  };
+}
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), siteUrlPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

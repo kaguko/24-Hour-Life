@@ -101,6 +101,16 @@ Những thay đổi cân bằng đã áp dụng: chiến lược mô phỏng nay
 
 ---
 
+### ✅ GIAI ĐOẠN "KẾT CỤC & CHIA SẺ" (ĐÃ HOÀN THÀNH)
+Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, không dùng cơ chế giữ chân kiểu mạng xã hội (không streak/leaderboard/ads).
+- [x] **`domain/ending.ts`**: 10 kết cục (Bậc Thầy Cân Bằng, Nô Lệ Dopamine, Cỗ Máy Kiệt Sức, Ẩn Sĩ Ngủ Đông, Linh Hồn Tiệc Tùng, Pha Lê Dễ Vỡ, Kẻ Sống Sót Trên Lằn Ranh, Chiến Binh Cày Cuốc, Người Bền Bỉ, Kẻ Thách Thức Loài Chó) + điểm 0–100; pure domain, có `buildShareText`.
+- [x] **Luồng kết thúc ván**: gục giữa chừng (kiệt quệ/phá sản) hoặc đủ 7 ngày đều ra `EndingModal`; trạng thái `finished` + `history` lưu qua reload. Bỏ nút "Tiếp tục tuần 2" (trước đây kẹt ở ngày 7).
+- [x] **`adapters/shareAdapter.ts`**: vẽ ảnh 1080×1350 bằng Canvas, Web Share API trên mobile, tải ảnh + chép nội dung trên desktop. Không tracking, không server.
+- [x] **`IntroModal`** cho lần chơi đầu (hiểu game trong 30 giây).
+- [x] **SEO/OG**: `public/og.png`, favicon, thẻ OG/Twitter, canonical; `vite.config.ts` tự điền URL tuyệt đối từ `VITE_SITE_URL` hoặc `VERCEL_PROJECT_PRODUCTION_URL`.
+- [x] Dọn gói/file không dùng (`express`, `dotenv`, `@google/genai`, `motion`, `lib/sound.ts`, `lib/storage.ts`).
+- [x] Kiểm thử UI tự động bằng Playwright (Edge headless): intro → chơi → kết cục → chia sẻ → reload → chơi lại, cả desktop và mobile.
+
 ### 📅 TUẦN 4: Cân Bằng Dựa Trên Dữ Liệu & Nâng Cấp Âm Thanh
 - [ ] Cân bằng lại thông số hành vi bằng cách chạy lại `simulate.ts` sau khi nhận phản hồi từ playtest.
 - [ ] Bổ sung nhạc nền nhẹ (Ambient/Lo-fi CC0, có giấy phép rõ ràng).
