@@ -1,24 +1,24 @@
 import React, { useState } from 'react';
-import { RandomEvent, EventChoice } from '../core/events';
+import { EventPrimitive } from '../domain';
 import { AlertCircle, Clock, ArrowRight } from 'lucide-react';
 
 interface EventModalProps {
-  event: RandomEvent;
-  onResolveChoice: (choice: EventChoice) => void;
+  event: EventPrimitive;
+  onResolveChoice: (choiceId: string) => void;
 }
 
 export const EventModal: React.FC<EventModalProps> = ({ event, onResolveChoice }) => {
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
-  const [resolvedChoice, setResolvedChoice] = useState<EventChoice | null>(null);
+  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
 
-  const handleSelect = (choice: EventChoice) => {
-    setSelectedFeedback(choice.feedback);
-    setResolvedChoice(choice);
+  const handleSelect = (choiceId: string, feedback: string) => {
+    setSelectedFeedback(feedback);
+    setSelectedChoiceId(choiceId);
   };
 
   const handleFinish = () => {
-    if (resolvedChoice) {
-      onResolveChoice(resolvedChoice);
+    if (selectedChoiceId) {
+      onResolveChoice(selectedChoiceId);
     }
   };
 
@@ -48,7 +48,7 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onResolveChoice }
               {event.choices.map((choice) => (
                 <button
                   key={choice.id}
-                  onClick={() => handleSelect(choice)}
+                  onClick={() => handleSelect(choice.id, choice.feedback)}
                   className="w-full text-left p-3.5 rounded-xl border border-stone-200 hover:border-stone-400 bg-stone-50 hover:bg-white transition-all group flex flex-col gap-1.5"
                 >
                   <div className="flex items-center justify-between text-xs font-semibold text-stone-900 group-hover:text-amber-700">

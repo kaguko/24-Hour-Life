@@ -1,13 +1,12 @@
 import React from 'react';
-import { ActionDefinition } from '../core/actions';
-import { PlayerStats } from '../core/stats';
-import { Sparkles, Clock, ArrowRight, AlertTriangle, Flame } from 'lucide-react';
+import { ActionPrimitive, PlayerStatsPrimitive } from '../domain';
+import { Clock, ArrowRight, AlertTriangle, Flame } from 'lucide-react';
 
 interface ActionCardProps {
-  action: ActionDefinition;
-  currentStats: PlayerStats;
+  action: ActionPrimitive;
+  currentStats: PlayerStatsPrimitive;
   hoursRemaining: number;
-  onSelect: (action: ActionDefinition) => void;
+  onSelect: (actionId: string) => void;
 }
 
 export const ActionCard: React.FC<ActionCardProps> = ({
@@ -18,14 +17,13 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 }) => {
   const isAffordableTime = hoursRemaining >= action.hours;
   const isLowWillpower = currentStats.willpower < 35;
-  const isExhausted = currentStats.energy < 20;
 
   // Ảo giác cám dỗ khi ý chí thấp
   const isTemptationIllusion = isLowWillpower && action.isTemptation;
   const isHealthyFriction = isLowWillpower && !action.isTemptation && action.willpowerCost >= 10;
 
   // Tính số hiển thị Dopamine (nếu có ảo giác thì phóng to)
-  const baseDopamine = action.baseChanges.dopamine ?? 0;
+  const baseDopamine = action.baseDopamine ?? 0;
   const displayDopamine = isTemptationIllusion
     ? baseDopamine + (action.perceivedDopamineBonus ?? 20)
     : baseDopamine;
@@ -105,82 +103,67 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           )}
 
           {/* Energy */}
-          {action.baseChanges.energy !== undefined && (
+          {action.baseEnergy !== undefined && (
             <span
               className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                action.baseChanges.energy > 0
+                action.baseEnergy > 0
                   ? 'bg-amber-100 text-amber-800'
                   : 'bg-stone-100 text-stone-700'
               }`}
             >
-              {action.baseChanges.energy > 0
-                ? `+${action.baseChanges.energy}`
-                : action.baseChanges.energy}{' '}
-              Năng lượng
+              {action.baseEnergy > 0 ? `+${action.baseEnergy}` : action.baseEnergy} Năng lượng
             </span>
           )}
 
           {/* Mental */}
-          {action.baseChanges.mental !== undefined && (
+          {action.baseMental !== undefined && (
             <span
               className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                action.baseChanges.mental > 0
+                action.baseMental > 0
                   ? 'bg-sky-100 text-sky-800'
                   : 'bg-stone-100 text-stone-700'
               }`}
             >
-              {action.baseChanges.mental > 0
-                ? `+${action.baseChanges.mental}`
-                : action.baseChanges.mental}{' '}
-              Tinh thần
+              {action.baseMental > 0 ? `+${action.baseMental}` : action.baseMental} Tinh thần
             </span>
           )}
 
           {/* Social */}
-          {action.baseChanges.social !== undefined && (
+          {action.baseSocial !== undefined && (
             <span
               className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                action.baseChanges.social > 0
+                action.baseSocial > 0
                   ? 'bg-emerald-100 text-emerald-800'
                   : 'bg-stone-100 text-stone-700'
               }`}
             >
-              {action.baseChanges.social > 0
-                ? `+${action.baseChanges.social}`
-                : action.baseChanges.social}{' '}
-              Kết nối
+              {action.baseSocial > 0 ? `+${action.baseSocial}` : action.baseSocial} Kết nối
             </span>
           )}
 
           {/* Money */}
-          {action.baseChanges.money !== undefined && (
+          {action.baseMoney !== undefined && (
             <span
               className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                action.baseChanges.money > 0
+                action.baseMoney > 0
                   ? 'bg-teal-100 text-teal-800 font-bold'
                   : 'bg-stone-100 text-stone-700'
               }`}
             >
-              {action.baseChanges.money > 0
-                ? `+${action.baseChanges.money}k`
-                : `${action.baseChanges.money}k`}{' '}
-              VNĐ
+              {action.baseMoney > 0 ? `+${action.baseMoney}k` : `${action.baseMoney}k`} VNĐ
             </span>
           )}
 
           {/* Willpower */}
-          {action.baseChanges.willpower !== undefined && (
+          {action.baseWillpower !== undefined && (
             <span
               className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                action.baseChanges.willpower > 0
+                action.baseWillpower > 0
                   ? 'bg-indigo-100 text-indigo-800'
                   : 'bg-stone-100 text-stone-700'
               }`}
             >
-              {action.baseChanges.willpower > 0
-                ? `+${action.baseChanges.willpower}`
-                : action.baseChanges.willpower}{' '}
-              Ý chí
+              {action.baseWillpower > 0 ? `+${action.baseWillpower}` : action.baseWillpower} Ý chí
             </span>
           )}
         </div>
@@ -189,7 +172,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       {/* Button Action */}
       <button
         disabled={!isAffordableTime}
-        onClick={() => onSelect(action)}
+        onClick={() => onSelect(action.id)}
         className={`w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${
           !isAffordableTime
             ? 'bg-stone-200 text-stone-400 cursor-not-allowed'

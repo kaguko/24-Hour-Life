@@ -3,12 +3,12 @@
 
 ---
 
-## 📌 1. Nguyên Tắc Cốt Lõi (Guiding Principles)
-1. **Kiểm chứng "có vui không" trước, kiếm tiền sau.**
-2. **Chưa có UI đẹp thì chưa cần art rườm rà.** Dùng hình khối, màu sắc theo chỉ số và icon sạch sẽ.
-3. **Không dùng cơ chế giữ chân kiểu mạng xã hội** (streak, bảng xếp hạng, xem ads đổi năng lượng).
-4. **Mỗi giai đoạn có tiêu chí "xong" rõ ràng.** Không đạt thì không chuyển bước tiếp theo.
-5. **Tách biệt "bộ não" (Logic thuần `core/`) khỏi "bề mặt" (Giao diện `ui/`).**
+## 📌 1. Nguyên Tắc Cốt Lõi: Clean Architecture Lite
+1. **Domain logic KHÔNG import UI, KHÔNG import React, KHÔNG import localStorage**: Mọi quy luật toán học, cân bằng chỉ số nằm trong `src/domain/`.
+2. **Domain chỉ nhận input primitive, trả về output primitive**: Các hàm nhận `string`, `number`, `boolean`, trả về plain DTOs hoặc primitives.
+3. **UI + Storage là "adapter" cắm vào domain**: Giao diện (`src/ui/`) và Bộ nhớ (`src/adapters/storageAdapter.ts`), Âm thanh (`src/adapters/audioAdapter.ts`) cắm vào Domain thông qua Controller Hook (`src/adapters/useGameAdapter.ts`).
+4. **Kiểm chứng "có vui không" trước, kiếm tiền sau.**
+5. **Không dùng cơ chế giữ chân kiểu mạng xã hội** (streak, ads đổi năng lượng, leaderboard).
 
 ---
 
@@ -95,46 +95,53 @@
 
 ---
 
-## 🗂️ 3. Sơ Đồ Cấu Trúc Mã Nguồn (Directory Map)
+## 🗂️ 3. Sơ Đồ Cấu Trúc Mã Nguồn (Clean Architecture Lite)
 
 ```
 /
 ├── ROADMAP.md                  # Bản đồ tiến độ và chỉ dẫn cho Agent (File này)
+├── README.md                   # Tài liệu tổng quan dự án
 ├── metadata.json               # Metadata của applet
 ├── index.html                  # Entry HTML với thẻ meta SEO/Social
 ├── src/
 │   ├── main.tsx                # Khởi chạy React app
-│   ├── App.tsx                 # Vòng lặp điều phối chính (Game Loop, State, Tab Switcher)
+│   ├── App.tsx                 # Vòng lặp điều phối chính (kết nối qua useGameAdapter)
 │   ├── index.css               # Tailwind CSS v4 (@import "tailwindcss";)
 │   │
-│   ├── core/                   # 🧠 BỘ NÃO: Logic thuần, độc lập giao diện, test được
-│   │   ├── stats.ts            # Định nghĩa 6 chỉ số, giới hạn, tính toán trạng thái
-│   │   ├── actions.ts          # 15 hành vi, chi phí ý chí, bẫy dopamine & sức ì
-│   │   ├── consequence.ts      # Tính toán hậu quả trễ qua đêm (nợ ngủ, crash, tiền trọ)
-│   │   ├── events.ts           # Sự kiện ngẫu nhiên & các nhánh đánh đổi
-│   │   └── simulate.ts         # Script mô phỏng 1000 ván cho 5 chiến lược
+│   ├── domain/                 # 🧠 DOMAIN PURE (Rule 1 & 2: NO React/UI/Storage, Primitive I/O)
+│   │   ├── types.ts            # Kiểu dữ liệu primitive (PlayerStatsPrimitive, SoundCue, ...)
+│   │   ├── stats.ts            # Toán học chỉ số, clampStats, evaluateLifeStatus
+│   │   ├── actions.ts          # 15 hành vi, executeActionById(actionId, stats, hoursRemaining)
+│   │   ├── consequence.ts      # processOvernightCycle(stats, actionIds, sleepDebt, day)
+│   │   ├── events.ts           # rollDomainEvent, resolveDomainChoice
+│   │   ├── simulate.ts         # runDomainSimulation (mô phỏng headless 1000 ván)
+│   │   └── index.ts            # Facade tổng hợp API domain
 │   │
-│   ├── ui/                     # 🖥️ BỀ MẶT: Giao diện người dùng
-│   │   ├── TopNav.tsx          # Thanh điều hướng chuẩn 3 vùng
-│   │   ├── StatsHUD.tsx        # Bảng đo 6 chỉ số phản hồi động
-│   │   ├── TimeTrack.tsx       # Thanh quỹ thời gian 24 giờ
-│   │   ├── ActionCard.tsx      # Thẻ hành vi (ảo giác phóng đại dopamine khi ý chí thấp)
-│   │   ├── ActionGrid.tsx      # Lưới hành vi & bộ lọc danh mục
-│   │   ├── MorningModal.tsx    # Modal hậu quả trễ qua đêm & quy luật hé lộ
-│   │   ├── EventModal.tsx      # Modal xử lý biến cố ngẫu nhiên
-│   │   ├── WeekReviewModal.tsx # Modal tổng kết tuần 7 ngày & câu hỏi phản tư
-│   │   ├── SimulationBench.tsx # Bàn thí nghiệm mô phỏng thuật toán trực tiếp
-│   │   └── GuideModal.tsx      # Bảng giải thích quy luật & triết lý thiết kế
+│   ├── adapters/               # 🔌 ADAPTERS (Rule 3: Cắm UI, Storage, Audio vào Domain)
+│   │   ├── storageAdapter.ts   # Cắm localStorage vào domain primitives
+│   │   ├── audioAdapter.ts     # Cắm Web Audio API vào domain sound cues
+│   │   └── useGameAdapter.ts   # React Hook Controller kết nối UI với Domain
 │   │
-│   └── lib/                    # 🛠️ CÔNG CỤ BỔ TRỢ
-│       ├── sound.ts            # Web Audio API tạo âm thanh tổng hợp không phụ thuộc mạng
-│       └── storage.ts          # Trình quản lý lưu/khôi phục tự động qua localStorage
+│   └── ui/                     # 🖥️ VIEW LAYER: Giao diện thuần (nhận DTOs & callbacks)
+│       ├── TopNav.tsx          # Thanh điều hướng chuẩn 3 vùng
+│       ├── StatsHUD.tsx        # Bảng đo 6 chỉ số phản hồi động
+│       ├── TimeTrack.tsx       # Thanh quỹ thời gian 24 giờ
+│       ├── ActionCard.tsx      # Thẻ hành vi (ảo giác phóng đại dopamine khi ý chí thấp)
+│       ├── ActionGrid.tsx      # Lưới hành vi & bộ lọc danh mục
+│       ├── MorningModal.tsx    # Modal hậu quả trễ qua đêm & quy luật hé lộ
+│       ├── EventModal.tsx      # Modal xử lý biến cố ngẫu nhiên
+│       ├── WeekReviewModal.tsx # Modal tổng kết tuần 7 ngày & câu hỏi phản tư
+│       ├── SimulationBench.tsx # Bàn thí nghiệm mô phỏng thuật toán trực tiếp
+│       └── GuideModal.tsx      # Bảng giải thích quy luật & triết lý thiết kế
 ```
 
 ---
 
 ## 🧭 4. Chỉ Dẫn Dành Cho Agent Khi Làm Việc Tiếp Theo
 1. **Kiểm tra file này trước tiên**: Bất cứ khi nào nhận yêu cầu mới, agent đọc `ROADMAP.md` để biết tính năng nào đã có và tính năng nào là bước kế tiếp.
-2. **Không sửa số liệu bằng cảm giác**: Khi thay đổi chỉ số trong `actions.ts` hoặc `consequence.ts`, hãy chạy kiểm chứng qua tab **"Mô phỏng 1000 lần"** (`simulate.ts`) để bảo đảm tính cân bằng không bị vỡ.
-3. **Giữ sạch kiến trúc**: Mọi logic nghiệp vụ mới phải đặt vào `src/core/`, không nhúng logic tính toán phức tạp trực tiếp vào component JSX.
-4. **Không cài đặt thêm thư viện cồng kềnh**: Tránh các UI framework nặng nề; giữ phong cách Tailwind tinh gọn và chống "AI slop" theo hiến pháp `frontend-design`.
+2. **Tuân thủ Clean Architecture Lite**:
+   - Mọi nghiệp vụ phải nằm trong `src/domain/`, KHÔNG import React/UI/localStorage vào domain.
+   - Domain chỉ nhận tham số primitive (`string`, `number`, `boolean`) và trả về primitive/plain DTOs.
+   - Giao diện và Storage chỉ là Adapter thông qua `src/adapters/`.
+3. **Không sửa số liệu bằng cảm giác**: Khi thay đổi chỉ số trong `domain/actions.ts` hoặc `domain/consequence.ts`, hãy chạy kiểm chứng qua tab **"Mô phỏng 1000 lần"** (`simulate.ts`) để bảo đảm tính cân bằng không bị vỡ.
+4. **Không cài đặt thêm thư viện cồng kềnh**: Giữ phong cách Tailwind tinh gọn và chống "AI slop" theo hiến pháp `frontend-design`.

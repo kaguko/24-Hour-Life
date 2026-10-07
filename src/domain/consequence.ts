@@ -1,0 +1,125 @@
+import { PlayerStatsPrimitive, NightResultPrimitive } from './types';
+import { DAILY_RENT_COST, MIN_SLEEP_HOURS, applyStatDeltas } from './stats';
+import { DOMAIN_ACTIONS } from './actions';
+
+/**
+ * Pure domain consequence processing
+ * Input: primitive stats, primitive string[] action IDs, primitive numbers
+ * Output: primitive NightResultPrimitive
+ */
+export function processOvernightCycle(
+  currentStats: PlayerStatsPrimitive,
+  actionIdsToday: string[],
+  previousSleepDebt: number,
+  dayNumber: number
+): NightResultPrimitive {
+  const notes: string[] = [];
+  const revealedMechanics: string[] = [];
+  const deltas: Partial<PlayerStatsPrimitive> = {
+    money: -DAILY_RENT_COST,
+  };
+
+  notes.push(`Trừ tiền phòng trọ và chi phí sinh hoạt cố định: -${DAILY_RENT_COST}k VNĐ`);
+
+  const actionsToday = actionIdsToday
+    .map((id) => DOMAIN_ACTIONS.find((a) => a.id === id))
+    .filter((a): a is (typeof DOMAIN_ACTIONS)[number] => a !== undefined);
+
+  // 1. Tính nợ ngủ
+  const sleepHours = actionsToday
+    .filter((a) => a.category === 'rest')
+    .reduce((sum, a) => sum + a.hours, 0);
+
+  const sleepDiff = MIN_SLEEP_HOURS - sleepHours;
+  const newSleepDebt = Math.max(0, previousSleepDebt + (sleepDiff > 0 ? sleepDiff : sleepDiff * 0.5));
+
+  if (sleepHours < 5) {
+    notes.push(`Thiếu ngủ nghiêm trọng (${sleepHours}h/7h chuẩn). Cơ thể bạn phát tín hiệu cầu cứu.`);
+    deltas.energy = (deltas.energy ?? 0) - 20;
+    deltas.mental = (deltas.mental ?? 0) - 15;
+    deltas.willpower = (deltas.willpower ?? 0) - 22;
+  } else if (sleepHours < 7) {
+    notes.push(`Ngủ chập chờn (${sleepHours}h). Nợ ngủ bắt đầu tích tụ âm ỉ.`);
+    deltas.energy = (deltas.energy ?? 0) - 10;
+    deltas.willpower = (deltas.willpower ?? 0) - 10;
+  } else {
+    notes.push(`Giấc ngủ trọn vẹn (${sleepHours}h). Năng lượng hồi phục dồi dào, giảm nợ ngủ.`);
+    deltas.energy = (deltas.energy ?? 0) + 20;
+    deltas.willpower = (deltas.willpower ?? 0) + 15;
+    deltas.mental = (deltas.mental ?? 0) + 10;
+  }
+
+  // Tác động nợ ngủ lũy kế
+  if (newSleepDebt >= 6) {
+    notes.push(`Nợ ngủ lũy kế chạm mức ${newSleepDebt.toFixed(1)}h: Hội chứng sương mù não (Brain Fog) làm bạn uể oải cả ngày.`);
+    deltas.energy = (deltas.energy ?? 0) - 15;
+    deltas.mental = (deltas.mental ?? 0) - 10;
+    if (dayNumber >= 3) {
+      revealedMechanics.push(
+        '💡 [Cơ chế ẩn được hé lộ]: Nợ ngủ không thể bù đắp chỉ bằng 1 ngày ngủ nướng. Nó ăn mòn sức đề kháng và năng lực tập trung.'
+      );
+    }
+  }
+
+  // 2. Dopamine Crash
+  const temptationHours = actionsToday
+    .filter((a) => a.isTemptation)
+    .reduce((sum, a) => sum + a.hours, 0);
+
+  if (currentStats.dopamine >= 75 || temptationHours >= 4) {
+    notes.push('Cơn sụp đổ Dopamine (Crash): Sau một ngày kích thích quá độ, sáng nay bạn thấy trống rỗng, vô vị và bồn chồn.');
+    deltas.dopamine = -25;
+    deltas.willpower = (deltas.willpower ?? 0) - 18;
+    deltas.mental = (deltas.mental ?? 0) - 12;
+
+    if (dayNumber >= 3) {
+      revealedMechanics.push(
+        '💡 [Cơ chế ẩn được hé lộ]: Khi não bộ bị ngập trong dopamine nhân tạo hôm qua, ngưỡng khoái cảm cơ bản tụt sâu vào hôm sau. Việc bình thường bỗng trở nên nhàm chán cùng cực.'
+      );
+    }
+  } else {
+    if (currentStats.dopamine > 55) {
+      deltas.dopamine = -12;
+    } else if (currentStats.dopamine < 40) {
+      deltas.dopamine = 8;
+    }
+  }
+
+  // 3. Cô lập xã hội
+  if (currentStats.social < 25) {
+    notes.push('Sự cô đơn kéo dài: Thiếu kết nối sâu sắc khiến tâm trạng sa sút.');
+    deltas.mental = (deltas.mental ?? 0) - 10;
+    deltas.willpower = (deltas.willpower ?? 0) - 8;
+  }
+
+  // 4. Áp lực nợ nần
+  if (currentStats.money - DAILY_RENT_COST < 0) {
+    notes.push('Áp lực nợ nần: Tiền trong tài khoản về âm, bạn lo lắng không yên.');
+    deltas.mental = (deltas.mental ?? 0) - 15;
+    deltas.willpower = (deltas.willpower ?? 0) - 12;
+  }
+
+  // 5. Thói quen phục hồi (Wellness)
+  const wellnessHours = actionsToday
+    .filter((a) => a.category === 'wellness')
+    .reduce((sum, a) => sum + a.hours, 0);
+
+  if (wellnessHours >= 2) {
+    notes.push('Thói quen lành mạnh hôm qua phát huy tác dụng: Tinh thần sảng khoái và tự tin.');
+    deltas.mental = (deltas.mental ?? 0) + 12;
+    deltas.willpower = (deltas.willpower ?? 0) + 10;
+  }
+
+  const newStats = applyStatDeltas(currentStats, deltas);
+
+  return {
+    dayCompleted: dayNumber,
+    rentPaid: DAILY_RENT_COST,
+    sleepHours,
+    sleepDebtChange: sleepDiff,
+    newSleepDebt,
+    newStats,
+    notes,
+    revealedMechanics,
+  };
+}

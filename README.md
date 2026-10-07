@@ -60,36 +60,42 @@ Game tích hợp sẵn công cụ mô phỏng chiến thuật tự động ngay 
 
 ---
 
-## 🚀 Cấu Trúc Mã Nguồn (Architecture)
+## 🏛️ Kiến Trúc "Clean Architecture Lite"
 
-Kiến trúc dự án tách biệt hoàn toàn giữa **bộ não (Logic thuần)** và **bề mặt (Giao diện React)**:
+Dự án áp dụng chặt chẽ 3 nguyên tắc cốt lõi:
+1. **Domain logic KHÔNG import UI, KHÔNG import React, KHÔNG import localStorage:** Mọi công thức tính toán, quy luật nhân quả và cân bằng số liệu được cô lập hoàn toàn tại `src/domain/`.
+2. **Domain chỉ nhận input primitive, trả về output primitive:** Mọi hàm nghiệp vụ giao tiếp bằng kiểu dữ liệu nguyên thủy (`string`, `number`, `boolean`, plain arrays) và trả về DTOs thuần túy.
+3. **UI + Storage là "adapter" cắm vào domain:** React UI, LocalStorage và Web Audio đóng vai trò là các plugin/adapter cắm vào Domain Facade thông qua Controller Hook `useGameAdapter`.
 
 ```
 src/
-├── core/                   # Logic thuần, 100% testable, không phụ thuộc UI
-│   ├── stats.ts            # Định nghĩa 6 chỉ số, giới hạn, đánh giá trạng thái
-│   ├── actions.ts          # 15 hành vi, chi phí ý chí, bẫy dopamine & sức ì
-│   ├── consequence.ts      # Tính toán hậu quả trễ qua đêm, nợ ngủ, tiền trọ
-│   ├── events.ts           # Sự kiện ngẫu nhiên & các lựa chọn đánh đổi
-│   └── simulate.ts         # Script mô phỏng hàng loạt 1000 ván cho các chiến lược
+├── domain/                 # 🧠 PURE DOMAIN (Rule 1 & 2: NO React/UI/Storage, Primitive I/O)
+│   ├── types.ts            # Kiểu dữ liệu primitive (PlayerStatsPrimitive, SoundCue, ...)
+│   ├── stats.ts            # Toán học chỉ số, clampStats, evaluateLifeStatus
+│   ├── actions.ts          # 15 hành vi, executeActionById(actionId, stats, hoursRemaining)
+│   ├── consequence.ts      # processOvernightCycle(stats, actionIds, sleepDebt, day)
+│   ├── events.ts           # rollDomainEvent, resolveDomainChoice
+│   ├── simulate.ts         # runDomainSimulation (động cơ mô phỏng headless 1000 ván)
+│   └── index.ts            # Facade API Domain duy nhất
 │
-├── ui/                     # Giao diện người dùng (React components)
-│   ├── TopNav.tsx          # Thanh điều hướng 3 vùng chuẩn
-│   ├── TimeTrack.tsx       # Thanh quỹ thời gian 24 giờ trong ngày
+├── adapters/               # 🔌 ADAPTER LAYER (Rule 3: Cắm UI, Storage, Audio vào Domain)
+│   ├── storageAdapter.ts   # Cắm localStorage vào domain primitives
+│   ├── audioAdapter.ts     # Cắm Web Audio API vào domain sound cues
+│   └── useGameAdapter.ts   # Controller Hook kết nối UI và Domain Facade
+│
+├── ui/                     # 🖥️ VIEW LAYER: React components hiển thị thuần
+│   ├── TopNav.tsx          # Thanh điều hướng 3 vùng
 │   ├── StatsHUD.tsx        # Bảng đo 6 chỉ số phản hồi động
-│   ├── ActionCard.tsx      # Thẻ hành vi (hiệu ứng ảo giác khi ý chí thấp)
+│   ├── TimeTrack.tsx       # Thanh quỹ thời gian 24 giờ
+│   ├── ActionCard.tsx      # Thẻ hành vi (ảo giác khi ý chí thấp)
 │   ├── ActionGrid.tsx      # Lưới hành vi & bộ lọc danh mục
-│   ├── MorningModal.tsx    # Hộp thoại bình minh & giải thích cơ chế ẩn
+│   ├── MorningModal.tsx    # Hộp thoại bình minh & cơ chế ẩn
 │   ├── EventModal.tsx      # Hộp thoại biến cố bất ngờ
-│   ├── WeekReviewModal.tsx # Hộp thoại tổng kết tuần 7 ngày & câu hỏi phản tư
+│   ├── WeekReviewModal.tsx # Hộp thoại tổng kết tuần & câu hỏi phản tư
 │   ├── SimulationBench.tsx # Bàn thí nghiệm mô phỏng thuật toán
-│   └── GuideModal.tsx      # Hướng dẫn quy luật & triết lý thiết kế
+│   └── GuideModal.tsx      # Hướng dẫn quy luật & triết lý
 │
-├── lib/                    # Công cụ tiện ích
-│   ├── sound.ts            # Web Audio API tạo âm thanh tổng hợp (zero external files)
-│   └── storage.ts          # Quản lý tự động lưu/khôi phục localStorage
-│
-├── App.tsx                 # Điều phối trạng thái và vòng lặp trò chơi
+├── App.tsx                 # View Root điều phối qua useGameAdapter
 └── main.tsx                # Entry point
 ```
 

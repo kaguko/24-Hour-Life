@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
-import { PlayerStats, DailyLog, evaluateLifeState } from '../core/stats';
-import { Trophy, ArrowRight, RotateCcw, Check, Sparkles } from 'lucide-react';
+import { PlayerStatsPrimitive, StatusResultPrimitive } from '../domain';
+import { Trophy, ArrowRight, RotateCcw, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface WeekReviewModalProps {
-  stats: PlayerStats;
-  dailyLogs: DailyLog[];
+  stats: PlayerStatsPrimitive;
+  lifeStatus: StatusResultPrimitive;
   onRestart: () => void;
   onContinueEndless: () => void;
 }
 
 export const WeekReviewModal: React.FC<WeekReviewModalProps> = ({
   stats,
-  dailyLogs,
+  lifeStatus,
   onRestart,
   onContinueEndless,
 }) => {
   const [reflectionAnswer, setReflectionAnswer] = useState<string | null>(null);
-  const lifeState = evaluateLifeState(stats);
 
   React.useEffect(() => {
     try {
@@ -53,20 +52,20 @@ export const WeekReviewModal: React.FC<WeekReviewModalProps> = ({
           <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 flex items-center justify-between">
             <div>
               <span className="text-xs text-stone-500 block">Đánh giá chung sau 1 tuần:</span>
-              <span className="text-base font-bold text-stone-900">{lifeState.label}</span>
+              <span className="text-base font-bold text-stone-900">{lifeStatus.label}</span>
             </div>
             <span
               className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-                lifeState.status === 'thriving'
+                lifeStatus.status === 'thriving'
                   ? 'bg-emerald-100 text-emerald-800'
-                  : lifeState.status === 'stable'
+                  : lifeStatus.status === 'stable'
                   ? 'bg-indigo-100 text-indigo-800'
                   : 'bg-rose-100 text-rose-800'
               }`}
             >
-              {lifeState.status === 'thriving'
+              {lifeStatus.status === 'thriving'
                 ? 'Thành công vượt trội'
-                : lifeState.status === 'stable'
+                : lifeStatus.status === 'stable'
                 ? 'Sống sót bền bỉ'
                 : 'Cần tái cân bằng'}
             </span>

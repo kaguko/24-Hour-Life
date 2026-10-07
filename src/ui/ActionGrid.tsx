@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { ActionDefinition, ActionCategory } from '../core/actions';
-import { PlayerStats } from '../core/stats';
+import { ActionPrimitive, ActionCategory, PlayerStatsPrimitive } from '../domain';
 import { ActionCard } from './ActionCard';
 import { AlertCircle } from 'lucide-react';
 
 interface ActionGridProps {
-  actions: ActionDefinition[];
-  currentStats: PlayerStats;
+  actions: ActionPrimitive[];
+  currentStats: PlayerStatsPrimitive;
   hoursRemaining: number;
-  onSelectAction: (action: ActionDefinition) => void;
+  onSelectAction: (actionId: string) => void;
 }
 
 export const ActionGrid: React.FC<ActionGridProps> = ({

@@ -1,16 +1,14 @@
 import React from 'react';
-import { PlayerStats, evaluateLifeState } from '../core/stats';
+import { PlayerStatsPrimitive, StatusResultPrimitive } from '../domain';
 import { Zap, Brain, Users, Wallet, ShieldAlert, Sparkles } from 'lucide-react';
 
 interface StatsHUDProps {
-  stats: PlayerStats;
-  previousStats?: PlayerStats | null;
+  stats: PlayerStatsPrimitive;
+  lifeStatus: StatusResultPrimitive;
   sleepDebt: number;
 }
 
-export const StatsHUD: React.FC<StatsHUDProps> = ({ stats, sleepDebt }) => {
-  const lifeState = evaluateLifeState(stats);
-
+export const StatsHUD: React.FC<StatsHUDProps> = ({ stats, lifeStatus, sleepDebt }) => {
   const statItems = [
     {
       key: 'energy',
@@ -100,18 +98,18 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ stats, sleepDebt }) => {
           <span className="text-xs font-semibold text-stone-700">Hiện trạng:</span>
           <span
             className={`text-xs font-medium px-2 py-0.5 rounded ${
-              lifeState.status === 'thriving'
+              lifeStatus.status === 'thriving'
                 ? 'bg-emerald-100 text-emerald-800'
-                : lifeState.status === 'stable'
+                : lifeStatus.status === 'stable'
                 ? 'bg-stone-100 text-stone-800'
-                : lifeState.status === 'stressed'
+                : lifeStatus.status === 'stressed'
                 ? 'bg-amber-100 text-amber-800'
                 : 'bg-rose-100 text-rose-800'
             }`}
           >
-            {lifeState.label}
+            {lifeStatus.label}
           </span>
-          <span className="text-xs text-stone-500 hidden sm:inline">· {lifeState.description}</span>
+          <span className="text-xs text-stone-500 hidden sm:inline">· {lifeStatus.description}</span>
         </div>
 
         {sleepDebt > 0 && (
@@ -156,7 +154,6 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ stats, sleepDebt }) => {
                 )}
               </div>
 
-              {/* Progress bar */}
               {item.max && (
                 <div className="w-full h-1.5 bg-stone-200/80 rounded-full overflow-hidden">
                   <div

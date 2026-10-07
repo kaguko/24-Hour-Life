@@ -1,9 +1,9 @@
 import React from 'react';
-import { NightReport } from '../core/consequence';
-import { Moon, Sunrise, AlertCircle, Lightbulb, ArrowRight, DollarSign } from 'lucide-react';
+import { NightResultPrimitive } from '../domain';
+import { Sunrise, Lightbulb, ArrowRight } from 'lucide-react';
 
 interface MorningModalProps {
-  report: NightReport;
+  report: NightResultPrimitive;
   onContinue: () => void;
 }
 
