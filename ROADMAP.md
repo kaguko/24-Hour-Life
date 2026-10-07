@@ -80,9 +80,24 @@
   - Không hướng dẫn trước, quan sát điểm họ bị khựng lại hoặc khó hiểu.
   - Đặt câu hỏi phản tư cuối buổi: *"Bạn muốn lướt FB nhiều hơn hay ít hơn sau khi chơi?"*.
   - **Tiêu chí xong Tuần 3**: Ít nhất 3/5 người chơi hết 1 tuần game mà không cần nhắc nhở.
-- [ ] **Mở rộng nội dung**:
-  - Bổ sung thêm 4–6 biến cố ngẫu nhiên đời thực (người yêu dỗi, hỏng laptop, trúng thưởng nhỏ, deadline bất thình lình vào cuối tuần).
-  - Thêm cơ chế "Chu kỳ tuần": Thứ 7 & Chủ nhật có các sự kiện đặc thù (nghỉ làm công sở, bạn bè rủ đi phượt).
+- [x] **Mở rộng nội dung** (ĐÃ LÀM):
+  - [x] Thêm 6 biến cố: người yêu dỗi, hỏng laptop, trúng thưởng nhỏ, deadline cuối tuần, bạn rủ đi phượt, bữa cơm gia đình Chủ nhật.
+  - [x] "Chu kỳ tuần": trường `onlyDays` trong `EventPrimitive`; Thứ 7/Chủ nhật có biến cố riêng; TopNav hiển thị thứ trong tuần (`getWeekdayLabel`).
+  - [x] Dọn trùng lặp: gộp `choc_cho`→`tease_dog`, `practice_soft_skills`→`learn_soft_skills`.
+  - [x] Chạy Mô phỏng 1000 lần (đã gồm biến cố) và sửa cân bằng — xem mục "Kết quả cân bằng" bên dưới.
+  - [ ] Còn lại: playtest 5 người.
+
+**Kết quả cân bằng (mô phỏng 1000 ván × 7 ngày, hiện tại):**
+
+| Chiến lược | Kết cục | Ngày sụp TB |
+|---|---|---|
+| Dopamine Chaser | 100% kiệt quệ (tinh thần) | ~3.0 |
+| Workaholic | 100% kiệt quệ (tinh thần) | ~4.5 |
+| Pure Sleeper | ~99% kiệt quệ (vô cảm + ngủ quá nhiều) | ~4.1 |
+| Party Animal | ~92% sống, ~8% phá sản; tiền cạn dần về ~500k | ~6.8 |
+| Balanced | 100% sống | 7 |
+
+Những thay đổi cân bằng đã áp dụng: chiến lược mô phỏng nay thực sự ngủ như mô tả (trước đó không ngủ → chết ngày 1); phạt **vô cảm (anhedonia)** khi dopamine nền < 25 mà không có hoạt động dopamine chậm; phạt **ngủ quá 9h/ngày**; **chợp mắt** giảm hiệu quả sau 4 lần/ngày; mô phỏng có biến cố. Cân nhắc sau playtest: chỉ số "Mục đích" riêng (chưa cần vì anhedonia đã xử lý Pure Sleeper); Chaser sụp ngày 3 (mục tiêu 4–5).
 
 ---
 
