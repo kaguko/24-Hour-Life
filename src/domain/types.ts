@@ -35,7 +35,15 @@ export interface ActionPrimitive {
   baseWillpower?: number;
 }
 
-export type SoundCue = 'temptation' | 'healthy' | 'neutral' | 'sigh' | 'night' | 'victory';
+export type SoundCue =
+  | 'temptation'
+  | 'healthy'
+  | 'neutral'
+  | 'sigh'
+  | 'night'
+  | 'victory'
+  | 'defeat'
+  | 'event';
 
 export interface QuotePrimitive {
   quote: string;

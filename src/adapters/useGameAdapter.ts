@@ -136,7 +136,10 @@ export function useGameAdapter() {
       if (!activeEvent && nextHoursUsed >= 8 && nextHoursUsed <= 18 && Math.random() < 0.35) {
         const rolled = rollDomainEvent(day);
         if (rolled) {
-          setTimeout(() => setActiveEvent(rolled), 300);
+          setTimeout(() => {
+            audioAdapter.playCue('event');
+            setActiveEvent(rolled);
+          }, 300);
         }
       }
 
@@ -160,11 +163,16 @@ export function useGameAdapter() {
     const collapsed = evaluateLifeStatus(stats).isGameOver;
     if (collapsed || day >= 7) {
       setFinished(true);
-      audioAdapter.playCue(collapsed ? 'sigh' : 'victory');
+      audioAdapter.playCue(collapsed ? 'defeat' : 'victory');
     } else {
       setDay((prev) => prev + 1);
     }
   }, [day, stats]);
+
+  const selectAvatar = useCallback((id: AvatarId) => {
+    audioAdapter.prime();
+    setAvatarId(id);
+  }, []);
 
   const dismissIntro = useCallback(() => {
     storageAdapter.markIntroSeen();
@@ -210,7 +218,7 @@ export function useGameAdapter() {
     activeEvent,
     ending,
     avatarId,
-    setAvatarId,
+    setAvatarId: selectAvatar,
     isIntroOpen,
     soundEnabled,
     takeAction,

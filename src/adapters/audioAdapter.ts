@@ -5,15 +5,49 @@
 
 import { SoundCue } from '../domain';
 
+const SAMPLE_CUES: SoundCue[] = ['temptation', 'healthy', 'neutral', 'sigh', 'night', 'victory', 'defeat', 'event'];
+
 class AudioAdapter {
   private ctx: AudioContext | null = null;
+  private buffers: Partial<Record<SoundCue, AudioBuffer>> = {};
+  private loading = false;
   public enabled = true;
+
+  /** Tải các mẫu âm thanh (public/sfx/*.mp3). Lỗi thì bỏ qua, dùng âm tổng hợp dự phòng. */
+  private loadSamples(ctx: AudioContext): void {
+    if (this.loading) return;
+    this.loading = true;
+    for (const cue of SAMPLE_CUES) {
+      fetch(`/sfx/${cue}.mp3`)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+        .then((data) => ctx.decodeAudioData(data))
+        .then((buf) => {
+          this.buffers[cue] = buf;
+        })
+        .catch(() => {
+          // giữ âm tổng hợp
+        });
+    }
+  }
+
+  private playSample(ctx: AudioContext, cue: SoundCue): boolean {
+    const buf = this.buffers[cue];
+    if (!buf) return false;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start();
+    return true;
+  }
 
   private getContext(): AudioContext | null {
     if (!this.enabled || typeof window === 'undefined') return null;
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (AudioCtx) this.ctx = new AudioCtx();
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+        this.loadSamples(this.ctx);
+      }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
@@ -21,9 +55,15 @@ class AudioAdapter {
     return this.ctx;
   }
 
+  /** Khởi tạo âm thanh sớm (gọi sau thao tác đầu tiên của người chơi) để mẫu kịp tải. */
+  public prime(): void {
+    this.getContext();
+  }
+
   public playCue(cue: SoundCue): void {
     const ctx = this.getContext();
     if (!ctx) return;
+    if (this.playSample(ctx, cue)) return;
     const now = ctx.currentTime;
 
     switch (cue) {
@@ -61,6 +101,7 @@ class AudioAdapter {
         break;
       }
 
+      case 'defeat':
       case 'sigh': {
         // Descending sigh
         const osc = ctx.createOscillator();
