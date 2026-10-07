@@ -88,6 +88,8 @@ export interface EventPrimitive {
   title: string;
   description: string;
   minDay: number;
+  /** Nếu có: chỉ xuất hiện vào các ngày này (1 = Thứ 2 ... 7 = Chủ nhật) */
+  onlyDays?: number[];
   choices: EventChoicePrimitive[];
 }
 

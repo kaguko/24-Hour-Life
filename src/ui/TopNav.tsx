@@ -1,4 +1,5 @@
 import React from 'react';
+import { getWeekdayLabel } from '../domain';
 import { Volume2, VolumeX, RotateCcw, Activity, Play, HelpCircle } from 'lucide-react';
 
 interface TopNavProps {
@@ -28,7 +29,7 @@ export const TopNav: React.FC<TopNavProps> = ({
           </span>
           <span className="hidden sm:inline text-xs text-stone-400 font-medium">·</span>
           <span className="hidden sm:inline text-xs text-stone-500 font-medium">
-            Ngày {day} / 7
+            Ngày {day} / 7 · {getWeekdayLabel(day)}
           </span>
         </div>
 
