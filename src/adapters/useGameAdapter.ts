@@ -99,7 +99,7 @@ export function useGameAdapter() {
   const takeAction = useCallback(
     (actionId: string) => {
       const currentHoursLeft = Math.max(0, 24 - hoursUsed);
-      const result = executeActionById(actionId, stats, currentHoursLeft);
+      const result = executeActionById(actionId, stats, currentHoursLeft, actionsTodayIds);
 
       if (!result.success) {
         setNotice(result.notice);

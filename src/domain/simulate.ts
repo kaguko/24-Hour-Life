@@ -2,6 +2,7 @@ import { PlayerStatsPrimitive, SimulationResultPrimitive } from './types';
 import { INITIAL_STATS, evaluateLifeStatus } from './stats';
 import { DOMAIN_ACTIONS, executeActionById } from './actions';
 import { processOvernightCycle } from './consequence';
+import { rollDomainEvent, resolveDomainChoice } from './events';
 
 export interface DomainStrategy {
   id: string;
@@ -14,26 +15,28 @@ export const DOMAIN_STRATEGIES: DomainStrategy[] = [
   {
     id: 'dopamine_chaser',
     name: 'Nghiện kích thích (Dopamine Chaser)',
-    description: 'Ưu tiên lướt mạng, cày game, đồ ăn nhanh. Chỉ ngủ khi không còn giờ.',
-    decideActionId: (stats, hoursLeft) => {
-      if (stats.money < 200 && hoursLeft >= 4) return 'work_focused';
-      if (hoursLeft >= 3) return 'binge_gaming';
-      if (hoursLeft >= 2) return 'scroll_social';
-      if (hoursLeft >= 0.5) return 'fast_food';
+    description: 'Ưu tiên lướt mạng, cày game, đồ ăn nhanh. Chỉ chợp mắt ngắn (~6h) vì mải cày.',
+    decideActionId: (stats, hoursLeft, actionsToday) => {
+      const naps = actionsToday.filter((id) => id === 'sleep_nap').length;
+      const free = hoursLeft - Math.max(0, 4 - naps) * 1.5; // dành chỗ cho 4 lần chợp mắt (6h)
+      if (stats.money < 200 && free >= 4) return 'work_focused';
+      if (free >= 3) return 'binge_gaming';
+      if (free >= 2) return 'scroll_social';
+      if (free >= 0.5) return 'fast_food';
       return 'sleep_nap';
     },
   },
   {
     id: 'workaholic',
     name: 'Cuồng công việc (Workaholic)',
-    description: 'Cày cuốc tối đa, làm thêm đêm, chỉ ngủ 4-5 tiếng và cắt bỏ mọi thứ khác.',
+    description: 'Cày cuốc 12h/ngày (có làm thêm đêm), chỉ chợp mắt ~6h và cắt bỏ mọi thứ khác.',
     decideActionId: (stats, hoursLeft, actionsToday) => {
+      const naps = actionsToday.filter((id) => id === 'sleep_nap').length;
+      const free = hoursLeft - Math.max(0, 4 - naps) * 1.5; // dành chỗ cho 4 lần chợp mắt (6h)
       const workDone = actionsToday.filter((id) => id.startsWith('work_')).length;
-      if (workDone < 2 && hoursLeft >= 4) return 'work_focused';
-      if (hoursLeft >= 4 && stats.energy > 20) return 'work_overtime';
-      if (hoursLeft >= 8 && stats.energy < 30) return 'sleep_deep';
-      if (hoursLeft >= 1.5) return 'sleep_nap';
-      return 'fast_food';
+      if (free >= 4 && workDone < 3) return workDone < 2 ? 'work_focused' : 'work_overtime';
+      if (free >= 0.5) return 'fast_food';
+      return 'sleep_nap';
     },
   },
   {
@@ -43,20 +46,22 @@ export const DOMAIN_STRATEGIES: DomainStrategy[] = [
     decideActionId: (_stats, hoursLeft, actionsToday) => {
       if (!actionsToday.includes('sleep_deep') && hoursLeft >= 8) return 'sleep_deep';
       if (hoursLeft >= 1.5) return 'sleep_nap';
-      if (hoursLeft >= 1) return 'meditate_walk';
+      if (hoursLeft >= 1) return 'meditate_breathe';
       return 'fast_food';
     },
   },
   {
     id: 'party_animal',
     name: 'Tiệc tùng & Hướng ngoại',
-    description: 'Ưu tiên nhậu, cà phê bạn bè, làm việc cầm chừng đủ chi trả.',
+    description: 'Ưu tiên nhậu, trò chuyện bạn bè, làm việc cầm chừng đủ chi trả, vẫn ngủ đủ giấc.',
     decideActionId: (stats, hoursLeft, actionsToday) => {
-      if (stats.money < 500 && hoursLeft >= 4) return 'work_focused';
-      const hadSocial = actionsToday.some((id) => ['beer_party', 'meet_friend'].includes(id));
-      if (!hadSocial && hoursLeft >= 3.5 && stats.money >= 500) return 'beer_party';
-      if (hoursLeft >= 2.5) return 'meet_friend';
-      if (hoursLeft >= 8) return 'sleep_deep';
+      const slept = actionsToday.includes('sleep_deep');
+      const free = hoursLeft - (slept ? 0 : 8); // dành chỗ cho giấc ngủ 8h
+      if (stats.money < 500 && free >= 4) return 'work_focused';
+      const hadBeer = actionsToday.includes('beer_party');
+      if (!hadBeer && free >= 3.5 && stats.money >= 500) return 'beer_party';
+      if (free >= 2.5) return 'deep_talk';
+      if (!slept && hoursLeft >= 8) return 'sleep_deep';
       return 'sleep_nap';
     },
   },
@@ -76,10 +81,96 @@ export const DOMAIN_STRATEGIES: DomainStrategy[] = [
       if (stats.social < 50 && hoursLeft >= 1) return 'call_family';
       if (hoursLeft >= 2 && stats.willpower >= 30) return 'learn_skill';
       if (hoursLeft >= 1.5) return 'sleep_nap';
-      return 'meditate_walk';
+      return 'meditate_breathe';
     },
   },
 ];
+
+export interface DayTimelineEntry {
+  day: number;
+  stats: PlayerStatsPrimitive;
+}
+
+export interface RunTracePrimitive {
+  survivedDays: number;
+  endedEarly: boolean;
+  collapseDay: number | null;
+  collapseReason: 'burnout_energy' | 'burnout_mental' | 'bankrupt' | null;
+  finalStats: PlayerStatsPrimitive;
+  timeline: DayTimelineEntry[];
+}
+
+/** Chơi 1 ván headless và ghi lại chỉ số cuối mỗi ngày (sau khi qua đêm). */
+export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePrimitive {
+  let currentStats = { ...INITIAL_STATS };
+  let sleepDebt = 0;
+  let survivedDays = 0;
+  let collapseDay: number | null = null;
+  let collapseReason: RunTracePrimitive['collapseReason'] = null;
+  const timeline: DayTimelineEntry[] = [];
+
+  for (let day = 1; day <= daysPerRun; day++) {
+    let hoursLeft = 24;
+    const actionsToday: string[] = [];
+
+    while (hoursLeft > 0) {
+      let chosenId = strategy.decideActionId(currentStats, hoursLeft, actionsToday);
+      let action = DOMAIN_ACTIONS.find((a) => a.id === chosenId);
+
+      if (!action || action.hours > hoursLeft) {
+        const fallback = DOMAIN_ACTIONS.filter((a) => a.hours <= hoursLeft).sort(
+          (a, b) => b.hours - a.hours
+        )[0];
+        if (!fallback) break;
+        chosenId = fallback.id;
+        action = fallback;
+      }
+
+      const res = executeActionById(chosenId, currentStats, hoursLeft, actionsToday);
+      if (!res.success) break;
+
+      currentStats = res.newStats;
+      actionsToday.push(chosenId);
+      hoursLeft -= res.hoursSpent;
+    }
+
+    // Biến cố ngẫu nhiên: người chơi giả lập chọn ngẫu nhiên một lựa chọn (chỉ tính tác động chỉ số)
+    if (Math.random() < 0.35) {
+      const ev = rollDomainEvent(day, Math.random() * 0.45);
+      if (ev) {
+        const choice = ev.choices[Math.floor(Math.random() * ev.choices.length)];
+        currentStats = resolveDomainChoice(ev.id, choice.id, currentStats).newStats;
+      }
+    }
+
+    const nightRes = processOvernightCycle(currentStats, actionsToday, sleepDebt, day);
+    currentStats = nightRes.newStats;
+    sleepDebt = nightRes.newSleepDebt;
+    survivedDays = day;
+    timeline.push({ day, stats: currentStats });
+
+    const lifeStatus = evaluateLifeStatus(currentStats);
+    if (lifeStatus.status === 'bankrupt') {
+      collapseDay = day;
+      collapseReason = 'bankrupt';
+      break;
+    }
+    if (lifeStatus.status === 'burnout') {
+      collapseDay = day;
+      collapseReason = currentStats.energy <= 10 ? 'burnout_energy' : 'burnout_mental';
+      break;
+    }
+  }
+
+  return {
+    survivedDays,
+    endedEarly: collapseDay !== null,
+    collapseDay,
+    collapseReason,
+    finalStats: currentStats,
+    timeline,
+  };
+}
 
 export function runDomainSimulation(
   strategyId: string,
@@ -101,66 +192,19 @@ export function runDomainSimulation(
   let sumSurvivalDays = 0;
 
   for (let run = 0; run < totalRuns; run++) {
-    let currentStats = { ...INITIAL_STATS };
-    let sleepDebt = 0;
-    let survivedDays = 0;
-    let endedEarly = false;
+    const trace = playOneRun(strategy, daysPerRun);
+    if (!trace.endedEarly) survivals++;
+    else if (trace.collapseReason === 'bankrupt') bankruptcies++;
+    else burnouts++;
 
-    for (let day = 1; day <= daysPerRun; day++) {
-      let hoursLeft = 24;
-      const actionsToday: string[] = [];
-
-      while (hoursLeft > 0) {
-        let chosenId = strategy.decideActionId(currentStats, hoursLeft, actionsToday);
-        let action = DOMAIN_ACTIONS.find((a) => a.id === chosenId);
-
-        if (!action || action.hours > hoursLeft) {
-          const fallback = DOMAIN_ACTIONS.filter((a) => a.hours <= hoursLeft).sort(
-            (a, b) => b.hours - a.hours
-          )[0];
-          if (!fallback) break;
-          chosenId = fallback.id;
-          action = fallback;
-        }
-
-        const res = executeActionById(chosenId, currentStats, hoursLeft);
-        if (!res.success) break;
-
-        currentStats = res.newStats;
-        actionsToday.push(chosenId);
-        hoursLeft -= res.hoursSpent;
-      }
-
-      const nightRes = processOvernightCycle(currentStats, actionsToday, sleepDebt, day);
-      currentStats = nightRes.newStats;
-      sleepDebt = nightRes.newSleepDebt;
-
-      const lifeStatus = evaluateLifeStatus(currentStats);
-      if (lifeStatus.status === 'burnout') {
-        burnouts++;
-        endedEarly = true;
-        survivedDays = day;
-        break;
-      }
-      if (lifeStatus.status === 'bankrupt') {
-        bankruptcies++;
-        endedEarly = true;
-        survivedDays = day;
-        break;
-      }
-
-      survivedDays = day;
-    }
-
-    if (!endedEarly) survivals++;
-
-    sumSurvivalDays += survivedDays;
-    sumDopamine += currentStats.dopamine;
-    sumEnergy += currentStats.energy;
-    sumMental += currentStats.mental;
-    sumSocial += currentStats.social;
-    sumMoney += currentStats.money;
-    sumWillpower += currentStats.willpower;
+    const f = trace.finalStats;
+    sumSurvivalDays += trace.survivedDays;
+    sumDopamine += f.dopamine;
+    sumEnergy += f.energy;
+    sumMental += f.mental;
+    sumSocial += f.social;
+    sumMoney += f.money;
+    sumWillpower += f.willpower;
   }
 
   return {

@@ -3,6 +3,12 @@ import { DAILY_RENT_COST, MIN_SLEEP_HOURS, applyStatDeltas } from './stats';
 import { DOMAIN_ACTIONS } from './actions';
 import { PhilosophicalQuote, getContextualQuote } from './quotes';
 
+const OVERSLEEP_THRESHOLD_HOURS = 9;
+const OVERSLEEP_MENTAL_PER_HOUR = 2;
+const ANHEDONIA_DOPAMINE_THRESHOLD = 25;
+const ANHEDONIA_BASE_PENALTY = 10;
+const ANHEDONIA_PENALTY_PER_POINT = 2.5; // mỗi điểm dopamine thiếu hụt dưới ngưỡng
+
 /**
  * Pure domain consequence processing
  * Input: primitive stats, primitive string[] action IDs, primitive numbers
@@ -59,6 +65,17 @@ export function processOvernightCycle(
     deltas.mental = (deltas.mental ?? 0) + 10;
   }
 
+  // Ngủ quá nhiều: nặng nề, uể oải, bào mòn tinh thần
+  if (sleepHours > OVERSLEEP_THRESHOLD_HOURS) {
+    const excess = sleepHours - OVERSLEEP_THRESHOLD_HOURS;
+    notes.push(
+      `Nằm quá lâu (${sleepHours}h nghỉ/ngày): Ngủ nhiều hơn mức cần thiết khiến đầu óc nặng nề, người rã rời và tinh thần đi xuống.`
+    );
+    deltas.mental = (deltas.mental ?? 0) - Math.round(excess * OVERSLEEP_MENTAL_PER_HOUR);
+    deltas.energy = (deltas.energy ?? 0) - Math.round(excess * 1.5);
+    deltas.willpower = (deltas.willpower ?? 0) - Math.round(excess * 1.5);
+  }
+
   // Tác động nợ ngủ lũy kế
   if (newSleepDebt >= 6) {
     notes.push(`Nợ ngủ lũy kế chạm mức ${newSleepDebt.toFixed(1)}h: Hội chứng sương mù não (Brain Fog) làm bạn uể oải cả ngày.`);
@@ -105,6 +122,22 @@ export function processOvernightCycle(
     if (dayNumber >= 3) {
       revealedMechanics.push(
         '💡 [Khoa học thần kinh - Dopamine Chậm]: Các hoạt động đòi hỏi nỗ lực (chạy bộ, học kỹ năng, thiền, trò chuyện sâu) kích hoạt con đường dopamine chậm, xây dựng cảm giác tự hào và phục hồi bình năng lượng ý chí bền vững.'
+      );
+    }
+  }
+
+  // 4b. Vô cảm (Anhedonia): dopamine nền cạn kiệt mà không làm gì nuôi dưỡng nó -> tinh thần mòn dần
+  if (currentStats.dopamine < ANHEDONIA_DOPAMINE_THRESHOLD && slowDopamineHours < 2) {
+    notes.push(
+      'Vô cảm kéo dài: Không có điều gì khiến bạn háo hức. Nằm im tưởng là nghỉ ngơi, nhưng tâm trí đang cạn dần động lực sống.'
+    );
+    const deficit = ANHEDONIA_DOPAMINE_THRESHOLD - currentStats.dopamine;
+    deltas.mental =
+      (deltas.mental ?? 0) - Math.round(ANHEDONIA_BASE_PENALTY + deficit * ANHEDONIA_PENALTY_PER_POINT);
+    deltas.willpower = (deltas.willpower ?? 0) - 6;
+    if (dayNumber >= 3) {
+      revealedMechanics.push(
+        '💡 [Khoa học thần kinh - Vô cảm]: Không kích thích không có nghĩa là bình yên. Khi hệ thống phần thưởng không được dùng đến, não bộ mất dần khả năng cảm thấy hứng thú - nghỉ ngơi thật sự cần xen kẽ với hoạt động có ý nghĩa.'
       );
     }
   }

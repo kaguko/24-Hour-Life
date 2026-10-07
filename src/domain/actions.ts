@@ -86,20 +86,6 @@ export const DOMAIN_ACTIONS: ActionPrimitive[] = [
     baseWillpower: -20,
   },
   {
-    id: 'choc_cho',
-    title: 'Chọc chó',
-    category: 'temptation',
-    dopaminePathway: 'fast',
-    hours: 0.5,
-    description: 'Nghịch dại tìm cảm giác mạnh: Trêu chọc chú chó hung dữ. Rủi ro ngẫu nhiên cao: Có thể tăng vọt dopamine và tinh thần do hưng phấn tột độ, hoặc bị chó cắn gây tốn kém sức khỏe và tiền bạc!',
-    willpowerCost: 0,
-    isTemptation: true,
-    perceivedDopamineBonus: 35,
-    baseDopamine: 35,
-    baseEnergy: -15,
-    baseWillpower: -10,
-  },
-  {
     id: 'tease_dog',
     title: 'Chọc chó (Cảm giác mạnh)',
     category: 'temptation',
@@ -162,21 +148,6 @@ export const DOMAIN_ACTIONS: ActionPrimitive[] = [
     baseMental: 22,
     baseSocial: 34,
     baseDopamine: 14,
-  },
-  {
-    id: 'practice_soft_skills',
-    title: 'Học kỹ năng mềm (Thực hành EQ)',
-    category: 'wellness',
-    dopaminePathway: 'slow',
-    hours: 1.5,
-    description: 'Thực hành kỹ năng lắng nghe, đàm phán, thuyết trình và thấu cảm. Tốn nhiều năng lượng và ý chí ban đầu để nâng cao trí tuệ cảm xúc và kết nối xã hội lâu dài.',
-    willpowerCost: 22,
-    isTemptation: false,
-    baseSocial: 30,
-    baseMental: 20,
-    baseWillpower: 24,
-    baseDopamine: 12,
-    baseEnergy: -20,
   },
   {
     id: 'exercise',
@@ -381,6 +352,9 @@ export const DOMAIN_ACTIONS: ActionPrimitive[] = [
   },
 ];
 
+const NAPS_BEFORE_DIMINISHING = 4;
+const NAP_DIMINISHED_FACTOR = 0.25;
+
 /**
  * Pure domain executor for taking an action
  * Input: primitive actionId (string), primitive stats, primitive hoursRemaining (number)
@@ -389,7 +363,8 @@ export const DOMAIN_ACTIONS: ActionPrimitive[] = [
 export function executeActionById(
   actionId: string,
   stats: PlayerStatsPrimitive,
-  hoursRemaining: number
+  hoursRemaining: number,
+  actionsTodayIds: string[] = []
 ): ActionResultPrimitive {
   const action = DOMAIN_ACTIONS.find((a) => a.id === actionId);
   if (!action) {
@@ -448,7 +423,7 @@ export function executeActionById(
     notice = 'Sức ì tâm lý: Não bộ kháng cự Dopamine Chậm vì đòi hỏi nỗ lực, bạn mất thêm 8 điểm ý chí!';
   }
   // 4. Cơ chế đặc thù cho "Chọc chó" (Rủi ro ngẫu nhiên: tăng dopamine/tinh thần hoặc bị cắn tốn sức khỏe)
-  if (action.id === 'tease_dog' || action.id === 'choc_cho') {
+  if (action.id === 'tease_dog') {
     const roll = Math.random();
     if (roll < 0.45) {
       // 45%: Thành công / Thoát hiểm ngoạn mục -> Tăng dopamine và tinh thần
@@ -488,12 +463,23 @@ export function executeActionById(
   }
 
   // 6. Cơ chế đặc thù cho "Học kỹ năng mềm" (Tốn nhiều năng lượng/ý chí, tăng chỉ số lâu dài)
-  if (action.id === 'practice_soft_skills' || action.id === 'learn_soft_skills') {
+  if (action.id === 'learn_soft_skills') {
     deltas.social = (deltas.social ?? 0) + 8;
     deltas.mental = (deltas.mental ?? 0) + 6;
     deltas.willpower = (deltas.willpower ?? 0) + 8;
     notice = 'Học kỹ năng mềm: Vượt qua sự e ngại ban đầu giúp bồi đắp trí tuệ cảm xúc (EQ), mở rộng kết nối và gia tăng ý chí lâu dài!';
     soundCue = 'healthy';
+  }
+
+  // 7. Ngủ quá nhiều: từ lần chợp mắt thứ 3 trong ngày, lợi ích hồi phục giảm mạnh
+  if (action.id === 'sleep_nap') {
+    const napsToday = actionsTodayIds.filter((id) => id === 'sleep_nap').length;
+    if (napsToday >= NAPS_BEFORE_DIMINISHING) {
+      deltas.energy = Math.round((deltas.energy ?? 0) * NAP_DIMINISHED_FACTOR);
+      deltas.mental = Math.round((deltas.mental ?? 0) * NAP_DIMINISHED_FACTOR);
+      deltas.willpower = Math.round((deltas.willpower ?? 0) * NAP_DIMINISHED_FACTOR);
+      notice = 'Ngủ quá nhiều: Càng nằm càng uể oải, giấc ngủ thêm gần như không còn hồi sức cho bạn.';
+    }
   }
 
   const newStats = applyStatDeltas(stats, deltas);
