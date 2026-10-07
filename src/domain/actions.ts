@@ -86,8 +86,22 @@ export const DOMAIN_ACTIONS: ActionPrimitive[] = [
     baseWillpower: -20,
   },
   {
+    id: 'choc_cho',
+    title: 'Chọc chó',
+    category: 'temptation',
+    dopaminePathway: 'fast',
+    hours: 0.5,
+    description: 'Nghịch dại tìm cảm giác mạnh: Trêu chọc chú chó hung dữ. Rủi ro ngẫu nhiên cao: Có thể tăng vọt dopamine và tinh thần do hưng phấn tột độ, hoặc bị chó cắn gây tốn kém sức khỏe và tiền bạc!',
+    willpowerCost: 0,
+    isTemptation: true,
+    perceivedDopamineBonus: 35,
+    baseDopamine: 35,
+    baseEnergy: -15,
+    baseWillpower: -10,
+  },
+  {
     id: 'tease_dog',
-    title: 'Chọc chó hàng xóm tìm cảm giác mạnh (0.5 giờ)',
+    title: 'Chọc chó (Cảm giác mạnh)',
     category: 'temptation',
     dopaminePathway: 'fast',
     hours: 0.5,
@@ -135,19 +149,34 @@ export const DOMAIN_ACTIONS: ActionPrimitive[] = [
     baseDopamine: 12,
   },
   {
+    id: 'learn_soft_skills',
+    title: 'Học kỹ năng mềm',
+    category: 'wellness',
+    dopaminePathway: 'slow',
+    hours: 2,
+    description: 'Thực hành kỹ năng lắng nghe, thuyết trình, đàm phán và trí tuệ cảm xúc (EQ). Tốn nhiều năng lượng và ý chí lúc đầu nhưng giúp bồi đắp chỉ số kết nối, tinh thần và ý chí lâu dài.',
+    willpowerCost: 24,
+    isTemptation: false,
+    baseEnergy: -22,
+    baseWillpower: 28,
+    baseMental: 22,
+    baseSocial: 34,
+    baseDopamine: 14,
+  },
+  {
     id: 'practice_soft_skills',
-    title: 'Luyện kỹ năng mềm & Giao tiếp EQ (1.5 giờ)',
+    title: 'Học kỹ năng mềm (Thực hành EQ)',
     category: 'wellness',
     dopaminePathway: 'slow',
     hours: 1.5,
-    description: 'Thực hành kỹ năng lắng nghe, đàm phán, thuyết trình và thấu cảm. Bước ra khỏi vùng an toàn để nâng cao trí tuệ cảm xúc và kết nối xã hội.',
-    willpowerCost: 16,
+    description: 'Thực hành kỹ năng lắng nghe, đàm phán, thuyết trình và thấu cảm. Tốn nhiều năng lượng và ý chí ban đầu để nâng cao trí tuệ cảm xúc và kết nối xã hội lâu dài.',
+    willpowerCost: 22,
     isTemptation: false,
     baseSocial: 30,
-    baseMental: 18,
-    baseWillpower: 18,
+    baseMental: 20,
+    baseWillpower: 24,
     baseDopamine: 12,
-    baseEnergy: -10,
+    baseEnergy: -20,
   },
   {
     id: 'exercise',
@@ -418,33 +447,35 @@ export function executeActionById(
     deltas.willpower = (deltas.willpower ?? 0) - 8;
     notice = 'Sức ì tâm lý: Não bộ kháng cự Dopamine Chậm vì đòi hỏi nỗ lực, bạn mất thêm 8 điểm ý chí!';
   }
-  // 4. Cơ chế đặc thù cho "Chọc chó hàng xóm" (Rủi ro nghịch dại tìm Dopamine Nhanh)
-  if (action.id === 'tease_dog') {
+  // 4. Cơ chế đặc thù cho "Chọc chó" (Rủi ro ngẫu nhiên: tăng dopamine/tinh thần hoặc bị cắn tốn sức khỏe)
+  if (action.id === 'tease_dog' || action.id === 'choc_cho') {
     const roll = Math.random();
-    if (roll < 0.55) {
-      // 55%: Bị rượt chạy tóe khói
-      deltas.energy = -28;
-      deltas.willpower = -14;
-      deltas.social = -15;
-      deltas.dopamine = 20;
-      notice = 'Hậu quả chọc chó: Chó đứt xích đuổi theo bạt mạng! Bạn chạy rơi cả dép, thở không ra hơi, lại còn bị hàng xóm mắng té tát vì nghịch dại! (-28 Năng lượng, -15 Kết nối)';
-      soundCue = 'sigh';
-    } else if (roll < 0.8) {
-      // 25%: Bị táp trúng chân
-      deltas.money = -600; // Tiền tiêm phòng dại & sát trùng
-      deltas.energy = -35;
-      deltas.mental = -28;
-      deltas.willpower = -22;
-      deltas.dopamine = 5;
-      notice = 'Họa vô đơn chí! Bạn vấp ngã và bị táp trúng bắp chân. Phải bấm bụng chi 600k VNĐ đi trạm y tế tiêm phòng dại trong đau đớn! (-600k VNĐ, -35 Năng lượng, -28 Tinh thần)';
-      soundCue = 'sigh';
-    } else {
-      // 20%: Thoát hiểm ngoạn mục
-      deltas.dopamine = 48;
+    if (roll < 0.45) {
+      // 45%: Thành công / Thoát hiểm ngoạn mục -> Tăng dopamine và tinh thần
+      deltas.dopamine = 45;
+      deltas.mental = 18;
       deltas.energy = -10;
       deltas.willpower = -6;
-      notice = 'Thoát hiểm trong gang tấc! Cú nhảy qua rào ngoạn mục đem lại cú nổ Dopamine & Adrenaline cực mạnh, nhưng tim bạn đập thình thịch 160 nhịp/phút! (+48 Dopamine tức thì)';
+      notice = 'Thành công ngoạn mục! Cú lừa chú chó qua hàng rào mang lại cảm giác phấn khích tột độ, dopamine và tinh thần vọt đỉnh! (+45 Dopamine, +18 Tinh thần)';
       soundCue = 'temptation';
+    } else if (roll < 0.75) {
+      // 30%: Bị rượt chạy tóe khói -> Tốn sức khỏe & thể lực
+      deltas.energy = -30;
+      deltas.mental = -12;
+      deltas.willpower = -15;
+      deltas.social = -15;
+      deltas.dopamine = 15;
+      notice = 'Hậu quả chọc chó: Chó đứt xích đuổi theo bạt mạng! Bạn chạy rơi cả dép, kiệt sức và bị hàng xóm mắng té tát vì tội nghịch dại! (-30 Năng lượng, -12 Tinh thần, -15 Kết nối)';
+      soundCue = 'sigh';
+    } else {
+      // 25%: Bị chó cắn -> Tốn sức khỏe nghiêm trọng & tốn tiền tiêm ngừa
+      deltas.money = -500; // Tiền tiêm phòng dại & sát trùng vết thương
+      deltas.energy = -38;
+      deltas.mental = -28;
+      deltas.willpower = -22;
+      deltas.dopamine = -15;
+      notice = 'Họa vô đơn chí! Bạn vấp ngã và bị chó táp trúng chân, tốn sức khỏe trầm trọng và mất 500k VNĐ đi trạm y tế tiêm phòng dại! (-38 Năng lượng, -28 Tinh thần, -500k VNĐ)';
+      soundCue = 'sigh';
     }
   }
 
@@ -456,10 +487,12 @@ export function executeActionById(
     soundCue = 'healthy';
   }
 
-  // 6. Cơ chế đặc thù cho "Luyện kỹ năng mềm"
-  if (action.id === 'practice_soft_skills') {
-    deltas.social = (deltas.social ?? 0) + 5;
-    notice = 'Nâng tầm EQ: Kỹ năng giao tiếp và thấu cảm giúp bạn tự tin hơn trước các tương tác xã hội!';
+  // 6. Cơ chế đặc thù cho "Học kỹ năng mềm" (Tốn nhiều năng lượng/ý chí, tăng chỉ số lâu dài)
+  if (action.id === 'practice_soft_skills' || action.id === 'learn_soft_skills') {
+    deltas.social = (deltas.social ?? 0) + 8;
+    deltas.mental = (deltas.mental ?? 0) + 6;
+    deltas.willpower = (deltas.willpower ?? 0) + 8;
+    notice = 'Học kỹ năng mềm: Vượt qua sự e ngại ban đầu giúp bồi đắp trí tuệ cảm xúc (EQ), mở rộng kết nối và gia tăng ý chí lâu dài!';
     soundCue = 'healthy';
   }
 

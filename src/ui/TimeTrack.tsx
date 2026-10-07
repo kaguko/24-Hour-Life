@@ -21,6 +21,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   work_overtime: 'bg-amber-700 text-white',
   learn_skill: 'bg-teal-600 text-white',
   study_deep: 'bg-blue-700 text-white',
+  learn_soft_skills: 'bg-indigo-600 text-white',
   practice_soft_skills: 'bg-indigo-500 text-white',
   exercise: 'bg-emerald-600 text-white',
   short_walk: 'bg-emerald-500 text-white',
@@ -38,6 +39,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   impulse_shopping: 'bg-rose-500 text-white',
   caffeine_spike: 'bg-amber-500 text-white',
   tease_dog: 'bg-red-600 text-white',
+  choc_cho: 'bg-red-600 text-white',
 };
 
 export const TimeTrack: React.FC<TimeTrackProps> = ({

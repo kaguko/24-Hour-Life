@@ -127,7 +127,7 @@ export function processOvernightCycle(
 
   // 7. Chọn câu triết lý vĩ nhân theo chủ đề nổi bật của ngày
   let quoteTheme: PhilosophicalQuote['theme'] = 'balance_moderation';
-  if (actionIdsToday.includes('tease_dog')) {
+  if (actionIdsToday.includes('tease_dog') || actionIdsToday.includes('choc_cho')) {
     quoteTheme = 'folly_recklessness';
   } else if (fastDopamineHours >= 3 || currentStats.dopamine >= 75) {
     quoteTheme = 'fast_dopamine';
