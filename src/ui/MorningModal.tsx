@@ -1,5 +1,5 @@
 import React from 'react';
-import { NightResultPrimitive } from '../domain';
+import { NightResultPrimitive, evaluateLifeStatus } from '../domain';
 import { Sunrise, Lightbulb, ArrowRight, Quote } from 'lucide-react';
 
 interface MorningModalProps {
@@ -8,6 +8,8 @@ interface MorningModalProps {
 }
 
 export const MorningModal: React.FC<MorningModalProps> = ({ report, onContinue }) => {
+  // Đêm cuối (ngày 7) hoặc đã sụp đổ: nút dẫn tới màn hình kết cục thay vì "ngày tiếp theo"
+  const isFinalNight = report.dayCompleted >= 7 || evaluateLifeStatus(report.newStats).isGameOver;
   return (
     <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -15,7 +17,11 @@ export const MorningModal: React.FC<MorningModalProps> = ({ report, onContinue }
         <div className="bg-gradient-to-r from-stone-900 to-indigo-950 p-5 text-white">
           <div className="flex items-center gap-2 text-indigo-300 text-xs font-semibold mb-1">
             <Sunrise className="w-4 h-4" />
-            <span>KẾT THÚC NGÀY {report.dayCompleted} · BƯỚC VÀO NGÀY {report.dayCompleted + 1}</span>
+            <span>
+              {isFinalNight
+                ? `KẾT THÚC NGÀY ${report.dayCompleted}`
+                : `KẾT THÚC NGÀY ${report.dayCompleted} · BƯỚC VÀO NGÀY ${report.dayCompleted + 1}`}
+            </span>
           </div>
           <h3 className="text-xl font-bold tracking-tight">
             Bình Minh & Những Hậu Quả Trễ Qua Đêm
@@ -99,7 +105,7 @@ export const MorningModal: React.FC<MorningModalProps> = ({ report, onContinue }
             onClick={onContinue}
             className="w-full sm:w-auto px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors shadow-xs"
           >
-            <span>Bắt đầu ngày {report.dayCompleted + 1}</span>
+            <span>{isFinalNight ? 'Xem kết cục của bạn' : `Bắt đầu ngày ${report.dayCompleted + 1}`}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

@@ -15,6 +15,7 @@ import {
   evaluateLifeStatus,
   rollDomainEvent,
   resolveDomainChoice,
+  evaluateEnding,
 } from '../domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
@@ -26,12 +27,14 @@ export function useGameAdapter() {
   const [sleepDebt, setSleepDebt] = useState<number>(0);
   const [actionsTodayIds, setActionsTodayIds] = useState<string[]>([]);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [history, setHistory] = useState<string[][]>([]);
+  const [finished, setFinished] = useState<boolean>(false);
+  const [isIntroOpen, setIsIntroOpen] = useState<boolean>(() => !storageAdapter.hasSeenIntro());
 
   // Transient UX states
   const [notice, setNotice] = useState<string | null>(null);
   const [morningReport, setMorningReport] = useState<NightResultPrimitive | null>(null);
   const [activeEvent, setActiveEvent] = useState<EventPrimitive | null>(null);
-  const [isWeekReviewOpen, setIsWeekReviewOpen] = useState<boolean>(false);
 
   // Restore on mount via storageAdapter
   useEffect(() => {
@@ -43,6 +46,8 @@ export function useGameAdapter() {
       setSleepDebt(saved.sleepDebt);
       setActionsTodayIds(saved.actionsTodayIds);
       setSoundEnabled(saved.soundEnabled);
+      setHistory(saved.history ?? []);
+      setFinished(saved.finished ?? false);
       audioAdapter.enabled = saved.soundEnabled;
     }
   }, []);
@@ -56,12 +61,17 @@ export function useGameAdapter() {
       sleepDebt,
       actionsTodayIds,
       soundEnabled,
+      history,
+      finished,
     });
-  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled]);
+  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished]);
 
   const hoursRemaining = Math.max(0, 24 - hoursUsed);
 
   const lifeStatus = useMemo(() => evaluateLifeStatus(stats), [stats]);
+
+  // Kết cục chỉ có ý nghĩa khi ván đã kết thúc
+  const ending = useMemo(() => (finished ? evaluateEnding(history, stats) : null), [finished, history, stats]);
 
   const actionsToday = useMemo(() => {
     return actionsTodayIds
@@ -88,6 +98,7 @@ export function useGameAdapter() {
         day
       );
 
+      setHistory((prev) => [...prev, customActionIds]);
       setStats(nightResult.newStats);
       setSleepDebt(nightResult.newSleepDebt);
       setMorningReport(nightResult);
@@ -141,13 +152,20 @@ export function useGameAdapter() {
     setActionsTodayIds([]);
     setHoursUsed(0);
 
-    if (day >= 7) {
-      setIsWeekReviewOpen(true);
-      audioAdapter.playCue('victory');
+    // Kết thúc ván khi sụp đổ giữa chừng hoặc đã đủ 7 ngày
+    const collapsed = evaluateLifeStatus(stats).isGameOver;
+    if (collapsed || day >= 7) {
+      setFinished(true);
+      audioAdapter.playCue(collapsed ? 'sigh' : 'victory');
     } else {
       setDay((prev) => prev + 1);
     }
-  }, [day]);
+  }, [day, stats]);
+
+  const dismissIntro = useCallback(() => {
+    storageAdapter.markIntroSeen();
+    setIsIntroOpen(false);
+  }, []);
 
   const resolveEvent = useCallback(
     (choiceId: string) => {
@@ -171,7 +189,8 @@ export function useGameAdapter() {
     setNotice(null);
     setMorningReport(null);
     setActiveEvent(null);
-    setIsWeekReviewOpen(false);
+    setHistory([]);
+    setFinished(false);
   }, []);
 
   return {
@@ -185,7 +204,8 @@ export function useGameAdapter() {
     notice,
     morningReport,
     activeEvent,
-    isWeekReviewOpen,
+    ending,
+    isIntroOpen,
     soundEnabled,
     takeAction,
     endDayEarly: () => endDay(stats, actionsTodayIds),
@@ -194,6 +214,6 @@ export function useGameAdapter() {
     resetGame,
     toggleSound,
     setNotice,
-    setIsWeekReviewOpen,
+    dismissIntro,
   };
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGameAdapter } from './adapters/useGameAdapter';
+import { shareAdapter } from './adapters/shareAdapter';
 import { DOMAIN_ACTIONS } from './domain';
 
 import { TopNav } from './ui/TopNav';
@@ -8,7 +9,8 @@ import { TimeTrack } from './ui/TimeTrack';
 import { ActionGrid } from './ui/ActionGrid';
 import { MorningModal } from './ui/MorningModal';
 import { EventModal } from './ui/EventModal';
-import { WeekReviewModal } from './ui/WeekReviewModal';
+import { EndingModal } from './ui/EndingModal';
+import { IntroModal } from './ui/IntroModal';
 import { SimulationBench } from './ui/SimulationBench';
 import { GuideModal } from './ui/GuideModal';
 import { AlertOctagon, RotateCcw } from 'lucide-react';
@@ -28,7 +30,9 @@ export default function App() {
     notice,
     morningReport,
     activeEvent,
-    isWeekReviewOpen,
+    ending,
+    isIntroOpen,
+    dismissIntro,
     soundEnabled,
     takeAction,
     endDayEarly,
@@ -37,7 +41,6 @@ export default function App() {
     resetGame,
     toggleSound,
     setNotice,
-    setIsWeekReviewOpen,
   } = useGameAdapter();
 
   return (
@@ -142,14 +145,17 @@ export default function App() {
         <EventModal event={activeEvent} onResolveChoice={resolveEvent} />
       )}
 
-      {isWeekReviewOpen && (
-        <WeekReviewModal
+      {ending && (
+        <EndingModal
+          ending={ending}
           stats={stats}
-          lifeStatus={lifeStatus}
           onRestart={resetGame}
-          onContinueEndless={() => setIsWeekReviewOpen(false)}
+          onShare={() => shareAdapter.share(ending, stats)}
+          onCopy={() => shareAdapter.copy(ending)}
         />
       )}
+
+      {isIntroOpen && !ending && <IntroModal onStart={dismissIntro} />}
     </div>
   );
 }
