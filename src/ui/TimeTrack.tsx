@@ -20,6 +20,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   work_focused: 'bg-amber-600 text-white',
   work_overtime: 'bg-amber-700 text-white',
   learn_skill: 'bg-teal-600 text-white',
+  study_deep: 'bg-blue-700 text-white',
+  practice_soft_skills: 'bg-indigo-500 text-white',
   exercise: 'bg-emerald-600 text-white',
   short_walk: 'bg-emerald-500 text-white',
   pet_bonding: 'bg-teal-500 text-white',
@@ -35,6 +37,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   fast_food: 'bg-orange-500 text-white',
   impulse_shopping: 'bg-rose-500 text-white',
   caffeine_spike: 'bg-amber-500 text-white',
+  tease_dog: 'bg-red-600 text-white',
 };
 
 export const TimeTrack: React.FC<TimeTrackProps> = ({

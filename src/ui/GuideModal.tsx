@@ -147,6 +147,41 @@ export const GuideModal: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Phân tích trường hợp đặc biệt: Học tập, Kỹ năng mềm & Chọc chó */}
+      <div className="p-5 bg-stone-50 rounded-2xl border border-stone-200 space-y-3">
+        <h3 className="text-sm font-bold text-stone-900">
+          🔍 Nghiên Cứu Tình Huống: Học Tập, Kỹ Năng Mềm và Trò Nghịch &quot;Chọc Chó&quot;
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs leading-relaxed">
+          <div className="p-3 bg-white rounded-xl border border-stone-200 space-y-1">
+            <div className="font-bold text-indigo-900 flex items-center gap-1">
+              <span>📚 Học Tập Chuyên Môn</span>
+            </div>
+            <p className="text-stone-600 text-[11px]">
+              <strong>Dopamine Chậm đỉnh cao:</strong> Tiêu hao năng lượng trí não và đòi hỏi ý chí cao. Tuy nhiên khi vượt qua ngưỡng kháng cự ban đầu, bạn đạt trạng thái <em>Dòng Chảy (Flow State)</em>, tạo ra sự tự tin vững chắc và gia tăng năng lực kinh tế dài hạn.
+            </p>
+          </div>
+
+          <div className="p-3 bg-white rounded-xl border border-stone-200 space-y-1">
+            <div className="font-bold text-emerald-900 flex items-center gap-1">
+              <span>🤝 Luyện Kỹ Năng Mềm (EQ)</span>
+            </div>
+            <p className="text-stone-600 text-[11px]">
+              <strong>Dopamine Chậm + Vốn Xã Hội:</strong> Thực hành giao tiếp, đàm phán và kiểm soát cảm xúc giúp tăng vọt chỉ số Kết Nối (+30). Kỹ năng mềm giúp bảo vệ bạn trước các áp lực cuộc sống và giảm mâu thuẫn trong các sự kiện ngẫu nhiên.
+            </p>
+          </div>
+
+          <div className="p-3 bg-white rounded-xl border border-stone-200 space-y-1">
+            <div className="font-bold text-rose-900 flex items-center gap-1">
+              <span>🐕 Nghịch Dại: &quot;Chọc Chó&quot;</span>
+            </div>
+            <p className="text-stone-600 text-[11px]">
+              <strong>Bẫy Dopamine Nhanh + Adrenaline:</strong> Tại sao con người lại thích nghịch dại? Vì não bộ bị kích động bởi sự hồi hộp và phần thưởng thoát hiểm tức thì! Nhưng rủi ro thực tế rất đắt: 55% bị rượt rơi dép mất sức, 25% bị cắn tốn 600k tiêm phòng dại!
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
