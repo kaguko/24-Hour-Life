@@ -30,6 +30,8 @@ export function useGameAdapter() {
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [history, setHistory] = useState<string[][]>([]);
   const [avatarId, setAvatarId] = useState<AvatarId>(DEFAULT_AVATAR);
+  // Hành vi vừa chọn (cho cảnh 3D); n tăng dần để lặp lại cùng hành vi vẫn kích hoạt hiệu ứng
+  const [lastAction, setLastAction] = useState<{ id: string; n: number } | null>(null);
   const [finished, setFinished] = useState<boolean>(false);
   const [isIntroOpen, setIsIntroOpen] = useState<boolean>(() => !storageAdapter.hasSeenIntro());
 
@@ -130,6 +132,7 @@ export function useGameAdapter() {
       setStats(result.newStats);
       setHoursUsed(nextHoursUsed);
       setActionsTodayIds(nextActionIds);
+      setLastAction((prev) => ({ id: actionId, n: (prev?.n ?? 0) + 1 }));
       setNotice(result.notice);
 
       // Random event trigger check (pure roll)
@@ -218,6 +221,7 @@ export function useGameAdapter() {
     activeEvent,
     ending,
     avatarId,
+    lastAction,
     setAvatarId: selectAvatar,
     isIntroOpen,
     soundEnabled,

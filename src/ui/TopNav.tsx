@@ -28,7 +28,7 @@ export const TopNav: React.FC<TopNavProps> = ({
         {/* Zone 1: Single Brand element */}
         <div className="flex items-center gap-3">
           <img src={avatarUrl(avatarId)} alt="" width={32} height={32} className="w-8 h-8 -ml-1" draggable={false} />
-          <span className="text-base sm:text-lg font-bold tracking-tight text-stone-900 font-sans">
+          <span className="hidden sm:inline text-base sm:text-lg font-bold tracking-tight text-stone-900 font-sans">
             Cuộc Sống 24 Giờ
           </span>
           <span className="hidden sm:inline text-xs text-stone-400 font-medium">·</span>
@@ -48,7 +48,7 @@ export const TopNav: React.FC<TopNavProps> = ({
             }`}
           >
             <Play className="w-3.5 h-3.5 text-stone-700" />
-            <span>Chơi thực tế</span>
+            <span className={currentTab === 'game' ? '' : 'hidden sm:inline'}>Chơi thực tế</span>
           </button>
           <button
             onClick={() => onTabChange('simulate')}
@@ -59,7 +59,7 @@ export const TopNav: React.FC<TopNavProps> = ({
             }`}
           >
             <Activity className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Mô phỏng 1000 lần</span>
+            <span className={currentTab === 'simulate' ? '' : 'hidden sm:inline'}>Mô phỏng 1000 lần</span>
           </button>
           <button
             onClick={() => onTabChange('guide')}
@@ -70,7 +70,7 @@ export const TopNav: React.FC<TopNavProps> = ({
             }`}
           >
             <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
-            <span>Luật & Bài học</span>
+            <span className={currentTab === 'guide' ? '' : 'hidden sm:inline'}>Luật & Bài học</span>
           </button>
         </nav>
 

@@ -120,7 +120,7 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ stats, lifeStatus, sleepDebt
       </div>
 
       {/* Grid 6 chỉ số */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
         {statItems.map((item) => {
           const IconComponent = item.icon;
           const displayVal = item.formatValue ?? `${item.value}${item.unit}`;

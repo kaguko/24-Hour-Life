@@ -111,6 +111,7 @@ Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, kh
 - [x] Dọn gói/file không dùng (`express`, `dotenv`, `@google/genai`, `motion`, `lib/sound.ts`, `lib/storage.ts`).
 - [x] **Nhân vật (Kenney Mini Characters, CC0)**: người chơi chọn 1 trong 12 nhân vật ở màn giới thiệu; hiện ở thanh trên, thẻ kết cục và ảnh chia sẻ (mỗi ảnh khác nhau → dễ khoe). Mô hình 3D được render sang PNG 192px (`public/avatars/`, ~320KB tổng). Nguồn: `CREDITS.md`.
 - [x] **Âm thanh thật (Kenney CC0)**: 8 cue (cám dỗ, lành mạnh, bấm nút, thở dài, qua đêm, biến cố, thắng, thất bại) từ Interface Sounds + Music Jingles, MP3 tổng 42KB; âm tổng hợp giữ làm dự phòng. Chưa có nhạc nền loop - jingle chỉ là stinger ngắn.
+- [x] **Phòng 3D (three.js, tải lười)**: căn phòng arcade từ Kenney Mini Arcade; nhân vật đã chọn đi tới đúng máy theo hành vi (game → máy arcade, đồ ăn → máy bán hàng, mua sắm → máy gắp, nhậu → máy nhảy, tập → bóng rổ, làm việc → quầy, ngủ → nằm xuống); phòng sáng/tối theo giờ và năng lượng, nháy hồng khi dopamine > 75, nhân vật xám khi tinh thần thấp. Bố cục 2 cột trên desktop, phòng dính trên cùng ở mobile. Bundle chính 110KB gzip; cảnh 3D (156KB gzip) tải riêng. Đồ thị hành vi → máy nằm ở `lib/roomStations.ts`.
 - [x] Kiểm thử UI tự động bằng Playwright (Edge headless): intro → chơi → kết cục → chia sẻ → reload → chơi lại, cả desktop và mobile.
 
 ### 📅 TUẦN 4: Cân Bằng Dựa Trên Dữ Liệu & Nâng Cấp Âm Thanh
