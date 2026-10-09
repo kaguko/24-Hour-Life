@@ -18,7 +18,9 @@ export interface PhilosophicalQuote {
     | 'social_connection'
     | 'folly_recklessness'
     | 'flow_study'
-    | 'balance_moderation';
+    | 'balance_moderation'
+    | 'rest_recovery'
+    | 'apathy_meaning';
 }
 
 export const PHILOSOPHICAL_QUOTES: PhilosophicalQuote[] = [
@@ -72,7 +74,14 @@ export const PHILOSOPHICAL_QUOTES: PhilosophicalQuote[] = [
     quote: 'Người có lý do để sống có thể chịu đựng được hầu hết mọi nghịch cảnh.',
     author: 'Friedrich Nietzsche',
     role: 'Triết gia người Đức',
-    theme: 'slow_dopamine',
+    theme: 'apathy_meaning',
+  },
+  {
+    id: 'frankl_meaning',
+    quote: 'Cuộc sống không bao giờ trở nên không thể chịu đựng vì hoàn cảnh, mà chỉ vì thiếu ý nghĩa và mục đích.',
+    author: 'Viktor Frankl',
+    role: 'Bác sĩ tâm thần, tác giả "Đi tìm lẽ sống"',
+    theme: 'apathy_meaning',
   },
   {
     id: 'james_clear_habits',
@@ -102,7 +111,14 @@ export const PHILOSOPHICAL_QUOTES: PhilosophicalQuote[] = [
     quote: 'Mỉm cười, thở và đi thật chậm. Bình an hiện diện trong từng hơi thở có ý thức.',
     author: 'Thích Nhất Hạnh',
     role: 'Thiền sư & Nhà hoạt động hòa bình',
-    theme: 'burnout_rest',
+    theme: 'rest_recovery',
+  },
+  {
+    id: 'lubbock_rest',
+    quote: 'Nghỉ ngơi không phải là lười nhác. Nằm trên cỏ dưới bóng cây một ngày hè, nghe nước róc rách, ngắm mây trôi, chẳng hề là phí thời gian.',
+    author: 'John Lubbock',
+    role: 'Nhà khoa học & Chính khách người Anh',
+    theme: 'rest_recovery',
   },
 
   // 4. TÀI CHÍNH & ÁP LỰC TIỀN BẠC

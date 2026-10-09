@@ -74,7 +74,11 @@ export const MorningModal: React.FC<MorningModalProps> = ({ report, onContinue }
                 <Quote className="w-3.5 h-3.5 text-indigo-600 fill-indigo-600" />
                 <span>Lời đúc kết từ vĩ nhân</span>
               </div>
-              <blockquote className="text-xs italic text-stone-800 leading-relaxed font-serif pl-2 border-l-2 border-indigo-400">
+              {report.philosophicalQuote.context && (
+                <p className="text-[11px] text-indigo-700/80">{report.philosophicalQuote.context}</p>
+              )}
+              {/* Không dùng font-serif: một số phông serif hiển thị lỗi dấu tiếng Việt khi in nghiêng */}
+              <blockquote className="text-xs italic text-stone-800 leading-relaxed pl-2 border-l-2 border-indigo-400">
                 &ldquo;{report.philosophicalQuote.quote}&rdquo;
               </blockquote>
               <div className="text-[11px] text-right text-stone-600 font-medium pt-0.5">

@@ -49,6 +49,8 @@ export interface QuotePrimitive {
   quote: string;
   author: string;
   role: string;
+  /** Lời dẫn: câu này nói về điều gì của ngày hôm qua */
+  context?: string;
 }
 
 export interface ActionResultPrimitive {

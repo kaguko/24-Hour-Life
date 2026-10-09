@@ -23,6 +23,8 @@ export function processOvernightCycle(
 ): NightResultPrimitive {
   const notes: string[] = [];
   const revealedMechanics: string[] = [];
+  // Mỗi hậu quả trong đêm ghi lại chủ đề triết lý và "sức nặng" (tổng mức đổi chỉ số, dấu + là tốt)
+  const drivers: Array<{ theme: PhilosophicalQuote['theme']; weight: number }> = [];
   const deltas: Partial<PlayerStatsPrimitive> = {
     money: -DAILY_RENT_COST,
   };
@@ -56,7 +58,9 @@ export function processOvernightCycle(
     deltas.energy = (deltas.energy ?? 0) - 20;
     deltas.mental = (deltas.mental ?? 0) - 15;
     deltas.willpower = (deltas.willpower ?? 0) - 22;
+    drivers.push({ theme: 'burnout_rest', weight: -57 });
   } else if (sleepHours < 7) {
+    drivers.push({ theme: 'burnout_rest', weight: -20 });
     notes.push(`Ngủ chập chờn (${sleepHours}h). Nợ ngủ bắt đầu tích tụ âm ỉ.`);
     deltas.energy = (deltas.energy ?? 0) - 10;
     deltas.willpower = (deltas.willpower ?? 0) - 10;
@@ -65,6 +69,8 @@ export function processOvernightCycle(
     deltas.energy = (deltas.energy ?? 0) + 20;
     deltas.willpower = (deltas.willpower ?? 0) + 15;
     deltas.mental = (deltas.mental ?? 0) + 10;
+    // Ngủ đủ là nền bình thường: trọng số thấp để không lấn át điều nổi bật hơn
+    drivers.push({ theme: 'rest_recovery', weight: 15 });
   }
 
   // Ngủ quá nhiều: nặng nề, uể oải, bào mòn tinh thần
@@ -76,6 +82,8 @@ export function processOvernightCycle(
     deltas.mental = (deltas.mental ?? 0) - Math.round(excess * OVERSLEEP_MENTAL_PER_HOUR);
     deltas.energy = (deltas.energy ?? 0) - Math.round(excess * 1.5);
     deltas.willpower = (deltas.willpower ?? 0) - Math.round(excess * 1.5);
+    // Ngủ quá nhiều là thiếu điều độ, không phải kiệt sức
+    drivers.push({ theme: 'balance_moderation', weight: -Math.round(excess * 5) });
   }
 
   // Tác động nợ ngủ lũy kế
@@ -83,6 +91,7 @@ export function processOvernightCycle(
     notes.push(`Nợ ngủ lũy kế chạm mức ${newSleepDebt.toFixed(1)}h: Hội chứng sương mù não (Brain Fog) làm bạn uể oải cả ngày.`);
     deltas.energy = (deltas.energy ?? 0) - 15;
     deltas.mental = (deltas.mental ?? 0) - 10;
+    drivers.push({ theme: 'burnout_rest', weight: -25 });
     if (dayNumber >= 3) {
       revealedMechanics.push(
         '💡 [Cơ chế ẩn được hé lộ]: Nợ ngủ không thể bù đắp chỉ bằng 1 ngày ngủ nướng. Nó ăn mòn thụ thể dopamine và năng lực tập trung.'
@@ -99,6 +108,7 @@ export function processOvernightCycle(
     deltas.dopamine = -28;
     deltas.willpower = (deltas.willpower ?? 0) - 20;
     deltas.mental = (deltas.mental ?? 0) - 14;
+    drivers.push({ theme: 'fast_dopamine', weight: -62 });
 
     if (dayNumber >= 2) {
       revealedMechanics.push(
@@ -121,6 +131,9 @@ export function processOvernightCycle(
     deltas.mental = (deltas.mental ?? 0) + 14;
     deltas.willpower = (deltas.willpower ?? 0) + 12;
     deltas.energy = (deltas.energy ?? 0) + 8;
+    // Học sâu chiếm phần lớn -> chủ đề học tập; còn lại -> dopamine chậm nói chung
+    const studyHours = actionsToday.filter((a) => a.id === 'study_deep' || a.id === 'learn_skill').reduce((s, a) => s + a.hours, 0);
+    drivers.push({ theme: studyHours * 2 >= slowDopamineHours ? 'flow_study' : 'slow_dopamine', weight: 34 });
 
     if (dayNumber >= 3) {
       revealedMechanics.push(
@@ -138,6 +151,7 @@ export function processOvernightCycle(
     deltas.mental =
       (deltas.mental ?? 0) - Math.round(ANHEDONIA_BASE_PENALTY + deficit * ANHEDONIA_PENALTY_PER_POINT);
     deltas.willpower = (deltas.willpower ?? 0) - 6;
+    drivers.push({ theme: 'apathy_meaning', weight: -(ANHEDONIA_BASE_PENALTY + deficit * ANHEDONIA_PENALTY_PER_POINT + 6) });
     if (dayNumber >= 3) {
       revealedMechanics.push(
         '💡 [Khoa học thần kinh - Vô cảm]: Không kích thích không có nghĩa là bình yên. Khi hệ thống phần thưởng không được dùng đến, não bộ mất dần khả năng cảm thấy hứng thú - nghỉ ngơi thật sự cần xen kẽ với hoạt động có ý nghĩa.'
@@ -150,6 +164,7 @@ export function processOvernightCycle(
     notes.push('Sự cô đơn kéo dài: Thiếu kết nối sâu sắc khiến tâm trạng sa sút.');
     deltas.mental = (deltas.mental ?? 0) - 10;
     deltas.willpower = (deltas.willpower ?? 0) - 8;
+    drivers.push({ theme: 'social_connection', weight: -18 });
   }
 
   // 6. Áp lực nợ nần
@@ -157,28 +172,16 @@ export function processOvernightCycle(
     notes.push('Áp lực nợ nần: Tiền trong tài khoản về âm, bạn lo lắng không yên.');
     deltas.mental = (deltas.mental ?? 0) - 15;
     deltas.willpower = (deltas.willpower ?? 0) - 12;
+    drivers.push({ theme: 'financial_freedom', weight: -27 });
   }
 
   const newStats = applyStatDeltas(currentStats, deltas);
 
-  // 7. Chọn câu triết lý vĩ nhân theo chủ đề nổi bật của ngày
-  let quoteTheme: PhilosophicalQuote['theme'] = 'balance_moderation';
+  // 7. Chọn câu triết lý khớp với kết cục nổi bật nhất của đêm
   if (actionIdsToday.includes('tease_dog') || actionIdsToday.includes('choc_cho')) {
-    quoteTheme = 'folly_recklessness';
-  } else if (fastDopamineHours >= 3 || fastSummary.atRisk) {
-    quoteTheme = 'fast_dopamine';
-  } else if (sleepHours < 5 || currentStats.energy <= 20) {
-    quoteTheme = 'burnout_rest';
-  } else if (slowDopamineHours >= 2.5) {
-    quoteTheme = 'slow_dopamine';
-  } else if (currentStats.money - DAILY_RENT_COST < 0) {
-    quoteTheme = 'financial_freedom';
-  } else if (currentStats.social < 25) {
-    quoteTheme = 'social_connection';
-  } else if (actionIdsToday.includes('study_deep')) {
-    quoteTheme = 'flow_study';
+    drivers.push({ theme: 'folly_recklessness', weight: -40 });
   }
-
+  const { theme: quoteTheme, context: quoteContext } = pickQuoteTheme(drivers);
   const selectedQuote = getContextualQuote(quoteTheme);
 
   return {
@@ -194,6 +197,51 @@ export function processOvernightCycle(
       quote: selectedQuote.quote,
       author: selectedQuote.author,
       role: selectedQuote.role,
+      context: quoteContext,
     },
   };
+}
+
+/** Lời dẫn ngắn: vì sao câu này được chọn cho buổi sáng hôm nay */
+const THEME_CONTEXT: Record<PhilosophicalQuote['theme'], string> = {
+  fast_dopamine: 'Cho cơn sụp đổ sau những khoái cảm tức thời hôm qua',
+  slow_dopamine: 'Cho những nỗ lực bền bỉ bạn đã gieo hôm qua',
+  flow_study: 'Cho những giờ học tập chuyên sâu hôm qua',
+  discipline_willpower: 'Cho sức mạnh của thói quen',
+  burnout_rest: 'Cho một cơ thể đang bị vắt kiệt',
+  rest_recovery: 'Cho một đêm nghỉ ngơi trọn vẹn',
+  financial_freedom: 'Cho áp lực tiền bạc đang đè nặng',
+  social_connection: 'Cho những ngày thiếu vắng kết nối',
+  folly_recklessness: 'Cho một phút bốc đồng hôm qua',
+  balance_moderation: 'Cho một ngày lệch nhịp: chỗ quá đà, chỗ thiếu hụt',
+  apathy_meaning: 'Cho những ngày mọi thứ trở nên vô vị',
+};
+
+/**
+ * Chọn chủ đề theo hậu quả có sức nặng lớn nhất.
+ * Ngày "lẫn lộn" (hậu quả tốt và xấu ngang ngửa, hoặc nhiều hậu quả xấu khác loại) -> trung đạo / điều độ.
+ */
+export function pickQuoteTheme(
+  drivers: Array<{ theme: PhilosophicalQuote['theme']; weight: number }>
+): { theme: PhilosophicalQuote['theme']; context: string } {
+  if (drivers.length === 0) return { theme: 'balance_moderation', context: THEME_CONTEXT.balance_moderation };
+  const bad = drivers.filter((d) => d.weight < 0).sort((a, b) => a.weight - b.weight);
+  const good = drivers.filter((d) => d.weight > 0).sort((a, b) => b.weight - a.weight);
+  const badSum = bad.reduce((s, d) => s - d.weight, 0);
+  const goodSum = good.reduce((s, d) => s + d.weight, 0);
+  const badThemes = new Set(bad.map((d) => d.theme));
+
+  let theme: PhilosophicalQuote['theme'];
+  if (bad.length === 0) {
+    theme = good[0].theme;
+  } else if (goodSum >= badSum * 0.5 && good.some((d) => d.theme !== 'rest_recovery')) {
+    // Vừa buông thả vừa cố gắng
+    theme = 'balance_moderation';
+  } else if (badThemes.size >= 2 && -bad[1].weight >= -bad[0].weight * 0.5) {
+    // Nhiều kiểu quá đà / thiếu hụt cùng lúc
+    theme = 'balance_moderation';
+  } else {
+    theme = bad[0].theme;
+  }
+  return { theme, context: THEME_CONTEXT[theme] };
 }
