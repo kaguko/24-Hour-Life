@@ -46,6 +46,24 @@ interface SceneApi {
   trigger: (actionId: string) => void;
 }
 
+/** Chỉ số hiện ngay trong phòng (thu gọn) */
+const ROOM_STATS: Array<{ key: keyof PlayerStatsPrimitive; icon: string; bar: string }> = [
+  { key: 'energy', icon: '⚡', bar: 'bg-amber-400' },
+  { key: 'mental', icon: '🧠', bar: 'bg-sky-400' },
+  { key: 'willpower', icon: '🛡️', bar: 'bg-indigo-400' },
+  { key: 'dopamine', icon: '✨', bar: 'bg-pink-400' },
+  { key: 'social', icon: '👥', bar: 'bg-emerald-400' },
+];
+
+const formatMoney = (k: number) => (Math.abs(k) >= 1000 ? `${(k / 1000).toFixed(1)}tr` : `${Math.round(k)}k`);
+
+interface FloatDelta {
+  id: number;
+  text: string;
+  good: boolean;
+  slot: number;
+}
+
 const CHAR_HEIGHT = 0.62;
 const HOME: [number, number] = STATION_POS.center;
 const WALK_SPEED = 2.8;
@@ -97,6 +115,27 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   const interactive = !!onSelectAction && actions.length > 0;
   const interactiveRef = useRef(interactive);
   interactiveRef.current = interactive;
+
+  // Số bay lên khi chỉ số đổi
+  const [deltas, setDeltas] = useState<FloatDelta[]>([]);
+  const prevStatsRef = useRef(stats);
+  const deltaIdRef = useRef(0);
+  useEffect(() => {
+    const prev = prevStatsRef.current;
+    prevStatsRef.current = stats;
+    if (prev === stats) return;
+    const fresh: FloatDelta[] = [];
+    for (const s of ROOM_STATS) {
+      const d = Math.round(stats[s.key] - prev[s.key]);
+      if (d !== 0) fresh.push({ id: ++deltaIdRef.current, text: `${s.icon} ${d > 0 ? '+' : ''}${d}`, good: d > 0, slot: fresh.length });
+    }
+    const dm = Math.round(stats.money - prev.money);
+    if (dm !== 0) fresh.push({ id: ++deltaIdRef.current, text: `💰 ${dm > 0 ? '+' : '-'}${formatMoney(Math.abs(dm))}`, good: dm > 0, slot: fresh.length });
+    if (!fresh.length) return;
+    setDeltas((cur) => [...cur, ...fresh]);
+    const ids = new Set(fresh.map((f) => f.id));
+    setTimeout(() => setDeltas((cur) => cur.filter((f) => !ids.has(f.id))), 1700);
+  }, [stats]);
   const mountRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<SceneApi | null>(null);
   const liveRef = useRef({ stats, hoursUsed, crashRisk });
@@ -476,8 +515,47 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       <span className="absolute top-2.5 left-3 px-2 py-1 rounded-lg bg-black/35 text-white text-xs font-semibold tabular-nums backdrop-blur-xs">
         {clock}
       </span>
+
+      {/* Chỉ số thu gọn trong phòng */}
+      <div className="absolute top-2.5 right-3 w-28 sm:w-32 px-2 py-1.5 rounded-lg bg-black/35 backdrop-blur-xs space-y-1 pointer-events-none">
+        {ROOM_STATS.map((s) => {
+          const v = Math.max(0, Math.min(100, stats[s.key]));
+          return (
+            <div key={s.key} className="flex items-center gap-1.5">
+              <span className="text-[10px] w-3.5 text-center">{s.icon}</span>
+              <div className="flex-1 h-1.5 rounded-full bg-white/20 overflow-hidden">
+                <div className={`h-full ${s.bar} ${v < 25 ? 'animate-pulse' : ''} transition-[width] duration-500`} style={{ width: `${v}%` }} />
+              </div>
+              <span className="text-[10px] text-white tabular-nums w-5 text-right">{Math.round(v)}</span>
+            </div>
+          );
+        })}
+        <div className="flex items-center gap-1.5 pt-0.5">
+          <span className="text-[10px] w-3.5 text-center">💰</span>
+          <span className={`text-[10px] font-semibold tabular-nums ${stats.money < 0 ? 'text-rose-300' : 'text-white'}`}>{formatMoney(stats.money)}</span>
+        </div>
+      </div>
+
+      {/* Số bay lên khi chỉ số đổi */}
+      <div className="absolute left-1/2 top-[38%] -translate-x-1/2 pointer-events-none">
+        {deltas.map((d) => (
+          <span
+            key={d.id}
+            className={`animate-float-up absolute whitespace-nowrap text-xs font-bold px-1.5 py-0.5 rounded-md ${d.good ? 'bg-emerald-500/85 text-white' : 'bg-rose-500/85 text-white'}`}
+            style={{ left: (d.slot % 3) * 56 - 84, top: Math.floor(d.slot / 3) * 22, animationDelay: `${d.slot * 70}ms`, opacity: 0 }}
+          >
+            {d.text}
+          </span>
+        ))}
+      </div>
+
+      {/* Thanh 24h: phần ngày đã dùng */}
+      <div className="absolute bottom-0 inset-x-0 h-1.5 bg-black/30 pointer-events-none">
+        <div className="h-full bg-gradient-to-r from-amber-300 via-sky-300 to-indigo-400 transition-[width] duration-500" style={{ width: `${Math.min(100, (hoursUsed / 24) * 100)}%` }} />
+      </div>
+
       {interactive && ready && !picked && (
-        <span className="absolute bottom-2.5 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-black/40 text-white text-[11px] backdrop-blur-xs pointer-events-none whitespace-nowrap">
+        <span className="absolute bottom-3.5 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-black/40 text-white text-[11px] backdrop-blur-xs pointer-events-none whitespace-nowrap">
           {hovered ? STATION_LABEL[hovered] : '👆 Bấm vào đồ vật hoặc nhân vật để hành động'}
         </span>
       )}

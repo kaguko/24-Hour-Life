@@ -20,6 +20,8 @@ const RoomScene = lazy(() => import('./ui/RoomScene'));
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<'game' | 'simulate' | 'guide'>('game');
+  // Danh sách thẻ chữ: thu gọn mặc định, chọn hành vi chính bằng cách bấm trong phòng 3D
+  const [showCards, setShowCards] = useState(false);
 
   // Clean Architecture: Adapter hook connects Domain to UI
   const {
@@ -152,12 +154,20 @@ export default function App() {
                     Còn lại {hoursRemaining.toFixed(1)} giờ tự do
                   </span>
                 </div>
-                <ActionGrid
-                  actions={DOMAIN_ACTIONS}
-                  currentStats={stats}
-                  hoursRemaining={hoursRemaining}
-                  onSelectAction={takeAction}
-                />
+                <button
+                  onClick={() => setShowCards((v) => !v)}
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 shadow-xs"
+                >
+                  {showCards ? '▲ Ẩn danh sách chi tiết' : `▼ Xem danh sách chi tiết (${DOMAIN_ACTIONS.length} hành vi)`}
+                </button>
+                {showCards && (
+                  <ActionGrid
+                    actions={DOMAIN_ACTIONS}
+                    currentStats={stats}
+                    hoursRemaining={hoursRemaining}
+                    onSelectAction={takeAction}
+                  />
+                )}
               </div>
             </div>
           </>

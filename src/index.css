@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+/* Số chỉ số bay lên trong phòng 3D khi chỉ số thay đổi */
+@keyframes float-up {
+  0% { opacity: 0; transform: translateY(6px) scale(0.9); }
+  15% { opacity: 1; transform: translateY(0) scale(1.05); }
+  100% { opacity: 0; transform: translateY(-46px) scale(1); }
+}
+.animate-float-up {
+  animation: float-up 1.6s ease-out forwards;
+}
