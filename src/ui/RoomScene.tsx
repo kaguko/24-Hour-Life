@@ -160,6 +160,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   }, [stats]);
   const mountRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
+  const petBubbleRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<SceneApi | null>(null);
   const liveRef = useRef({ stats, hoursUsed, crashRisk });
   const pendingRef = useRef<{ avatar: AvatarId; action: string | null }>({ avatar: avatarId, action: null });
@@ -204,15 +205,15 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     scene.add(room);
 
     const loader = new GLTFLoader();
-    const cache = new Map<string, THREE.Group>();
+    // Lưu promise (không phải kết quả) để các lần gọi song song cùng một file chỉ tải một lần
+    const cache = new Map<string, Promise<THREE.Group>>();
     const getModel = async (url: string) => {
       let g = cache.get(url);
       if (!g) {
-        const gltf = await loader.loadAsync(url);
-        g = gltf.scene;
+        g = loader.loadAsync(url).then((gltf) => gltf.scene);
         cache.set(url, g);
       }
-      return g.clone(true);
+      return (await g).clone(true);
     };
 
     const props: Partial<Record<StationId, THREE.MeshStandardMaterial[]>> = {};
@@ -250,6 +251,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
 
     // Chó cưng (Kenney Cube Pets): có hoạt hình riêng, phản ứng khi được vuốt ve / bị chọc
     const PET_HEIGHT = 0.3;
+    const petGroup = new THREE.Group();
     let petMixer: THREE.AnimationMixer | null = null;
     const petClips = new Map<string, THREE.AnimationAction>();
     let petCurrent: THREE.AnimationAction | null = null;
@@ -268,7 +270,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       const s = PET_HEIGHT / (box.max.y - box.min.y || 1);
       inner.position.set(-c.x * s, -box.min.y * s, -c.z * s);
       inner.scale.setScalar(s);
-      const pet = new THREE.Group();
+      const pet = petGroup;
       pet.add(inner);
       pet.position.set(0.78, 0, -0.4);
       pet.rotation.y = -Math.PI / 2;
@@ -403,23 +405,25 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     let disposed = false;
     (async () => {
       try {
-        const floors: Promise<void>[] = [];
+        // Tải mọi thứ song song: sàn, tường, đồ đạc, nhân vật
+        const shell: Promise<void>[] = [];
         for (let ix = 0; ix < 5; ix++) {
           for (let iz = 0; iz < 4; iz++) {
-            floors.push(addProp('floor', -2 + ix, -1.5 + iz, 0));
+            shell.push(addProp('floor', -2 + ix, -1.5 + iz, 0));
           }
         }
-        await Promise.all(floors);
         // Tường sau và tường trái
         for (let ix = 0; ix < 5; ix++) {
-          await addProp(ix === 3 ? 'wall-window' : 'wall', -2 + ix, -2.3, 0);
+          shell.push(addProp(ix === 3 ? 'wall-window' : 'wall', -2 + ix, -2.3, 0));
         }
         for (let iz = 0; iz < 4; iz++) {
-          await addProp(iz === 1 ? 'wall-window' : 'wall', -2.8, -1.5 + iz, Math.PI / 2);
+          shell.push(addProp(iz === 1 ? 'wall-window' : 'wall', -2.8, -1.5 + iz, Math.PI / 2));
         }
-        await addProp('wall-corner', -2.8, -2.3, 0);
+        shell.push(addProp('wall-corner', -2.8, -2.3, 0));
         // Đồ trong phòng
         await Promise.all([
+          ...shell,
+          loadAvatar(pendingRef.current.avatar),
           addProp('arcade-machine', -1.75, -1.65, 0, 'arcade'),
           addProp('arcade-machine', -1.15, -1.65, 0, 'arcade'),
           addProp('claw-machine', -0.35, -1.62, 0, 'claw'),
@@ -442,7 +446,6 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           addFurniture('trashcan', -2.3, -0.75, 0, 'trash'),
           addPet(),
         ]);
-        await loadAvatar(pendingRef.current.avatar);
         if (disposed) return;
         if (pendingRef.current.action) trigger(pendingRef.current.action);
         setReady(true);
@@ -481,6 +484,22 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     let lift = 0;
     let afterUntil = 0;
     const headPos = new THREE.Vector3();
+    /** Đặt bong bóng emoji (phần tử HTML) phía trên một vật trong cảnh; text rỗng thì ẩn. */
+    const placeBubble = (el: HTMLDivElement | null, obj: THREE.Object3D, above: number, text: string) => {
+      if (!el) return;
+      if (!text) {
+        el.style.opacity = '0';
+        return;
+      }
+      obj.getWorldPosition(headPos);
+      headPos.y += above;
+      headPos.project(camera);
+      const x = ((headPos.x + 1) / 2) * mount.clientWidth;
+      const y = ((1 - headPos.y) / 2) * mount.clientHeight;
+      el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+      if (el.textContent !== text) el.textContent = text;
+      el.style.opacity = '1';
+    };
 
     const frame = () => {
       raf = requestAnimationFrame(frame);
@@ -608,21 +627,16 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           : '';
         if (mood && time % 7 < 2.2) face = mood;
       }
-      const bubble = bubbleRef.current;
-      if (bubble) {
-        if (face) {
-          holder.getWorldPosition(headPos);
-          headPos.y += CHAR_HEIGHT + 0.22 + lift;
-          headPos.project(camera);
-          const w = mount.clientWidth;
-          const h = mount.clientHeight;
-          bubble.style.transform = `translate(${((headPos.x + 1) / 2) * w}px, ${((1 - headPos.y) / 2) * h}px) translate(-50%, -100%)`;
-          if (bubble.textContent !== face) bubble.textContent = face;
-          bubble.style.opacity = '1';
-        } else {
-          bubble.style.opacity = '0';
-        }
+      placeBubble(bubbleRef.current, holder, CHAR_HEIGHT + 0.22 + lift, face);
+
+      // Chó cưng cũng có cảm xúc: thích được vuốt ve, bực khi bị chọc
+      let petFace = '';
+      if (anim.station === 'pet') {
+        const teased = anim.mood === 'fast';
+        if (anim.phase === 'act') petFace = teased ? '😠' : '😍';
+        else if (time < afterUntil) petFace = teased ? '😒' : '🐾';
       }
+      placeBubble(petBubbleRef.current, petGroup, PET_HEIGHT + 0.2, petFace);
 
       renderer.render(scene, camera);
     };
@@ -685,6 +699,12 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         ref={bubbleRef}
         aria-hidden
         className="absolute left-0 top-0 pointer-events-none select-none px-1.5 py-0.5 rounded-full bg-white/95 shadow-md text-lg sm:text-xl leading-none transition-opacity duration-200 after:content-[''] after:absolute after:left-1/2 after:-bottom-1 after:-translate-x-1/2 after:border-x-4 after:border-t-4 after:border-x-transparent after:border-t-white/95"
+        style={{ opacity: 0 }}
+      />
+      <div
+        ref={petBubbleRef}
+        aria-hidden
+        className="absolute left-0 top-0 pointer-events-none select-none px-1 py-0.5 rounded-full bg-white/95 shadow-md text-base sm:text-lg leading-none transition-opacity duration-200 after:content-[''] after:absolute after:left-1/2 after:-bottom-1 after:-translate-x-1/2 after:border-x-4 after:border-t-4 after:border-x-transparent after:border-t-white/95"
         style={{ opacity: 0 }}
       />
       {!ready && (
