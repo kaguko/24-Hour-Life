@@ -182,6 +182,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   const mountRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const petBubbleRef = useRef<HTMLDivElement>(null);
+  const huskyBubbleRef = useRef<HTMLDivElement>(null);
   const coachRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<SceneApi | null>(null);
   const liveRef = useRef({ stats, hoursUsed, crashRisk, sleeping, coachOn: false });
@@ -321,14 +322,16 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       petPlay('idle');
     };
 
-    // Husky mập (cùng mô hình chó Kenney, nhuộm xám-trắng, thân to ngang): đi tuần qua lại cho phòng sinh động
-    const HUSKY_PATH: [number, number] = [-0.4, 0.35];
-    const HUSKY_Z = 1.1;
+    // Husky mập (cùng mô hình chó Kenney, nhuộm xám-trắng, thân to ngang): đi khắp phòng cho sinh động
+    /** Các khoảng sàn trống husky đi qua lại (tránh đồ đạc) */
+    const HUSKY_SPOTS: Array<[number, number]> = [
+      [-0.3, 1.1], [0.35, 1.15], [-0.45, 0.3], [-0.6, -0.35], [0.1, -0.6], [1.05, -0.35], [0.3, 0.4], [-0.2, -0.1],
+    ];
     const husky = new THREE.Group();
     const huskyClips = new Map<string, THREE.AnimationAction>();
     let huskyMixer: THREE.AnimationMixer | null = null;
     let huskyCurrent: THREE.AnimationAction | null = null;
-    const huskyState = { dir: 1, wait: 1.5 };
+    const huskyState = { target: 1, wait: 1.5, angryUntil: -10 };
     const huskyPlay = (name: string) => {
       const next = huskyClips.get(name);
       if (!next || next === huskyCurrent) return;
@@ -361,33 +364,63 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         m.material = mat;
       });
       husky.add(inner);
-      husky.position.set(HUSKY_PATH[0], 0, HUSKY_Z);
+      husky.position.set(HUSKY_SPOTS[0][0], 0, HUSKY_SPOTS[0][1]);
       room.add(husky);
       huskyMixer = new THREE.AnimationMixer(inner);
       gltf.animations.forEach((clip) => huskyClips.set(clip.name, huskyMixer!.clipAction(clip)));
       huskyPlay('idle');
     };
-    const updateHusky = (dt: number) => {
-      if (!huskyMixer) return;
+    /** Xoay mượt về hướng góc a (đi đường ngắn nhất quanh vòng tròn) */
+    const turnHusky = (a: number, k: number) => {
+      const d = Math.atan2(Math.sin(a - husky.rotation.y), Math.cos(a - husky.rotation.y));
+      husky.rotation.y += d * Math.min(1, k);
+    };
+    /**
+     * Đi lang thang giữa các khoảng sàn trống; bị nhân vật đang đi đụng phải thì đứng lại sủa.
+     * Trả về true khi đang tức giận (để hiện bong bóng).
+     */
+    const updateHusky = (dt: number, time: number, charX: number, charZ: number, charWalking: boolean) => {
+      if (!huskyMixer) return false;
       huskyMixer.update(dt);
+      const angry = time < huskyState.angryUntil;
+      const cdx = charX - husky.position.x;
+      const cdz = charZ - husky.position.z;
+      if (!angry && charWalking && time > huskyState.angryUntil + 1.2 && Math.hypot(cdx, cdz) < 0.3) {
+        huskyState.angryUntil = time + 1.8;
+        soundRef.current?.('bark', 0.35);
+      }
+      if (time < huskyState.angryUntil) {
+        husky.rotation.z = 0;
+        turnHusky(Math.atan2(cdx, cdz), dt * 10);
+        huskyPlay('gesture-negative');
+        return true;
+      }
       if (huskyState.wait > 0) {
         huskyState.wait -= dt;
-        huskyPlay('idle');
-        husky.rotation.y += ((huskyState.dir > 0 ? Math.PI / 2 : -Math.PI / 2) - husky.rotation.y) * Math.min(1, dt * 4);
-        return;
-      }
-      const goal = huskyState.dir > 0 ? HUSKY_PATH[1] : HUSKY_PATH[0];
-      const dx = goal - husky.position.x;
-      // Đi chậm, lạch bạch
-      husky.position.x += Math.sign(dx) * Math.min(Math.abs(dx), 0.28 * dt);
-      husky.rotation.y = huskyState.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
-      husky.rotation.z = Math.sin(performance.now() / 120) * 0.04;
-      huskyPlay('walk');
-      if (Math.abs(dx) < 0.01) {
-        huskyState.dir *= -1;
-        huskyState.wait = 1.5 + Math.random() * 2.5;
         husky.rotation.z = 0;
+        huskyPlay('idle');
+        return false;
       }
+      const [gx, gz] = HUSKY_SPOTS[huskyState.target];
+      const dx = gx - husky.position.x;
+      const dz = gz - husky.position.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < 0.02) {
+        // Tới nơi: nghỉ một lúc rồi chọn chỗ khác
+        let next = huskyState.target;
+        while (next === huskyState.target) next = Math.floor(Math.random() * HUSKY_SPOTS.length);
+        huskyState.target = next;
+        huskyState.wait = 1 + Math.random() * 3;
+        return false;
+      }
+      // Đi chậm, lạch bạch
+      const step = Math.min(dist, 0.3 * dt);
+      husky.position.x += (dx / dist) * step;
+      husky.position.z += (dz / dist) * step;
+      turnHusky(Math.atan2(dx, dz), dt * 8);
+      husky.rotation.z = Math.sin(time * 8) * 0.04;
+      huskyPlay('walk');
+      return false;
     };
 
     // Nhân vật
@@ -687,7 +720,13 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       const animated = clips.size > 0;
       mixer?.update(dt);
       petMixer?.update(dt);
-      updateHusky(dt);
+      const huskyAngry = updateHusky(
+        dt,
+        time,
+        holder.position.x,
+        holder.position.z,
+        holder.visible && (anim.phase === 'walk' || anim.phase === 'return')
+      );
       const petBusy = anim.phase === 'act' && anim.station === 'pet';
       petPlay(petBusy ? (anim.mood === 'fast' ? 'gesture-negative' : 'gesture-positive') : 'idle');
       const target = STATION_POS[anim.station];
@@ -811,6 +850,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         else if (time < afterUntil) petFace = teased ? '😒' : '🐾';
       }
       placeBubble(petBubbleRef.current, petGroup, PET_HEIGHT + 0.2, petFace);
+      placeBubble(huskyBubbleRef.current, husky, PET_HEIGHT * 1.15 + 0.2, huskyAngry ? '😠 Gâu gâu!' : '');
 
       // Hướng dẫn lần đầu: vòng tròn nhấp nháy trên bàn học
       const coachEl = coachRef.current;
@@ -912,6 +952,12 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         ref={petBubbleRef}
         aria-hidden
         className="absolute left-0 top-0 pointer-events-none select-none px-1 py-0.5 rounded-full bg-white/95 shadow-md text-base sm:text-lg leading-none transition-opacity duration-200 after:content-[''] after:absolute after:left-1/2 after:-bottom-1 after:-translate-x-1/2 after:border-x-4 after:border-t-4 after:border-x-transparent after:border-t-white/95"
+        style={{ opacity: 0 }}
+      />
+      <div
+        ref={huskyBubbleRef}
+        aria-hidden
+        className="absolute left-0 top-0 pointer-events-none select-none whitespace-nowrap px-1.5 py-0.5 rounded-full bg-rose-50 border border-rose-300 shadow-md text-[11px] sm:text-xs font-extrabold text-rose-700 leading-none transition-opacity duration-200"
         style={{ opacity: 0 }}
       />
       {!ready && (

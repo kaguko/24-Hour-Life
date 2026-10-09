@@ -65,6 +65,7 @@ class AudioAdapter {
   public playRoomSfx(name: string, volume = 0.5): void {
     const ctx = this.getContext();
     if (!ctx) return;
+    if (name === 'bark') return this.bark(ctx, volume);
     let buf = this.roomBuffers.get(name);
     if (!buf) {
       buf = fetch(`/sfx/room/${name}.mp3`)
@@ -82,6 +83,31 @@ class AudioAdapter {
       src.connect(gain);
       gain.connect(ctx.destination);
       src.start();
+    });
+  }
+
+  /** "Gâu gâu": hai tiếng sủa ngắn tổng hợp (bộ âm thanh Kenney không có tiếng chó) */
+  private bark(ctx: AudioContext, volume: number): void {
+    [0, 0.24].forEach((delay) => {
+      const t = ctx.currentTime + delay;
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(260, t);
+      osc.frequency.linearRampToValueAtTime(480, t + 0.03);
+      osc.frequency.exponentialRampToValueAtTime(170, t + 0.14);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 900;
+      filter.Q.value = 1.2;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(volume, t + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.18);
     });
   }
 
