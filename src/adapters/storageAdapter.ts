@@ -26,6 +26,8 @@ export interface SerializedGameState {
   goalIds?: string[];
   /** Địa điểm hiện tại của nhân vật */
   location?: string;
+  /** Sự kiện lớn của tuần: loại, độ khó ẩn, kết quả (nếu đã diễn ra) */
+  bigEvent?: { id: string; difficulty: number; result?: { tier: string; score: number } };
 }
 
 const INTRO_KEY = '24h_life_intro_seen_v1';

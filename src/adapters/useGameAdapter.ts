@@ -34,6 +34,18 @@ import {
   resistCost,
   applyStatDeltas,
   clockFromHoursRemaining,
+  BigEventState,
+  BigEventOutcome,
+  BigEventTier,
+  pickBigEvent,
+  isBigEventId,
+  resolveBigEvent,
+  BIG_EVENT_DAY,
+  BIG_EVENT_AFTER_HOURS,
+  BIG_EVENT_ACTION_ID,
+  BIG_EVENT_HOURS,
+  bigEventDef,
+  TIER_LABEL,
 } from '../domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
@@ -75,6 +87,9 @@ export function useGameAdapter() {
   // Cám dỗ đang xâm nhập (ý chí thấp): round tăng mỗi lần chiều theo, dừng lại càng khó
   const [intrusion, setIntrusion] = useState<IntrusionState | null>(null);
   const [intrusionsToday, setIntrusionsToday] = useState<number>(0);
+  // Sự kiện lớn của tuần: độ khó thật được giấu khỏi người chơi
+  const [bigEvent, setBigEvent] = useState<BigEventState>(() => pickBigEvent());
+  const [pendingBigEvent, setPendingBigEvent] = useState<BigEventOutcome | null>(null);
 
   // Restore on mount via storageAdapter
   useEffect(() => {
@@ -94,6 +109,9 @@ export function useGameAdapter() {
       const savedGoals = (saved.goalIds ?? []).filter(isGoalId);
       if (savedGoals.length === GOAL_COUNT_PER_RUN) setGoalIds(savedGoals);
       if (isLocationId(saved.location)) setLocation(saved.location);
+      if (saved.bigEvent && isBigEventId(saved.bigEvent.id) && typeof saved.bigEvent.difficulty === 'number') {
+        setBigEvent({ id: saved.bigEvent.id, difficulty: saved.bigEvent.difficulty, result: saved.bigEvent.result as BigEventState['result'] });
+      }
       audioAdapter.enabled = saved.soundEnabled;
     }
   }, []);
@@ -114,8 +132,9 @@ export function useGameAdapter() {
       dayGrades,
       goalIds,
       location,
+      bigEvent,
     });
-  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds, location]);
+  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds, location, bigEvent]);
 
   const hoursRemaining = Math.max(0, 24 - hoursUsed);
 
@@ -338,6 +357,32 @@ export function useGameAdapter() {
     [intrusion, stats, hoursUsed, actionsTodayIds, day, history, endDay]
   );
 
+  // Đến giờ sự kiện lớn (Thứ Bảy 14:00): tính kết quả khi không còn hộp thoại nào đang mở
+  useEffect(() => {
+    if (finished || bigEvent.result || pendingBigEvent) return;
+    if (morningReport || activeEvent || intrusion) return;
+    if (day < BIG_EVENT_DAY) return;
+    if (day === BIG_EVENT_DAY && hoursUsed < BIG_EVENT_AFTER_HOURS) return;
+    setPendingBigEvent(resolveBigEvent(bigEvent, { history, todayIds: actionsTodayIds, stats }));
+  }, [finished, bigEvent, pendingBigEvent, morningReport, activeEvent, intrusion, day, hoursUsed, history, actionsTodayIds, stats]);
+
+  const confirmBigEvent = useCallback(() => {
+    if (!pendingBigEvent) return;
+    const o = pendingBigEvent;
+    const newStats = applyStatDeltas(stats, o.deltas);
+    const left = Math.max(0, 24 - hoursUsed);
+    const spend = Math.min(BIG_EVENT_HOURS, left);
+    const ids = [...actionsTodayIds, BIG_EVENT_ACTION_ID];
+    audioAdapter.playCue(o.tier === 'great' || o.tier === 'pass' ? 'victory' : 'defeat');
+    setStats(newStats);
+    setHoursUsed(hoursUsed + spend);
+    setActionsTodayIds(ids);
+    setBigEvent({ ...bigEvent, result: { tier: o.tier as BigEventTier, score: o.score } });
+    setPendingBigEvent(null);
+    setNotice(`${bigEventDef(bigEvent.id).title}: ${TIER_LABEL[o.tier]} (${o.score}/100).`);
+    if (hoursUsed + spend >= 24) setTimeout(() => endDay(newStats, ids), 400);
+  }, [pendingBigEvent, stats, hoursUsed, actionsTodayIds, bigEvent, endDay]);
+
   const advanceToNextDay = useCallback(() => {
     setMorningReport(null);
     setNotice(null);
@@ -397,6 +442,8 @@ export function useGameAdapter() {
     setLocation('home');
     setIntrusion(null);
     setIntrusionsToday(0);
+    setBigEvent(pickBigEvent());
+    setPendingBigEvent(null);
     setFinished(false);
   }, []);
 
@@ -448,5 +495,8 @@ export function useGameAdapter() {
     travelTo,
     intrusion,
     answerIntrusion,
+    bigEvent,
+    pendingBigEvent,
+    confirmBigEvent,
   };
 }

@@ -7,6 +7,9 @@ import {
   locationDef,
   PlanResult,
   INTRUSIONS,
+  bigEventPrepDisplay,
+  bigEventRumor,
+  bigEventDef,
   summarizeFastDopamine,
   computeSkillXp,
   habitTag,
@@ -16,6 +19,8 @@ import { SkillsPanel } from './ui/SkillsPanel';
 import { GoalsPanel } from './ui/GoalsPanel';
 import { CityMap } from './ui/CityMap';
 import { IntrusionModal } from './ui/IntrusionModal';
+import { BigEventPanel } from './ui/BigEventPanel';
+import { BigEventModal } from './ui/BigEventModal';
 
 import { TopNav } from './ui/TopNav';
 import { StatsHUD } from './ui/StatsHUD';
@@ -75,6 +80,9 @@ export default function App() {
     travelTo,
     intrusion,
     answerIntrusion,
+    bigEvent,
+    pendingBigEvent,
+    confirmBigEvent,
   } = useGameAdapter();
 
   // Chuyển ngày: nhân vật lên giường, phòng tối ("Ngày N khép lại"), rồi bình minh, rồi mới hiện báo cáo sáng
@@ -115,6 +123,11 @@ export default function App() {
     for (const [id, p] of Object.entries(plans)) if (!p.ok) out[id] = p.reason;
     return out;
   }, [plans]);
+
+  // Sự kiện lớn của tuần: thanh chuẩn bị (không lộ con số) và tin đồn về độ khó
+  const bigEventCtx = { history, todayIds: actionsToday.map((a) => a.id), stats };
+  const bigPrep = bigEventPrepDisplay(bigEvent, bigEventCtx);
+  const bigRumor = bigEventRumor(bigEvent, day);
 
   // Mục tiêu trong tuần: tiến độ tính từ lịch sử + chỉ số hiện tại
   const goals = useMemo(
@@ -268,6 +281,8 @@ export default function App() {
                   )}
                 </div>
 
+                <BigEventPanel state={bigEvent} day={day} hoursUsed={hoursUsed} prep={bigPrep} rumor={bigRumor} />
+
                 <GoalsPanel goals={goals} />
 
                 {/* Visual 24h Time Track */}
@@ -357,6 +372,10 @@ export default function App() {
         <MorningModal report={morningReport} dayGrades={dayGrades} onContinue={advanceToNextDay} />
       )}
 
+      {pendingBigEvent && !morningReport && !activeEvent && !intrusion && (
+        <BigEventModal state={bigEvent} outcome={pendingBigEvent} onContinue={confirmBigEvent} />
+      )}
+
       {intrusion && !activeEvent && (
         <IntrusionModal
           def={INTRUSIONS[intrusion.kind]}
@@ -378,6 +397,11 @@ export default function App() {
           ending={ending}
           journey={journey}
           goals={goals}
+          bigEvent={
+            bigEvent.result
+              ? { emoji: bigEventDef(bigEvent.id).emoji, title: bigEventDef(bigEvent.id).title, tier: bigEvent.result.tier, score: bigEvent.result.score }
+              : undefined
+          }
           stats={stats}
           avatarId={avatarId}
           onRestart={resetGame}

@@ -12,6 +12,7 @@ interface EndingModalProps {
   ending: EndingPrimitive;
   journey: JourneyPrimitive;
   goals?: GoalResultPrimitive[];
+  bigEvent?: { emoji: string; title: string; tier: string; score: number };
   stats: PlayerStatsPrimitive;
   avatarId: AvatarId;
   onRestart: () => void;
@@ -29,7 +30,7 @@ const OUTCOME_LABEL: Record<EndingPrimitive['outcome'], string> = {
   burnout: 'Gục ngã vì kiệt quệ',
 };
 
-export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals = [], stats, avatarId, onRestart, onShare, onCopy }) => {
+export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals = [], bigEvent, stats, avatarId, onRestart, onShare, onCopy }) => {
   const pal = ENDING_PALETTES[ending.palette];
   const [reflection, setReflection] = useState<'less' | 'same' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -182,6 +183,20 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals
                   </span>
                 ))}
               </p>
+            )}
+            {bigEvent && (
+              <div className="rounded-xl border border-stone-200 bg-white p-3 flex items-center justify-between gap-2 text-xs">
+                <span className="font-bold text-stone-900">
+                  {bigEvent.emoji} Sự kiện lớn: {bigEvent.title}
+                </span>
+                <span
+                  className={`font-bold shrink-0 ${
+                    bigEvent.tier === 'great' ? 'text-amber-600' : bigEvent.tier === 'pass' ? 'text-emerald-700' : bigEvent.tier === 'close' ? 'text-orange-600' : 'text-rose-600'
+                  }`}
+                >
+                  {{ great: 'Xuất sắc', pass: 'Đạt', close: 'Suýt soát', fail: 'Hỏng' }[bigEvent.tier] ?? ''} · {bigEvent.score}/100
+                </span>
+              </div>
             )}
             {goals.length > 0 && (
               <div className="rounded-xl border border-stone-200 bg-white p-3 space-y-1.5">

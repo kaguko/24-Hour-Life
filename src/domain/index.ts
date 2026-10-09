@@ -14,6 +14,8 @@ export * from './goals';
 export * from './map';
 export * from './planner';
 export * from './intrusion';
+export * from './bigEventAction';
+export * from './bigEvents';
 export * from './dopamine';
 export * from './consequence';
 export * from './events';
