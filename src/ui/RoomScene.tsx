@@ -253,7 +253,19 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         obj.traverse((o) => { o.userData.station = station; });
       }
       room.add(obj);
+      return mats;
     };
+
+    // Đèn ban đêm: đèn cây (vàng ấm) và màn hình máy tính (xanh nhạt) tự bật khi trời tối
+    const lampLight = new THREE.PointLight(0xffb866, 0, 3.6, 1.4);
+    lampLight.position.set(2.3, 0.7, 1.0);
+    room.add(lampLight);
+    const screenLight = new THREE.PointLight(0x9fd0ff, 0, 1.4, 1.6);
+    screenLight.position.set(-0.6, 0.45, 1.65);
+    room.add(screenLight);
+    let lampMats: THREE.MeshStandardMaterial[] = [];
+    let screenMats: THREE.MeshStandardMaterial[] = [];
+    let lampOn = 0;
 
     // Chó cưng (Kenney Cube Pets): có hoạt hình riêng, phản ứng khi được vuốt ve / bị chọc
     const PET_HEIGHT = 0.3;
@@ -443,11 +455,11 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           addFurniture('rugRound', 0, 0.35, 0),
           addFurniture('bedSingle', 1.2, 1.55, Math.PI / 2, 'bed'),
           addFurniture('desk', -0.6, 1.55, 0, 'desk'),
-          addFurniture('computerScreen', -0.6, 1.5, 0, 'desk', 0.285),
+          addFurniture('computerScreen', -0.6, 1.5, 0, 'desk', 0.285).then((m) => { screenMats = m; }),
           addFurniture('chairDesk', -0.6, 1.88, Math.PI, 'desk'),
           addFurniture('kitchenStove', 2.25, -0.9, -Math.PI / 2, 'kitchen'),
           addFurniture('pottedPlant', -2.3, 1.95, 0),
-          addFurniture('lampRoundFloor', 2.3, 1.0, 0),
+          addFurniture('lampRoundFloor', 2.3, 1.0, 0).then((m) => { lampMats = m; }),
           addFurniture('loungeSofa', -1.25, 0.75, Math.PI / 2, 'sofa'),
           addFurniture('speaker', 0.98, 0.85, -Math.PI / 2, 'music'),
           addFurniture('trashcan', -2.3, -0.75, 0, 'trash'),
@@ -528,8 +540,17 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       // Ánh sáng theo giờ & chỉ số
       const sky = skyColor(hrs, skyNow);
       const daylight = Math.max(0, Math.sin(((hrs - 6) / 12) * Math.PI));
-      hemi.intensity = 0.5 + 0.55 * daylight;
-      sun.intensity = 0.35 + 1.25 * daylight;
+      hemi.intensity = 0.2 + 0.85 * daylight;
+      sun.intensity = 0.08 + 1.52 * daylight;
+      // Trời tối thì đèn bật dần lên
+      const lampGoal = daylight < 0.35 ? 1 - daylight / 0.35 : 0;
+      lampOn += (lampGoal - lampOn) * Math.min(1, dt * 2);
+      lampLight.intensity = lampOn * 2.6;
+      screenLight.intensity = lampOn * 1.1;
+      lampMats.forEach((m) => { m.emissive.setHex(0xffd28a); m.emissiveIntensity = lampOn * 0.9; });
+      if (!(anim.phase === 'act' && anim.station === 'desk')) {
+        screenMats.forEach((m) => { m.emissive.setHex(0x9fd0ff); m.emissiveIntensity = lampOn * 0.35; });
+      }
       sun.color.copy(tmpColor.set(0xffffff).lerp(sky, 0.35));
       renderer.toneMappingExposure = 0.62 + 0.5 * (st.energy / 100);
 
