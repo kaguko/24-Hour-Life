@@ -239,7 +239,7 @@ export default function App() {
           stats={stats}
           avatarId={avatarId}
           onRestart={resetGame}
-          onShare={() => shareAdapter.share(ending, stats, avatarId, journey)}
+          onShare={(heroImage) => shareAdapter.share(ending, stats, avatarId, journey, heroImage)}
           onCopy={() => shareAdapter.copy(ending)}
         />
       )}

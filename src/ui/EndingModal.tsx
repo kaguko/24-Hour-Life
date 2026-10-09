@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { EndingPrimitive, JourneyPrimitive, PlayerStatsPrimitive } from '../domain';
+import { stationOf } from '../lib/roomStations';
+import type { EndingStageHandle } from './EndingStage';
 import { JOURNEY_SERIES, WEEKDAY_SHORT } from '../lib/journeyColors';
 import { ENDING_PALETTES } from '../lib/endingPalette';
 import { AvatarId, avatarUrl } from '../lib/avatars';
@@ -12,9 +14,13 @@ interface EndingModalProps {
   stats: PlayerStatsPrimitive;
   avatarId: AvatarId;
   onRestart: () => void;
-  onShare: () => Promise<'shared' | 'downloaded' | 'copied' | 'cancelled' | 'failed'>;
+  /** heroImage: ảnh chụp sân khấu 3D (data URL) để đưa vào ảnh chia sẻ */
+  onShare: (heroImage?: string) => Promise<'shared' | 'downloaded' | 'copied' | 'cancelled' | 'failed'>;
   onCopy: () => Promise<boolean>;
 }
+
+// Sân khấu 3D tải lười, giống phòng 3D
+const EndingStage = lazy(() => import('./EndingStage'));
 
 const OUTCOME_LABEL: Record<EndingPrimitive['outcome'], string> = {
   survived: 'Sống sót trọn 7 ngày',
@@ -26,6 +32,10 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, stats
   const pal = ENDING_PALETTES[ending.palette];
   const [reflection, setReflection] = useState<'less' | 'same' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const stageRef = useRef<EndingStageHandle>(null);
+  const [stageFailed, setStageFailed] = useState(false);
+  // Món đồ trên sân khấu: hành vi người chơi làm nhiều nhất
+  const topStation = journey.topActions[0] ? stationOf(journey.topActions[0].id) : null;
 
   useEffect(() => {
     if (ending.outcome !== 'survived') return;
@@ -42,7 +52,7 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, stats
   };
 
   const handleShare = async () => {
-    const r = await onShare();
+    const r = await onShare(stageFailed ? undefined : stageRef.current?.snapshot() ?? undefined);
     if (r === 'downloaded') flash('Đã tải ảnh về máy và chép nội dung chia sẻ. Dán vào bài đăng của bạn!');
     else if (r === 'copied') flash('Đã chép nội dung chia sẻ.');
     else if (r === 'failed') flash('Không chia sẻ được. Hãy thử nút "Chép nội dung".');
@@ -61,8 +71,14 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, stats
           style={{ background: `linear-gradient(145deg, ${pal.from}, ${pal.to})` }}
         >
           <p className="text-[11px] font-semibold tracking-[0.2em] text-white/70">CUỘC SỐNG 24 GIỜ</p>
-          <div className="relative w-36 h-36 mx-auto my-2">
-            <img src={avatarUrl(avatarId)} alt="Nhân vật của bạn" className="w-full h-full drop-shadow-lg" draggable={false} />
+          <div className={`relative mx-auto my-2 ${stageFailed ? 'w-36 h-36' : 'w-60 h-48'}`}>
+            {stageFailed ? (
+              <img src={avatarUrl(avatarId)} alt="Nhân vật của bạn" className="w-full h-full drop-shadow-lg" draggable={false} />
+            ) : (
+              <Suspense fallback={<img src={avatarUrl(avatarId)} alt="" className="w-36 h-36 mx-auto drop-shadow-lg" draggable={false} />}>
+                <EndingStage ref={stageRef} ending={ending} avatarId={avatarId} station={topStation} onFailed={() => setStageFailed(true)} />
+              </Suspense>
+            )}
             <span
               className="absolute -right-1 bottom-0 text-3xl leading-none bg-black/30 rounded-full w-11 h-11 flex items-center justify-center"
               aria-hidden

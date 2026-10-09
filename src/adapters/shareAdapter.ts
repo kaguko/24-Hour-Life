@@ -72,7 +72,9 @@ export async function renderShareCard(
   ending: EndingPrimitive,
   stats: PlayerStatsPrimitive,
   avatarId: AvatarId,
-  journey: JourneyPrimitive
+  journey: JourneyPrimitive,
+  /** Ảnh sân khấu 3D (data URL); không có thì dùng ảnh nhân vật PNG */
+  heroImage?: string
 ): Promise<Blob | null> {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
@@ -82,7 +84,8 @@ export async function renderShareCard(
   if (!ctx) return null;
 
   const pal = ENDING_PALETTES[ending.palette];
-  const avatar = await loadImage(avatarUrl(avatarId));
+  const hero = heroImage ? await loadImage(heroImage) : null;
+  const avatar = hero ?? (await loadImage(avatarUrl(avatarId)));
 
   // Nền gradient
   const bg = ctx.createLinearGradient(0, 0, CARD_W, CARD_H);
@@ -107,19 +110,24 @@ export async function renderShareCard(
   ctx.fillText('CUỘC SỐNG 24 GIỜ', CARD_W / 2, 90);
 
   // Emoji
+  // Nhân vật / sân khấu 3D: giữ đúng tỉ lệ ảnh, cao tối đa 280px
+  let heroW = 270;
   if (avatar) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(avatar, CARD_W / 2 - 135, 110, 270, 270);
+    const heroH = 280;
+    heroW = Math.min(480, heroH * (avatar.width / avatar.height || 1));
+    ctx.drawImage(avatar, CARD_W / 2 - heroW / 2, 104, heroW, heroH);
   }
   // Huy hiệu emoji của kết cục
+  const badgeX = CARD_W / 2 + Math.min(heroW / 2 - 10, 200);
   ctx.fillStyle = 'rgba(0,0,0,0.32)';
   ctx.beginPath();
-  ctx.arc(CARD_W / 2 + 130, 345, 48, 0, Math.PI * 2);
+  ctx.arc(badgeX, 345, 48, 0, Math.PI * 2);
   ctx.fill();
   ctx.font = `64px ${FONT}`;
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(ending.emoji, CARD_W / 2 + 130, 368);
+  ctx.fillText(ending.emoji, badgeX, 368);
 
   // Nhãn "Bạn là"
   ctx.fillStyle = pal.accent;
@@ -261,11 +269,12 @@ export const shareAdapter = {
     ending: EndingPrimitive,
     stats: PlayerStatsPrimitive,
     avatarId: AvatarId,
-    journey: JourneyPrimitive
+    journey: JourneyPrimitive,
+    heroImage?: string
   ): Promise<ShareResult> {
     const text = buildShareText(ending, getGameUrl());
     try {
-      const blob = await renderShareCard(ending, stats, avatarId, journey);
+      const blob = await renderShareCard(ending, stats, avatarId, journey, heroImage);
       if (blob && typeof navigator !== 'undefined' && navigator.canShare && navigator.share) {
         const file = new File([blob], '24h-life-ket-cuc.png', { type: 'image/png' });
         if (navigator.canShare({ files: [file] })) {
