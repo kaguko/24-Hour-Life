@@ -91,9 +91,26 @@ export function useGameAdapter() {
     setSoundEnabled((prev) => {
       const next = !prev;
       audioAdapter.enabled = next;
+      if (next) audioAdapter.startMusic();
+      else audioAdapter.stopMusic();
       return next;
     });
   }, []);
+
+  // Nhạc nền: trình duyệt chỉ cho phát sau thao tác đầu tiên của người chơi
+  useEffect(() => {
+    const start = () => {
+      if (audioAdapter.enabled) audioAdapter.startMusic();
+    };
+    window.addEventListener('pointerdown', start, { once: true });
+    return () => window.removeEventListener('pointerdown', start);
+  }, []);
+
+  // Nhạc đổi sắc thái theo giờ trong game (ngày bắt đầu lúc 07:00)
+  useEffect(() => {
+    const clock = (hoursUsed + 7) % 24;
+    audioAdapter.setMusicNight(clock >= 19 || clock < 6);
+  }, [hoursUsed]);
 
   // Trigger day end transition
   const endDay = useCallback(
