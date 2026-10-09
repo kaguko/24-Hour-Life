@@ -503,7 +503,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
 
   return (
     <div
-      className="relative w-full h-56 sm:h-72 lg:h-96 rounded-2xl overflow-hidden border border-stone-200 shadow-xs bg-indigo-950"
+      className="relative w-full h-56 sm:h-80 lg:h-[30rem] rounded-2xl overflow-hidden border border-stone-200 shadow-xs bg-indigo-950"
       aria-label="Căn phòng của bạn: bấm vào đồ vật hoặc nhân vật để chọn hành vi"
     >
       <div ref={mountRef} className="absolute inset-0" />
@@ -515,6 +515,11 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       <span className="absolute top-2.5 left-3 px-2 py-1 rounded-lg bg-black/35 text-white text-xs font-semibold tabular-nums backdrop-blur-xs">
         {clock}
       </span>
+      {(stats.willpower < 35 || crashRisk) && (
+        <span className="absolute top-10 left-3 max-w-[45%] px-2 py-1 rounded-lg bg-rose-600/85 text-white text-[10px] font-semibold leading-snug animate-pulse pointer-events-none">
+          {stats.willpower < 35 ? '⚠️ Ý chí cạn: cám dỗ trông hấp dẫn hơn thật' : '⚠️ Quá nhiều dopamine nhanh: sáng mai dễ sụp'}
+        </span>
+      )}
 
       {/* Chỉ số thu gọn trong phòng */}
       <div className="absolute top-2.5 right-3 w-28 sm:w-32 px-2 py-1.5 rounded-lg bg-black/35 backdrop-blur-xs space-y-1 pointer-events-none">

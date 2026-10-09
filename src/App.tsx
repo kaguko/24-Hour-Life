@@ -22,6 +22,7 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<'game' | 'simulate' | 'guide'>('game');
   // Danh sách thẻ chữ: thu gọn mặc định, chọn hành vi chính bằng cách bấm trong phòng 3D
   const [showCards, setShowCards] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   // Clean Architecture: Adapter hook connects Domain to UI
   const {
@@ -109,12 +110,11 @@ export default function App() {
               </div>
             )}
 
-            {/* Bố cục game: cột trái (phòng 3D + chỉ số + thời gian) luôn hiện khi cuộn; cột phải là hành vi */}
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(360px,440px)_minmax(0,1fr)] gap-4 lg:gap-5 items-start">
-              <div className="contents lg:block lg:sticky lg:top-[4.5rem] lg:space-y-4 lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto lg:pr-1">
-                {/* Căn phòng 3D: nhân vật phản ứng theo hành vi và chỉ số. Trên mobile dính ngay dưới thanh trên */}
-                <div className="sticky top-14 z-30 -mx-4 px-4 py-2 bg-stone-100/90 backdrop-blur-sm sm:mx-0 sm:px-0 sm:rounded-2xl lg:static lg:z-auto lg:mx-0 lg:p-0 lg:bg-transparent lg:backdrop-blur-none">
-                  <Suspense fallback={<div className="h-56 sm:h-72 lg:h-96 rounded-2xl bg-indigo-950/90 animate-pulse" />}>
+            {/* Bố cục game: phòng 3D là màn hình chính; thời gian bên dưới; chi tiết mở khi cần */}
+            <div className="space-y-4">
+                {/* Căn phòng 3D: bấm đồ vật để hành động. Trên mobile dính ngay dưới thanh trên */}
+                <div className="sticky top-14 z-30 -mx-4 px-4 py-2 bg-stone-100/90 backdrop-blur-sm sm:mx-0 sm:px-0 sm:rounded-2xl lg:static lg:z-auto lg:p-0 lg:bg-transparent lg:backdrop-blur-none">
+                  <Suspense fallback={<div className="h-56 sm:h-80 lg:h-[30rem] rounded-2xl bg-indigo-950/90 animate-pulse" />}>
                     <RoomScene
                       avatarId={avatarId}
                       stats={stats}
@@ -128,9 +128,6 @@ export default function App() {
                   </Suspense>
                 </div>
 
-                {/* 6 Stats HUD */}
-                <StatsHUD stats={stats} lifeStatus={lifeStatus} sleepDebt={sleepDebt} crashRisk={crashRisk} />
-
                 {/* Visual 24h Time Track */}
                 <TimeTrack
                   hoursUsed={hoursUsed}
@@ -142,24 +139,25 @@ export default function App() {
                   }))}
                   onEndDayEarly={endDayEarly}
                 />
-              </div>
 
-              {/* Action Grid (with low-willpower dopamine illusion) */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-stone-900">
-                    Lựa Chọn Hành Vi Trong 24 Giờ
-                  </h3>
-                  <span className="text-xs text-stone-500">
-                    Còn lại {hoursRemaining.toFixed(1)} giờ tự do
-                  </span>
+                {/* Chi tiết: mở khi cần */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setShowStats((v) => !v)}
+                    className={`px-3 py-2 text-xs font-medium rounded-xl border shadow-xs ${showStats ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50 text-stone-700 border-stone-200'}`}
+                  >
+                    📊 Chỉ số chi tiết
+                  </button>
+                  <button
+                    onClick={() => setShowCards((v) => !v)}
+                    className={`px-3 py-2 text-xs font-medium rounded-xl border shadow-xs ${showCards ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50 text-stone-700 border-stone-200'}`}
+                  >
+                    📋 Danh sách hành vi ({DOMAIN_ACTIONS.length})
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowCards((v) => !v)}
-                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 shadow-xs"
-                >
-                  {showCards ? '▲ Ẩn danh sách chi tiết' : `▼ Xem danh sách chi tiết (${DOMAIN_ACTIONS.length} hành vi)`}
-                </button>
+
+                {showStats && <StatsHUD stats={stats} lifeStatus={lifeStatus} sleepDebt={sleepDebt} crashRisk={crashRisk} />}
+
                 {showCards && (
                   <ActionGrid
                     actions={DOMAIN_ACTIONS}
@@ -168,7 +166,6 @@ export default function App() {
                     onSelectAction={takeAction}
                   />
                 )}
-              </div>
             </div>
           </>
         )}
