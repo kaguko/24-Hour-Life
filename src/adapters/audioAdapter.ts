@@ -55,6 +55,35 @@ class AudioAdapter {
     return this.ctx;
   }
 
+  private roomBuffers = new Map<string, Promise<AudioBuffer | null>>();
+
+  /**
+   * Âm thanh trong phòng 3D (public/sfx/room/<name>.mp3): bước chân, lật sách, nồi, cửa...
+   * Tải khi cần lần đầu; lỗi thì im lặng.
+   */
+  public playRoomSfx(name: string, volume = 0.5): void {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    let buf = this.roomBuffers.get(name);
+    if (!buf) {
+      buf = fetch(`/sfx/room/${name}.mp3`)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+        .then((data) => ctx.decodeAudioData(data))
+        .catch(() => null);
+      this.roomBuffers.set(name, buf);
+    }
+    buf.then((b) => {
+      if (!b || !this.enabled) return;
+      const src = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      gain.gain.value = volume;
+      src.buffer = b;
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start();
+    });
+  }
+
   /** Khởi tạo âm thanh sớm (gọi sau thao tác đầu tiên của người chơi) để mẫu kịp tải. */
   public prime(): void {
     this.getContext();

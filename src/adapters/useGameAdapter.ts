@@ -210,6 +210,8 @@ export function useGameAdapter() {
     setFinished(false);
   }, []);
 
+  const playRoomSfx = useCallback((name: string, volume?: number) => audioAdapter.playRoomSfx(name, volume), []);
+
   return {
     day,
     hoursUsed,
@@ -236,5 +238,6 @@ export function useGameAdapter() {
     toggleSound,
     setNotice,
     dismissIntro,
+    playRoomSfx,
   };
 }

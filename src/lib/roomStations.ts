@@ -18,6 +18,7 @@ export type StationId =
   | 'music'
   | 'pet'
   | 'trash'
+  | 'outside'
   | 'center';
 
 export type ActionMood = 'fast' | 'slow' | 'work' | 'sleep' | 'neutral';
@@ -43,7 +44,23 @@ export const STATION_POS: Record<StationId, [number, number]> = {
   music: [0.62, 0.85],
   pet: [0.4, -0.4],
   trash: [-1.9, -0.75],
+  // Ra khỏi phòng qua cạnh trước (thảm cửa ở mép sàn)
+  outside: [0.12, 3.1],
   center: [0, 0.35],
+};
+
+/** Âm thanh khi nhân vật bắt đầu làm hành vi tại từng chỗ (public/sfx/room/<name>.mp3). */
+export const STATION_SFX: Partial<Record<StationId, string>> = {
+  desk: 'book',
+  kitchen: 'pot',
+  register: 'coins',
+  claw: 'coins',
+  sofa: 'creak',
+  bed: 'cloth',
+  trash: 'trash',
+  arcade: 'arcade',
+  vending: 'vending',
+  music: 'music',
 };
 
 /** Độ cao nhân vật khi đang làm hành vi (vd nằm trên giường). */
@@ -64,7 +81,7 @@ export const ACTION_VISUALS: Record<string, ActionVisual> = {
   tease_dog: { station: 'pet', mood: 'fast' },
   // Dopamine chậm
   exercise: { station: 'basketball', mood: 'slow' },
-  short_walk: { station: 'center', mood: 'slow' },
+  short_walk: { station: 'outside', mood: 'slow' },
   study_deep: { station: 'desk', mood: 'slow' },
   learn_skill: { station: 'desk', mood: 'slow' },
   learn_soft_skills: { station: 'desk', mood: 'slow' },
@@ -128,7 +145,8 @@ export const STATION_LABEL: Record<StationId, string> = {
   music: '🔊 Loa – Nghe nhạc',
   pet: '🐶 Chó cưng',
   trash: '🧹 Thùng rác – Dọn dẹp',
-  center: '🧍 Bản thân – Đi bộ, thiền',
+  outside: '🧥 Cửa ra vào – Ra ngoài đi bộ',
+  center: '🧍 Bản thân – Thiền',
 };
 
 /** Hành vi thuộc về món đồ nào (không có trong bản đồ thì về 'center'). */
@@ -151,6 +169,7 @@ export const STATION_FACING: Record<StationId, number> = {
   music: Math.PI / 2,
   pet: Math.PI / 2,
   trash: -Math.PI / 2,
+  outside: 0,
   center: 0.6,
 };
 

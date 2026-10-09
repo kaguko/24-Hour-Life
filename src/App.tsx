@@ -51,6 +51,7 @@ export default function App() {
     resetGame,
     toggleSound,
     setNotice,
+    playRoomSfx,
   } = useGameAdapter();
 
   // Chỉ dopamine NHANH trong ngày mới gây sụp; dopamine cao nhờ hoạt động lành mạnh thì không
@@ -124,6 +125,7 @@ export default function App() {
                       actions={DOMAIN_ACTIONS}
                       hoursRemaining={hoursRemaining}
                       onSelectAction={takeAction}
+                      onSound={playRoomSfx}
                     />
                   </Suspense>
                 </div>

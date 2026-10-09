@@ -14,6 +14,7 @@ import {
   STATION_LABEL,
   STATION_Y,
   STATION_POS,
+  STATION_SFX,
   StationId,
   ActionMood,
   stationOf,
@@ -36,6 +37,8 @@ interface RoomSceneProps {
   actions?: ActionPrimitive[];
   hoursRemaining?: number;
   onSelectAction?: (actionId: string) => void;
+  /** Phát âm thanh trong phòng (bước chân, đồ vật, cửa) */
+  onSound?: (name: string, volume?: number) => void;
 }
 
 interface Picked {
@@ -131,7 +134,10 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   actions = [],
   hoursRemaining = 0,
   onSelectAction,
+  onSound,
 }) => {
+  const soundRef = useRef(onSound);
+  soundRef.current = onSound;
   const [picked, setPicked] = useState<Picked | null>(null);
   const [hovered, setHovered] = useState<StationId | null>(null);
   const interactive = !!onSelectAction && actions.length > 0;
@@ -231,14 +237,14 @@ const RoomScene: React.FC<RoomSceneProps> = ({
 
     // Đồ nội thất Kenney Furniture Kit: gốc ở góc mô hình, nên căn giữa và thu nhỏ cho hợp nhân vật
     const FURNITURE_SCALE = 0.75;
-    const addFurniture = async (name: string, x: number, z: number, rotY: number, station?: StationId, y = 0) => {
+    const addFurniture = async (name: string, x: number, z: number, rotY: number, station?: StationId, y = 0, scale = FURNITURE_SCALE) => {
       const inner = await getModel(`/models/furniture/${name}.glb`);
       const box = new THREE.Box3().setFromObject(inner);
       const c = box.getCenter(new THREE.Vector3());
       inner.position.set(-c.x, -box.min.y, -c.z);
       const obj = new THREE.Group();
       obj.add(inner);
-      obj.scale.setScalar(FURNITURE_SCALE);
+      obj.scale.setScalar(scale);
       obj.position.set(x, y, z);
       obj.rotation.y = rotY;
       const mats = uniqueMaterials(obj);
@@ -394,7 +400,8 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       afterUntil = 0;
       anim.mood = v.mood;
       anim.t = 0;
-      anim.actDur = v.mood === 'sleep' ? 2.6 : v.mood === 'work' || v.mood === 'slow' ? 2.0 : 1.4;
+      anim.actDur = v.station === 'outside' ? 2.4 : v.mood === 'sleep' ? 2.6 : v.mood === 'work' || v.mood === 'slow' ? 2.0 : 1.4;
+      holder.visible = true;
       anim.phase = 'walk';
       anim.glow = 1;
     };
@@ -444,6 +451,8 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           addFurniture('loungeSofa', -1.25, 0.75, Math.PI / 2, 'sofa'),
           addFurniture('speaker', 0.98, 0.85, -Math.PI / 2, 'music'),
           addFurniture('trashcan', -2.3, -0.75, 0, 'trash'),
+          addFurniture('rugDoormat', 0.12, 1.8, 0, 'outside', 0, 1.4),
+          addFurniture('coatRackStanding', 0.42, 1.95, 0, 'outside'),
           addPet(),
         ]);
         if (disposed) return;
@@ -483,6 +492,8 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     let sinceRender = 0;
     let lift = 0;
     let afterUntil = 0;
+    let lastStep = 0;
+    let stepIdx = 0;
     const headPos = new THREE.Vector3();
     /** Đặt bong bóng emoji (phần tử HTML) phía trên một vật trong cảnh; text rỗng thì ẩn. */
     const placeBubble = (el: HTMLDivElement | null, obj: THREE.Object3D, above: number, text: string) => {
@@ -551,10 +562,24 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           holder.rotation.y = Math.atan2(dx, dz);
           if (animated) play('walk');
           else bob = Math.abs(Math.sin(time * 14)) * 0.07;
+          // Tiếng bước chân
+          if (holder.visible && time - lastStep > 0.34) {
+            lastStep = time;
+            stepIdx = (stepIdx % 3) + 1;
+            soundRef.current?.(`step${stepIdx}`, 0.22);
+          }
         } else if (anim.phase === 'walk') {
           anim.phase = 'act';
           anim.t = 0;
           if (animated) play(actClip(anim.mood, anim.station));
+          if (anim.station === 'outside') {
+            // Ra khỏi phòng: khuất bóng trong lúc đi dạo
+            holder.visible = false;
+            soundRef.current?.('door-close', 0.45);
+          } else {
+            const sfx = STATION_SFX[anim.station];
+            if (sfx) soundRef.current?.(sfx, 0.5);
+          }
         } else {
           anim.phase = 'idle';
         }
@@ -581,6 +606,10 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           if (mats) mats.forEach((m) => { m.emissiveIntensity = 0; });
           anim.phase = anim.station === 'center' ? 'idle' : 'return';
           afterUntil = time + 2.2; // pha "sau khi làm xong"
+          if (!holder.visible) {
+            holder.visible = true;
+            soundRef.current?.('door-open', 0.45);
+          }
           if (animated) play(anim.phase === 'return' ? 'walk' : 'idle', 0.4);
         }
       } else {
@@ -615,7 +644,8 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       // Bong bóng biểu cảm trên đầu nhân vật
       const emote = ACTION_EMOTE[anim.actionId];
       let face = '';
-      if (anim.phase === 'act' && emote) face = emote[0];
+      if (!holder.visible) face = '';
+      else if (anim.phase === 'act' && emote) face = emote[0];
       else if (time < afterUntil && emote) face = emote[1];
       else if (anim.phase === 'idle') {
         // Đứng yên: thỉnh thoảng lộ tâm trạng theo chỉ số
