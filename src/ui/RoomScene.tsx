@@ -5,6 +5,7 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import { ActionPrimitive, PlayerStatsPrimitive } from '../domain';
 import { AvatarId } from '../lib/avatars';
 import {
+  ACTION_EMOTE,
   ACTION_VISUALS,
   DEFAULT_VISUAL,
   MOOD_GLOW,
@@ -158,6 +159,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     setTimeout(() => setDeltas((cur) => cur.filter((f) => !ids.has(f.id))), 1700);
   }, [stats]);
   const mountRef = useRef<HTMLDivElement>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<SceneApi | null>(null);
   const liveRef = useRef({ stats, hoursUsed, crashRisk });
   const pendingRef = useRef<{ avatar: AvatarId; action: string | null }>({ avatar: avatarId, action: null });
@@ -380,11 +382,14 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       lie: 0,
       facing: 0.6,
       glow: 0,
+      actionId: '',
     };
 
     const trigger = (actionId: string) => {
       const v = ACTION_VISUALS[actionId] ?? DEFAULT_VISUAL;
       anim.station = v.station;
+      anim.actionId = actionId;
+      afterUntil = 0;
       anim.mood = v.mood;
       anim.t = 0;
       anim.actDur = v.mood === 'sleep' ? 2.6 : v.mood === 'work' || v.mood === 'slow' ? 2.0 : 1.4;
@@ -474,6 +479,8 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     scene.background = skyNow;
     let sinceRender = 0;
     let lift = 0;
+    let afterUntil = 0;
+    const headPos = new THREE.Vector3();
 
     const frame = () => {
       raf = requestAnimationFrame(frame);
@@ -554,6 +561,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         if (anim.t >= anim.actDur) {
           if (mats) mats.forEach((m) => { m.emissiveIntensity = 0; });
           anim.phase = anim.station === 'center' ? 'idle' : 'return';
+          afterUntil = time + 2.2; // pha "sau khi làm xong"
           if (animated) play(anim.phase === 'return' ? 'walk' : 'idle', 0.4);
         }
       } else {
@@ -583,6 +591,37 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       if (charMats.length) {
         const gloom = st.mental < 35 ? 0.55 : 1;
         charMats.forEach((m) => m.color.setScalar(gloom));
+      }
+
+      // Bong bóng biểu cảm trên đầu nhân vật
+      const emote = ACTION_EMOTE[anim.actionId];
+      let face = '';
+      if (anim.phase === 'act' && emote) face = emote[0];
+      else if (time < afterUntil && emote) face = emote[1];
+      else if (anim.phase === 'idle') {
+        // Đứng yên: thỉnh thoảng lộ tâm trạng theo chỉ số
+        const mood =
+          st.energy < 30 ? '🥱'
+          : st.willpower < 35 ? '😩'
+          : st.mental < 35 ? '😔'
+          : st.energy >= 70 && st.mental >= 70 && st.willpower >= 70 ? '😄'
+          : '';
+        if (mood && time % 7 < 2.2) face = mood;
+      }
+      const bubble = bubbleRef.current;
+      if (bubble) {
+        if (face) {
+          holder.getWorldPosition(headPos);
+          headPos.y += CHAR_HEIGHT + 0.22 + lift;
+          headPos.project(camera);
+          const w = mount.clientWidth;
+          const h = mount.clientHeight;
+          bubble.style.transform = `translate(${((headPos.x + 1) / 2) * w}px, ${((1 - headPos.y) / 2) * h}px) translate(-50%, -100%)`;
+          if (bubble.textContent !== face) bubble.textContent = face;
+          bubble.style.opacity = '1';
+        } else {
+          bubble.style.opacity = '0';
+        }
       }
 
       renderer.render(scene, camera);
@@ -641,6 +680,13 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       aria-label="Căn phòng của bạn: bấm vào đồ vật hoặc nhân vật để chọn hành vi"
     >
       <div ref={mountRef} className="absolute inset-0" />
+      {/* Biểu cảm nhân vật: vị trí cập nhật mỗi khung hình theo đầu nhân vật */}
+      <div
+        ref={bubbleRef}
+        aria-hidden
+        className="absolute left-0 top-0 pointer-events-none select-none px-1.5 py-0.5 rounded-full bg-white/95 shadow-md text-lg sm:text-xl leading-none transition-opacity duration-200 after:content-[''] after:absolute after:left-1/2 after:-bottom-1 after:-translate-x-1/2 after:border-x-4 after:border-t-4 after:border-x-transparent after:border-t-white/95"
+        style={{ opacity: 0 }}
+      />
       {!ready && (
         <div className="absolute inset-0 flex items-center justify-center text-xs text-indigo-200 animate-pulse">
           Đang dựng căn phòng…

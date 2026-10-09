@@ -82,6 +82,36 @@ export const ACTION_VISUALS: Record<string, ActionVisual> = {
   sleep_nap: { station: 'bed', mood: 'sleep' },
 };
 
+/**
+ * Biểu cảm hai pha của nhân vật: [lúc đang làm, sau khi làm xong].
+ * Dopamine nhanh: sướng lúc làm, hụt hẫng sau đó. Dopamine chậm: gắng sức lúc làm, thỏa mãn sau đó.
+ */
+export const ACTION_EMOTE: Record<string, [string, string]> = {
+  scroll_social: ['🤩', '😶'],
+  binge_gaming: ['🤩', '😶'],
+  fast_food: ['😋', '😪'],
+  caffeine_spike: ['⚡', '😵‍💫'],
+  impulse_shopping: ['🤑', '😬'],
+  beer_party: ['🥳', '🤢'],
+  tease_dog: ['😈', '😅'],
+  exercise: ['😤', '😌'],
+  short_walk: ['🚶', '😌'],
+  study_deep: ['🤔', '💡'],
+  learn_skill: ['🎸', '😊'],
+  learn_soft_skills: ['🤔', '😊'],
+  deep_talk: ['💬', '🤗'],
+  call_family: ['📞', '🤗'],
+  pet_bonding: ['🥰', '❤️'],
+  meditate_breathe: ['😌', '🧘'],
+  cook_tyrosine: ['👨‍🍳', '😋'],
+  listen_music: ['🎧', '😊'],
+  clean_room: ['🧹', '✨'],
+  work_focused: ['🤔', '😊'],
+  work_overtime: ['😓', '😮‍💨'],
+  sleep_deep: ['💤', '😊'],
+  sleep_nap: ['💤', '🥱'],
+};
+
 /** Tên hiển thị khi người chơi bấm vào món đồ trong phòng. */
 export const STATION_LABEL: Record<StationId, string> = {
   arcade: '🕹️ Máy game – Mạng xã hội & game',
