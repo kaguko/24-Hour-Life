@@ -67,13 +67,16 @@ interface FloatDelta {
 }
 
 /** Hoạt hình có sẵn trong mô hình Kenney mini-characters */
-type Clip = 'idle' | 'walk' | 'sit' | 'die' | 'interact-right' | 'jump' | 'emote-yes' | 'crouch';
+type Clip = 'idle' | 'walk' | 'sit' | 'die' | 'interact-right' | 'jump' | 'emote-yes' | 'crouch' | 'pick-up';
 
 /** Dáng nhân vật khi đang làm hành vi tại một điểm đến */
 function actClip(mood: ActionMood, station: StationId): Clip {
   if (mood === 'sleep') return 'die'; // nằm xuống
   if (mood === 'work') return 'sit';
-  if (station === 'desk') return 'sit';
+  if (station === 'desk' || station === 'sofa') return 'sit';
+  if (station === 'music') return 'emote-yes';
+  if (station === 'trash') return 'pick-up';
+  if (station === 'pet') return mood === 'fast' ? 'interact-right' : 'crouch';
   if (station === 'kitchen') return 'interact-right';
   if (station === 'basketball') return 'jump';
   if (station === 'dance') return 'emote-yes';
@@ -243,6 +246,39 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       room.add(obj);
     };
 
+    // Chó cưng (Kenney Cube Pets): có hoạt hình riêng, phản ứng khi được vuốt ve / bị chọc
+    const PET_HEIGHT = 0.3;
+    let petMixer: THREE.AnimationMixer | null = null;
+    const petClips = new Map<string, THREE.AnimationAction>();
+    let petCurrent: THREE.AnimationAction | null = null;
+    const petPlay = (name: string) => {
+      const next = petClips.get(name);
+      if (!next || next === petCurrent) return;
+      next.reset().fadeIn(0.25).play();
+      petCurrent?.fadeOut(0.25);
+      petCurrent = next;
+    };
+    const addPet = async () => {
+      const gltf = await loader.loadAsync('/models/pets/animal-dog.glb');
+      const inner = gltf.scene;
+      const box = new THREE.Box3().setFromObject(inner);
+      const c = box.getCenter(new THREE.Vector3());
+      const s = PET_HEIGHT / (box.max.y - box.min.y || 1);
+      inner.position.set(-c.x * s, -box.min.y * s, -c.z * s);
+      inner.scale.setScalar(s);
+      const pet = new THREE.Group();
+      pet.add(inner);
+      pet.position.set(0.78, 0, -0.4);
+      pet.rotation.y = -Math.PI / 2;
+      const mats = uniqueMaterials(pet);
+      props.pet = [...(props.pet ?? []), ...mats];
+      pet.traverse((o) => { o.userData.station = 'pet'; });
+      room.add(pet);
+      petMixer = new THREE.AnimationMixer(inner);
+      gltf.animations.forEach((clip) => petClips.set(clip.name, petMixer!.clipAction(clip)));
+      petPlay('idle');
+    };
+
     // Nhân vật
     const holder = new THREE.Group();
     holder.position.set(HOME[0], 0, HOME[1]);
@@ -385,7 +421,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           addProp('vending-machine', 0.55, -1.7, 0, 'vending'),
           addProp('cash-register', 1.5, -1.7, 0, 'register'),
           addProp('dance-machine', 2.0, 0.15, -Math.PI / 2, 'dance'),
-          addProp('pinball', -2.0, 0.2, Math.PI / 2, 'pinball'),
+          addProp('pinball', -2.0, 0.2, Math.PI / 2),
           addProp('basketball-game', -2.0, 1.2, Math.PI / 2, 'basketball'),
           // Góc sinh hoạt
           addFurniture('rugRound', 0, 0.35, 0),
@@ -396,6 +432,10 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           addFurniture('kitchenStove', 2.25, -0.9, -Math.PI / 2, 'kitchen'),
           addFurniture('pottedPlant', -2.3, 1.95, 0),
           addFurniture('lampRoundFloor', 2.3, 1.0, 0),
+          addFurniture('loungeSofa', -1.25, 0.75, Math.PI / 2, 'sofa'),
+          addFurniture('speaker', 0.98, 0.85, -Math.PI / 2, 'music'),
+          addFurniture('trashcan', -2.3, -0.75, 0, 'trash'),
+          addPet(),
         ]);
         await loadAvatar(pendingRef.current.avatar);
         if (disposed) return;
@@ -468,6 +508,9 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       // Hoạt hình nhân vật: dùng clip có sẵn trong mô hình; không có clip thì nhún bằng code
       const animated = clips.size > 0;
       mixer?.update(dt);
+      petMixer?.update(dt);
+      const petBusy = anim.phase === 'act' && anim.station === 'pet';
+      petPlay(petBusy ? (anim.mood === 'fast' ? 'gesture-negative' : 'gesture-positive') : 'idle');
       const target = STATION_POS[anim.station];
       let bob = 0;
       if (anim.phase === 'walk' || anim.phase === 'return') {

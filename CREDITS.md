@@ -8,7 +8,10 @@
   Arcade machines, walls and floor tiles used in the 3D room (`public/models/arcade/`). The Mini Characters GLB models are used there too (`public/models/characters/`).
 
 - **Furniture Kit** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
-  Bed, desk, chair, stove, rug and decor in the 3D room (`public/models/furniture/`).
+  Bed, desk, chair, stove, sofa, speaker, trash can, rug and decor in the 3D room (`public/models/furniture/`).
+
+- **Cube Pets** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+  The animated pet dog in the 3D room (`public/models/pets/`).
 
 ## Audio
 - **Interface Sounds**, **Music Jingles** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).

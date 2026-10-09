@@ -14,6 +14,10 @@ export type StationId =
   | 'bed'
   | 'desk'
   | 'kitchen'
+  | 'sofa'
+  | 'music'
+  | 'pet'
+  | 'trash'
   | 'center';
 
 export type ActionMood = 'fast' | 'slow' | 'work' | 'sleep' | 'neutral';
@@ -35,6 +39,10 @@ export const STATION_POS: Record<StationId, [number, number]> = {
   bed: [1.2, 1.55],
   desk: [-0.6, 1.85],
   kitchen: [1.85, -0.9],
+  sofa: [-0.98, 0.75],
+  music: [0.62, 0.85],
+  pet: [0.4, -0.4],
+  trash: [-1.9, -0.75],
   center: [0, 0.35],
 };
 
@@ -53,20 +61,20 @@ export const ACTION_VISUALS: Record<string, ActionVisual> = {
   caffeine_spike: { station: 'vending', mood: 'fast' },
   impulse_shopping: { station: 'claw', mood: 'fast' },
   beer_party: { station: 'dance', mood: 'fast' },
-  tease_dog: { station: 'pinball', mood: 'fast' },
+  tease_dog: { station: 'pet', mood: 'fast' },
   // Dopamine chậm
   exercise: { station: 'basketball', mood: 'slow' },
   short_walk: { station: 'center', mood: 'slow' },
   study_deep: { station: 'desk', mood: 'slow' },
   learn_skill: { station: 'desk', mood: 'slow' },
   learn_soft_skills: { station: 'desk', mood: 'slow' },
-  deep_talk: { station: 'center', mood: 'slow' },
-  call_family: { station: 'center', mood: 'slow' },
-  pet_bonding: { station: 'center', mood: 'slow' },
+  deep_talk: { station: 'sofa', mood: 'slow' },
+  call_family: { station: 'sofa', mood: 'slow' },
+  pet_bonding: { station: 'pet', mood: 'slow' },
   meditate_breathe: { station: 'center', mood: 'slow' },
   cook_tyrosine: { station: 'kitchen', mood: 'slow' },
-  listen_music: { station: 'center', mood: 'slow' },
-  clean_room: { station: 'center', mood: 'slow' },
+  listen_music: { station: 'music', mood: 'slow' },
+  clean_room: { station: 'trash', mood: 'slow' },
   // Công việc & nghỉ
   work_focused: { station: 'desk', mood: 'work' },
   work_overtime: { station: 'register', mood: 'work' },
@@ -86,7 +94,11 @@ export const STATION_LABEL: Record<StationId, string> = {
   bed: '🛏️ Giường – Ngủ',
   desk: '📚 Bàn – Học & làm việc',
   kitchen: '🍳 Bếp – Nấu ăn',
-  center: '🧍 Bản thân – Vận động nhẹ, thiền, kết nối',
+  sofa: '🛋️ Sofa – Trò chuyện & gọi điện',
+  music: '🔊 Loa – Nghe nhạc',
+  pet: '🐶 Chó cưng',
+  trash: '🧹 Thùng rác – Dọn dẹp',
+  center: '🧍 Bản thân – Đi bộ, thiền',
 };
 
 /** Hành vi thuộc về món đồ nào (không có trong bản đồ thì về 'center'). */
@@ -105,6 +117,10 @@ export const STATION_FACING: Record<StationId, number> = {
   bed: Math.PI,
   desk: Math.PI,
   kitchen: Math.PI / 2,
+  sofa: Math.PI / 2,
+  music: Math.PI / 2,
+  pet: Math.PI / 2,
+  trash: -Math.PI / 2,
   center: 0.6,
 };
 
