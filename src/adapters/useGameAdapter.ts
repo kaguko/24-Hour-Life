@@ -17,6 +17,7 @@ import {
   resolveDomainChoice,
   evaluateEnding,
   buildJourney,
+  DayGrade,
 } from '../domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
@@ -34,6 +35,9 @@ export function useGameAdapter() {
   // Hành vi vừa chọn (cho cảnh 3D); n tăng dần để lặp lại cùng hành vi vẫn kích hoạt hiệu ứng
   const [lastAction, setLastAction] = useState<{ id: string; n: number } | null>(null);
   const [finished, setFinished] = useState<boolean>(false);
+  // Chỉ số lúc đầu ngày (để tổng kết cả ngày) và hạng của các ngày đã qua
+  const [dayStartStats, setDayStartStats] = useState<PlayerStatsPrimitive>(INITIAL_STATS);
+  const [dayGrades, setDayGrades] = useState<DayGrade[]>([]);
   const [isIntroOpen, setIsIntroOpen] = useState<boolean>(() => !storageAdapter.hasSeenIntro());
 
   // Transient UX states
@@ -53,6 +57,8 @@ export function useGameAdapter() {
       setSoundEnabled(saved.soundEnabled);
       setHistory(saved.history ?? []);
       setFinished(saved.finished ?? false);
+      setDayStartStats(saved.dayStartStats ?? saved.stats);
+      setDayGrades((saved.dayGrades ?? []) as DayGrade[]);
       if (isAvatarId(saved.avatarId)) setAvatarId(saved.avatarId);
       audioAdapter.enabled = saved.soundEnabled;
     }
@@ -70,8 +76,10 @@ export function useGameAdapter() {
       history,
       finished,
       avatarId,
+      dayStartStats,
+      dayGrades,
     });
-  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId]);
+  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades]);
 
   const hoursRemaining = Math.max(0, 24 - hoursUsed);
 
@@ -120,15 +128,18 @@ export function useGameAdapter() {
         customEndStats,
         customActionIds,
         sleepDebt,
-        day
+        day,
+        dayStartStats
       );
+      const grade = nightResult.recap?.grade;
+      if (grade) setDayGrades((prev) => [...prev, grade]);
 
       setHistory((prev) => [...prev, customActionIds]);
       setStats(nightResult.newStats);
       setSleepDebt(nightResult.newSleepDebt);
       setMorningReport(nightResult);
     },
-    [stats, actionsTodayIds, sleepDebt, day]
+    [stats, actionsTodayIds, sleepDebt, day, dayStartStats]
   );
 
   // Action dispatcher
@@ -180,6 +191,7 @@ export function useGameAdapter() {
     setNotice(null);
     setActionsTodayIds([]);
     setHoursUsed(0);
+    setDayStartStats(stats); // chỉ số buổi sáng = mốc so sánh cho ngày mới
 
     // Kết thúc ván khi sụp đổ giữa chừng hoặc đã đủ 7 ngày
     const collapsed = evaluateLifeStatus(stats).isGameOver;
@@ -224,6 +236,8 @@ export function useGameAdapter() {
     setMorningReport(null);
     setActiveEvent(null);
     setHistory([]);
+    setDayStartStats(INITIAL_STATS);
+    setDayGrades([]);
     setFinished(false);
   }, []);
 
@@ -266,5 +280,6 @@ export function useGameAdapter() {
     dismissIntro,
     playRoomSfx,
     showCoach,
+    dayGrades,
   };
 }

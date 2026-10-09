@@ -53,6 +53,7 @@ export default function App() {
     setNotice,
     playRoomSfx,
     showCoach,
+    dayGrades,
   } = useGameAdapter();
 
   // Chuyển ngày: nhân vật lên giường, phòng tối ("Ngày N khép lại"), rồi bình minh, rồi mới hiện báo cáo sáng
@@ -225,7 +226,7 @@ export default function App() {
       )}
 
       {morningReport && morningReport === revealedReport && (
-        <MorningModal report={morningReport} onContinue={advanceToNextDay} />
+        <MorningModal report={morningReport} dayGrades={dayGrades} onContinue={advanceToNextDay} />
       )}
 
       {activeEvent && (

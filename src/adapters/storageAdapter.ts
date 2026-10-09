@@ -18,6 +18,10 @@ export interface SerializedGameState {
   avatarId?: string;
   /** Ván đã kết thúc (sụp đổ hoặc đủ 7 ngày) */
   finished?: boolean;
+  /** Chỉ số lúc bắt đầu ngày hiện tại (để tổng kết thay đổi cả ngày) */
+  dayStartStats?: PlayerStatsPrimitive;
+  /** Hạng S/A/B/C/D của các ngày đã qua */
+  dayGrades?: string[];
 }
 
 const INTRO_KEY = '24h_life_intro_seen_v1';

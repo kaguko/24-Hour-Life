@@ -4,6 +4,7 @@ import { DOMAIN_ACTIONS } from './actions';
 import { PhilosophicalQuote, getContextualQuote } from './quotes';
 import { summarizeFastDopamine } from './dopamine';
 import { sleepSegments } from './circadian';
+import { buildDayRecap } from './dayRecap';
 
 const fmtClock = (h: number) => `${String(Math.floor(h) % 24).padStart(2, '0')}:${h % 1 ? '30' : '00'}`;
 
@@ -22,7 +23,9 @@ export function processOvernightCycle(
   currentStats: PlayerStatsPrimitive,
   actionIdsToday: string[],
   previousSleepDebt: number,
-  dayNumber: number
+  dayNumber: number,
+  /** Chỉ số lúc bắt đầu ngày (để tổng kết thay đổi cả ngày); không có thì dùng chỉ số cuối ngày */
+  dayStartStats?: PlayerStatsPrimitive
 ): NightResultPrimitive {
   const notes: string[] = [];
   const revealedMechanics: string[] = [];
@@ -86,7 +89,8 @@ export function processOvernightCycle(
     deltas.energy = (deltas.energy ?? 0) - 20;
     deltas.mental = (deltas.mental ?? 0) - 15;
     deltas.willpower = (deltas.willpower ?? 0) - 22;
-    drivers.push({ theme: 'burnout_rest', weight: -57 });
+    // Càng ngủ ít càng nặng: 3h ngủ nặng hơn cả cơn sụp dopamine
+    drivers.push({ theme: 'burnout_rest', weight: -(57 + (5 - restedHours) * 5) });
   } else if (restedHours < 7) {
     drivers.push({ theme: 'burnout_rest', weight: -20 });
     notes.push(`Ngủ chập chờn (${sleepLabel}). Nợ ngủ bắt đầu tích tụ âm ỉ.`);
@@ -213,6 +217,7 @@ export function processOvernightCycle(
   }
   const { theme: quoteTheme, context: quoteContext } = pickQuoteTheme(drivers);
   const selectedQuote = getContextualQuote(quoteTheme);
+  const recap = buildDayRecap(actionIdsToday, drivers, dayStartStats ?? currentStats, newStats, restedHours, quoteTheme);
 
   return {
     dayCompleted: dayNumber,
@@ -229,6 +234,7 @@ export function processOvernightCycle(
       role: selectedQuote.role,
       context: quoteContext,
     },
+    recap,
   };
 }
 

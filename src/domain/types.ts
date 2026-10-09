@@ -74,6 +74,8 @@ export interface NightResultPrimitive {
   notes: string[];
   revealedMechanics: string[];
   philosophicalQuote?: QuotePrimitive;
+  /** Thẻ tổng kết ngày: danh hiệu, hạng, thay đổi chỉ số, gợi ý */
+  recap?: import('./dayRecap').DayRecapPrimitive;
 }
 
 export type LifeStatus = 'thriving' | 'stable' | 'stressed' | 'burnout' | 'bankrupt';
