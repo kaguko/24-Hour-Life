@@ -331,7 +331,10 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     const huskyClips = new Map<string, THREE.AnimationAction>();
     let huskyMixer: THREE.AnimationMixer | null = null;
     let huskyCurrent: THREE.AnimationAction | null = null;
-    const huskyState = { target: 1, wait: 1.5, angryUntil: -10 };
+    const huskyState = { target: 1, wait: 1.5, angryUntil: -10, onChair: false, barkAgainAt: 0 };
+    /** Ghế máy tính (x, z, độ cao mặt ghế) và chỗ nhảy xuống khi bị giành ghế */
+    const HUSKY_SEAT: [number, number, number] = [-0.6, 1.9, 0.2];
+    const HUSKY_HOP: [number, number] = [-0.15, 1.45];
     const huskyPlay = (name: string) => {
       const next = huskyClips.get(name);
       if (!next || next === huskyCurrent) return;
@@ -379,13 +382,51 @@ const RoomScene: React.FC<RoomSceneProps> = ({
      * Đi lang thang giữa các khoảng sàn trống; bị nhân vật đang đi đụng phải thì đứng lại sủa.
      * Trả về true khi đang tức giận (để hiện bong bóng).
      */
-    const updateHusky = (dt: number, time: number, charX: number, charZ: number, charWalking: boolean) => {
-      if (!huskyMixer) return false;
+    const updateHusky = (
+      dt: number,
+      time: number,
+      charX: number,
+      charZ: number,
+      charWalking: boolean,
+      /** Trời tối: husky chiếm ghế máy tính */
+      night: boolean,
+      /** Nhân vật đang đến / đang dùng bàn máy tính */
+      deskTaken: boolean
+    ): '' | 'angry' | 'pc' => {
+      if (!huskyMixer) return '';
       huskyMixer.update(dt);
       const angry = time < huskyState.angryUntil;
       const cdx = charX - husky.position.x;
       const cdz = charZ - husky.position.z;
-      if (!angry && charWalking && time > huskyState.angryUntil + 1.2 && Math.hypot(cdx, cdz) < 0.3) {
+
+      // Đang ngồi máy tính mà bị giành ghế: nhảy xuống, quay sang sủa
+      if (huskyState.onChair && deskTaken) {
+        huskyState.onChair = false;
+        husky.position.set(HUSKY_HOP[0], 0, HUSKY_HOP[1]);
+        huskyState.angryUntil = time + 2.6;
+        huskyState.barkAgainAt = time + 1.2;
+        huskyState.wait = 2;
+        soundRef.current?.('bark', 0.4);
+      }
+      if (huskyState.barkAgainAt && time > huskyState.barkAgainAt) {
+        huskyState.barkAgainAt = 0;
+        soundRef.current?.('bark', 0.4);
+      }
+      // Ngồi trên ghế bấm máy tính đến khi trời sáng
+      if (huskyState.onChair) {
+        if (!night) {
+          huskyState.onChair = false;
+          husky.position.set(HUSKY_HOP[0], 0, HUSKY_HOP[1]);
+        } else {
+          husky.rotation.z = 0;
+          husky.position.y = HUSKY_SEAT[2] + Math.abs(Math.sin(time * 9)) * 0.008; // gõ phím rung rung
+          turnHusky(Math.PI, dt * 6);
+          huskyPlay('idle');
+          return 'pc';
+        }
+      }
+
+      if (!angry && !huskyState.onChair && charWalking && time > huskyState.angryUntil + 1.2 && Math.hypot(cdx, cdz) < 0.3) {
         huskyState.angryUntil = time + 1.8;
         soundRef.current?.('bark', 0.35);
       }
@@ -393,13 +434,32 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         husky.rotation.z = 0;
         turnHusky(Math.atan2(cdx, cdz), dt * 10);
         huskyPlay('gesture-negative');
-        return true;
+        return 'angry';
+      }
+
+      // Tối rồi và bàn đang trống: tới ghế máy tính
+      if (night && !deskTaken) {
+        const dx = HUSKY_SEAT[0] - husky.position.x;
+        const dz = HUSKY_SEAT[1] - husky.position.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist < 0.03) {
+          huskyState.onChair = true;
+          husky.position.set(HUSKY_SEAT[0], HUSKY_SEAT[2], HUSKY_SEAT[1]);
+          return 'pc';
+        }
+        const step = Math.min(dist, 0.4 * dt);
+        husky.position.x += (dx / dist) * step;
+        husky.position.z += (dz / dist) * step;
+        turnHusky(Math.atan2(dx, dz), dt * 8);
+        husky.rotation.z = Math.sin(time * 8) * 0.04;
+        huskyPlay('walk');
+        return '';
       }
       if (huskyState.wait > 0) {
         huskyState.wait -= dt;
         husky.rotation.z = 0;
         huskyPlay('idle');
-        return false;
+        return '';
       }
       const [gx, gz] = HUSKY_SPOTS[huskyState.target];
       const dx = gx - husky.position.x;
@@ -411,7 +471,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         while (next === huskyState.target) next = Math.floor(Math.random() * HUSKY_SPOTS.length);
         huskyState.target = next;
         huskyState.wait = 1 + Math.random() * 3;
-        return false;
+        return '';
       }
       // Đi chậm, lạch bạch
       const step = Math.min(dist, 0.3 * dt);
@@ -420,7 +480,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       turnHusky(Math.atan2(dx, dz), dt * 8);
       husky.rotation.z = Math.sin(time * 8) * 0.04;
       huskyPlay('walk');
-      return false;
+      return '';
     };
 
     // Nhân vật
@@ -720,12 +780,14 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       const animated = clips.size > 0;
       mixer?.update(dt);
       petMixer?.update(dt);
-      const huskyAngry = updateHusky(
+      const huskyMood = updateHusky(
         dt,
         time,
         holder.position.x,
         holder.position.z,
-        holder.visible && (anim.phase === 'walk' || anim.phase === 'return')
+        holder.visible && (anim.phase === 'walk' || anim.phase === 'return'),
+        hrs >= 19,
+        anim.station === 'desk' && (anim.phase === 'walk' || anim.phase === 'act')
       );
       const petBusy = anim.phase === 'act' && anim.station === 'pet';
       petPlay(petBusy ? (anim.mood === 'fast' ? 'gesture-negative' : 'gesture-positive') : 'idle');
@@ -850,7 +912,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         else if (time < afterUntil) petFace = teased ? '😒' : '🐾';
       }
       placeBubble(petBubbleRef.current, petGroup, PET_HEIGHT + 0.2, petFace);
-      placeBubble(huskyBubbleRef.current, husky, PET_HEIGHT * 1.15 + 0.2, huskyAngry ? '😠 Gâu gâu!' : '');
+      placeBubble(huskyBubbleRef.current, husky, PET_HEIGHT * 1.15 + 0.2, huskyMood === 'angry' ? '😠 Gâu gâu!' : huskyMood === 'pc' && time % 6 < 2.5 ? '💻' : '');
 
       // Hướng dẫn lần đầu: vòng tròn nhấp nháy trên bàn học
       const coachEl = coachRef.current;
