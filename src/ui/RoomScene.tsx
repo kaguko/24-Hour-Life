@@ -11,6 +11,7 @@ import {
   SKY_KEYS,
   STATION_FACING,
   STATION_LABEL,
+  STATION_Y,
   STATION_POS,
   StationId,
   ActionMood,
@@ -72,6 +73,8 @@ type Clip = 'idle' | 'walk' | 'sit' | 'die' | 'interact-right' | 'jump' | 'emote
 function actClip(mood: ActionMood, station: StationId): Clip {
   if (mood === 'sleep') return 'die'; // nằm xuống
   if (mood === 'work') return 'sit';
+  if (station === 'desk') return 'sit';
+  if (station === 'kitchen') return 'interact-right';
   if (station === 'basketball') return 'jump';
   if (station === 'dance') return 'emote-yes';
   if (mood === 'fast') return 'interact-right';
@@ -211,6 +214,26 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     const addProp = async (name: string, x: number, z: number, rotY: number, station?: StationId) => {
       const obj = await getModel(`/models/arcade/${name}.glb`);
       obj.position.set(x, 0, z);
+      obj.rotation.y = rotY;
+      const mats = uniqueMaterials(obj);
+      if (station) {
+        props[station] = [...(props[station] ?? []), ...mats];
+        obj.traverse((o) => { o.userData.station = station; });
+      }
+      room.add(obj);
+    };
+
+    // Đồ nội thất Kenney Furniture Kit: gốc ở góc mô hình, nên căn giữa và thu nhỏ cho hợp nhân vật
+    const FURNITURE_SCALE = 0.75;
+    const addFurniture = async (name: string, x: number, z: number, rotY: number, station?: StationId, y = 0) => {
+      const inner = await getModel(`/models/furniture/${name}.glb`);
+      const box = new THREE.Box3().setFromObject(inner);
+      const c = box.getCenter(new THREE.Vector3());
+      inner.position.set(-c.x, -box.min.y, -c.z);
+      const obj = new THREE.Group();
+      obj.add(inner);
+      obj.scale.setScalar(FURNITURE_SCALE);
+      obj.position.set(x, y, z);
       obj.rotation.y = rotY;
       const mats = uniqueMaterials(obj);
       if (station) {
@@ -365,6 +388,15 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           addProp('pinball', -2.0, 0.2, Math.PI / 2, 'pinball'),
           addProp('basketball-game', -2.0, 1.2, Math.PI / 2, 'basketball'),
           addProp('column', 2.35, 1.7, 0),
+          // Góc sinh hoạt
+          addFurniture('rugRound', 0, 0.35, 0),
+          addFurniture('bedSingle', 1.2, 1.55, Math.PI / 2, 'bed'),
+          addFurniture('desk', -0.6, 1.55, 0, 'desk'),
+          addFurniture('computerScreen', -0.6, 1.5, 0, 'desk', 0.285),
+          addFurniture('chairDesk', -0.6, 1.88, Math.PI, 'desk'),
+          addFurniture('kitchenStove', 2.25, -0.9, -Math.PI / 2, 'kitchen'),
+          addFurniture('pottedPlant', -2.3, 1.95, 0),
+          addFurniture('lampRoundFloor', 2.3, 1.0, 0),
         ]);
         await loadAvatar(pendingRef.current.avatar);
         if (disposed) return;
@@ -402,6 +434,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     const skyNow = new THREE.Color();
     scene.background = skyNow;
     let sinceRender = 0;
+    let lift = 0;
 
     const frame = () => {
       raf = requestAnimationFrame(frame);
@@ -499,7 +532,10 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         }
       }
       holder.rotation.x = -anim.lie * (Math.PI / 2);
-      holder.position.y = bob + anim.lie * 0.1;
+      // Nằm lên giường: nâng nhân vật lên mặt giường
+      const liftGoal = anim.phase === 'act' ? STATION_Y[anim.station] ?? 0 : 0;
+      lift += (liftGoal - lift) * Math.min(1, dt * 8);
+      holder.position.y = bob + anim.lie * 0.1 + lift;
 
       // Tinh thần thấp: nhân vật hơi xám
       if (charMats.length) {

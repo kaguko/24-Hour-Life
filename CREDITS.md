@@ -7,6 +7,9 @@
 - **Mini Arcade** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
   Arcade machines, walls and floor tiles used in the 3D room (`public/models/arcade/`). The Mini Characters GLB models are used there too (`public/models/characters/`).
 
+- **Furniture Kit** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+  Bed, desk, chair, stove, rug and decor in the 3D room (`public/models/furniture/`).
+
 ## Audio
 - **Interface Sounds**, **Music Jingles** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
   8 clips converted to mono 32 kHz MP3 and volume-normalised (`public/sfx/`); the originals are not redistributed.

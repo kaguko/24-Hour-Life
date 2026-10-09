@@ -11,6 +11,9 @@ export type StationId =
   | 'dance'
   | 'basketball'
   | 'register'
+  | 'bed'
+  | 'desk'
+  | 'kitchen'
   | 'center';
 
 export type ActionMood = 'fast' | 'slow' | 'work' | 'sleep' | 'neutral';
@@ -29,7 +32,15 @@ export const STATION_POS: Record<StationId, [number, number]> = {
   dance: [1.0, 0.15],
   basketball: [-1.0, 1.2],
   register: [1.5, -1.05],
+  bed: [1.2, 1.55],
+  desk: [-0.6, 1.85],
+  kitchen: [1.85, -0.9],
   center: [0, 0.35],
+};
+
+/** Độ cao nhân vật khi đang làm hành vi (vd nằm trên giường). */
+export const STATION_Y: Partial<Record<StationId, number>> = {
+  bed: 0.24,
 };
 
 export const DEFAULT_VISUAL: ActionVisual = { station: 'center', mood: 'neutral' };
@@ -46,21 +57,21 @@ export const ACTION_VISUALS: Record<string, ActionVisual> = {
   // Dopamine chậm
   exercise: { station: 'basketball', mood: 'slow' },
   short_walk: { station: 'center', mood: 'slow' },
-  study_deep: { station: 'center', mood: 'slow' },
-  learn_skill: { station: 'center', mood: 'slow' },
-  learn_soft_skills: { station: 'center', mood: 'slow' },
+  study_deep: { station: 'desk', mood: 'slow' },
+  learn_skill: { station: 'desk', mood: 'slow' },
+  learn_soft_skills: { station: 'desk', mood: 'slow' },
   deep_talk: { station: 'center', mood: 'slow' },
   call_family: { station: 'center', mood: 'slow' },
   pet_bonding: { station: 'center', mood: 'slow' },
   meditate_breathe: { station: 'center', mood: 'slow' },
-  cook_tyrosine: { station: 'center', mood: 'slow' },
+  cook_tyrosine: { station: 'kitchen', mood: 'slow' },
   listen_music: { station: 'center', mood: 'slow' },
   clean_room: { station: 'center', mood: 'slow' },
   // Công việc & nghỉ
-  work_focused: { station: 'register', mood: 'work' },
+  work_focused: { station: 'desk', mood: 'work' },
   work_overtime: { station: 'register', mood: 'work' },
-  sleep_deep: { station: 'center', mood: 'sleep' },
-  sleep_nap: { station: 'center', mood: 'sleep' },
+  sleep_deep: { station: 'bed', mood: 'sleep' },
+  sleep_nap: { station: 'bed', mood: 'sleep' },
 };
 
 /** Tên hiển thị khi người chơi bấm vào món đồ trong phòng. */
@@ -71,8 +82,11 @@ export const STATION_LABEL: Record<StationId, string> = {
   claw: '🧸 Máy gắp – Mua sắm',
   dance: '🪩 Sàn nhảy – Tiệc tùng',
   basketball: '🏀 Bóng rổ – Vận động',
-  register: '💼 Quầy – Công việc',
-  center: '🧍 Bản thân – Học, nghỉ, kết nối',
+  register: '💼 Quầy – Tăng ca',
+  bed: '🛏️ Giường – Ngủ',
+  desk: '📚 Bàn – Học & làm việc',
+  kitchen: '🍳 Bếp – Nấu ăn',
+  center: '🧍 Bản thân – Vận động nhẹ, thiền, kết nối',
 };
 
 /** Hành vi thuộc về món đồ nào (không có trong bản đồ thì về 'center'). */
@@ -88,6 +102,9 @@ export const STATION_FACING: Record<StationId, number> = {
   pinball: -Math.PI / 2,
   basketball: -Math.PI / 2,
   dance: Math.PI / 2,
+  bed: Math.PI,
+  desk: Math.PI,
+  kitchen: Math.PI / 2,
   center: 0.6,
 };
 
