@@ -1,4 +1,5 @@
 import React from 'react';
+import { tagTone } from '../lib/tagTone';
 import { ActionPrimitive, PlayerStatsPrimitive } from '../domain';
 import { Clock, ArrowRight, AlertTriangle, Flame, Zap, Sprout } from 'lucide-react';
 
@@ -95,7 +96,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           {action.title}
         </h4>
         {habitTag && (
-          <p className={`text-[11px] font-medium mb-1 ${habitTag.startsWith('⚠️') ? 'text-amber-700' : 'text-emerald-700'}`}>{habitTag}</p>
+          <p className={`text-[11px] font-medium mb-1 ${tagTone(habitTag)}`}>{habitTag}</p>
         )}
         <p className="text-xs text-stone-600 mb-3 line-clamp-2 leading-relaxed">
           {action.description}

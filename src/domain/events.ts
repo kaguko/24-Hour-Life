@@ -1,7 +1,8 @@
 import { EventPrimitive, PlayerStatsPrimitive } from './types';
 import { applyStatDeltas } from './stats';
+import { PLACE_EVENTS } from './placeEvents';
 
-export const DOMAIN_EVENTS: EventPrimitive[] = [
+const CORE_EVENTS: EventPrimitive[] = [
   {
     id: 'deadline_rush',
     title: 'Dự án gấp từ sếp / Khách hàng',
@@ -256,6 +257,8 @@ export const DOMAIN_EVENTS: EventPrimitive[] = [
   },
 ];
 
+export const DOMAIN_EVENTS: EventPrimitive[] = [...CORE_EVENTS, ...PLACE_EVENTS];
+
 export const WEEKDAY_LABELS = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
 
 /** Ngày game 1..7 -> nhãn thứ trong tuần (Ngày 1 = Thứ Hai) */
@@ -270,11 +273,18 @@ export function isWeekend(day: number): boolean {
 export function rollDomainEvent(day: number, rollSeed = Math.random()): EventPrimitive | null {
   if (rollSeed > 0.45) return null;
   const eligible = DOMAIN_EVENTS.filter(
-    (e) => day >= e.minDay && (!e.onlyDays || e.onlyDays.includes(day))
+    (e) => !e.places && day >= e.minDay && (!e.onlyDays || e.onlyDays.includes(day))
   );
   if (eligible.length === 0) return null;
   const idx = Math.floor(rollSeed * eligible.length * (1 / 0.45)) % eligible.length;
   return eligible[idx];
+}
+
+/** Sự kiện gắn với địa điểm ('road' = trên đường đi). `rand` trả số trong [0,1). */
+export function rollPlaceEvent(place: string, day: number, rand: () => number = Math.random): EventPrimitive | null {
+  const eligible = DOMAIN_EVENTS.filter((e) => e.places?.includes(place) && day >= e.minDay);
+  if (eligible.length === 0) return null;
+  return eligible[Math.floor(rand() * eligible.length) % eligible.length];
 }
 
 export function resolveDomainChoice(

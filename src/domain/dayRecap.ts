@@ -115,7 +115,10 @@ export function buildDayRecap(
   const grade: DayGrade = score >= 85 ? 'S' : score >= 70 ? 'A' : score >= 55 ? 'B' : score >= 40 ? 'C' : 'D';
 
   // Ngủ là nền tảng, không tính là "quyết định" tốt/tệ nhất
-  const unique = [...new Set(actionIds)].filter((id) => DOMAIN_ACTIONS.find((a) => a.id === id)?.category !== 'rest');
+  const unique = [...new Set(actionIds)].filter((id) => {
+    const c = DOMAIN_ACTIONS.find((a) => a.id === id)?.category;
+    return c !== 'rest' && c !== 'travel';
+  });
   const ranked = unique.map((id) => ({ id, v: actionValue(id) })).sort((x, y) => y.v - x.v);
   const best = ranked[0] && ranked[0].v > 0 ? { title: shortTitle(ranked[0].id), reason: reasonOf(ranked[0].id) } : undefined;
   const lastR = ranked[ranked.length - 1];

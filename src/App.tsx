@@ -2,17 +2,18 @@ import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'rea
 import { useGameAdapter } from './adapters/useGameAdapter';
 import { shareAdapter } from './adapters/shareAdapter';
 import {
-  DOMAIN_ACTIONS,
+  PLAYABLE_ACTIONS,
+  planAction,
+  locationDef,
+  PlanResult,
   summarizeFastDopamine,
-  actionLockReason,
-  clockFromHoursRemaining,
   computeSkillXp,
-  skillLevels,
   habitTag,
   evaluateGoals,
 } from './domain';
 import { SkillsPanel } from './ui/SkillsPanel';
 import { GoalsPanel } from './ui/GoalsPanel';
+import { CityMap } from './ui/CityMap';
 
 import { TopNav } from './ui/TopNav';
 import { StatsHUD } from './ui/StatsHUD';
@@ -68,6 +69,8 @@ export default function App() {
     history,
     goalIds,
     finished,
+    location,
+    travelTo,
   } = useGameAdapter();
 
   // Chuyển ngày: nhân vật lên giường, phòng tối ("Ngày N khép lại"), rồi bình minh, rồi mới hiện báo cáo sáng
@@ -95,22 +98,19 @@ export default function App() {
   // Chỉ dopamine NHANH trong ngày mới gây sụp; dopamine cao nhờ hoạt động lành mạnh thì không
   const crashRisk = summarizeFastDopamine(actionsToday.map((a) => a.id)).atRisk;
 
-  // Hành vi đang bị khóa theo giờ / ngày / số lần trong ngày
+  // Kế hoạch cho từng hành vi: đi đường (nếu ở xa), nơi đó còn mở cửa, hành vi có đang bị khóa không
   const skillXp = useMemo(() => computeSkillXp(history, actionsToday.map((a) => a.id)), [history, actionsToday]);
-  const lockReasons = useMemo(() => {
-    const ctx = {
-      clock: clockFromHoursRemaining(hoursRemaining),
-      day,
-      actionsTodayIds: actionsToday.map((a) => a.id),
-      skillLevels: skillLevels(skillXp),
-    };
-    const out: Record<string, string> = {};
-    for (const a of DOMAIN_ACTIONS) {
-      const reason = actionLockReason(a, ctx);
-      if (reason) out[a.id] = reason;
-    }
+  const plans = useMemo(() => {
+    const ctx = { day, actionsTodayIds: actionsToday.map((a) => a.id), history };
+    const out: Record<string, PlanResult> = {};
+    for (const a of PLAYABLE_ACTIONS) out[a.id] = planAction(a.id, location, hoursRemaining, ctx);
     return out;
-  }, [hoursRemaining, day, actionsToday, skillXp]);
+  }, [location, hoursRemaining, day, actionsToday, history]);
+  const lockReasons = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const [id, p] of Object.entries(plans)) if (!p.ok) out[id] = p.reason;
+    return out;
+  }, [plans]);
 
   // Mục tiêu trong tuần: tiến độ tính từ lịch sử + chỉ số hiện tại
   const goals = useMemo(
@@ -136,15 +136,24 @@ export default function App() {
     doneGoalsRef.current = done;
   }, [goals, goalIds, finished, setNotice]);
 
-  // Nhãn thói quen (đang tạo / đã thành nếp / đã nhờn) theo các ngày trước
+  // Nhãn phụ trên mỗi hành vi: tốn bao nhiêu giờ đi đường, và thói quen (đang tạo / đã thành nếp / đã nhờn)
   const habitTags = useMemo(() => {
     const out: Record<string, string> = {};
-    for (const a of DOMAIN_ACTIONS) {
-      const tag = habitTag(a, history);
+    for (const a of PLAYABLE_ACTIONS) {
+      const p = plans[a.id];
+      const travel = p && p.ok && p.travelHours > 0 ? `🚶 +${p.travelHours}h đi đường` : null;
+      const tag = [travel, habitTag(a, history)].filter(Boolean).join(' · ');
       if (tag) out[a.id] = tag;
     }
     return out;
-  }, [history]);
+  }, [history, plans]);
+
+  // Tự chuyển giữa phòng (ở nhà) và bản đồ (đang ở ngoài)
+  const [view, setView] = useState<'room' | 'map'>('room');
+  useEffect(() => {
+    setView(location === 'home' ? 'room' : 'map');
+  }, [location]);
+  const here = locationDef(location);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 via-indigo-50/60 to-stone-100 text-stone-900 font-sans flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
@@ -203,7 +212,38 @@ export default function App() {
             {/* Bố cục game: phòng 3D là màn hình chính; thời gian bên dưới; chi tiết mở khi cần */}
             <div className="space-y-4">
                 {/* Căn phòng 3D: bấm đồ vật để hành động */}
-                <div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    {([
+                      ['room', '🏠 Phòng'],
+                      ['map', '🗺️ Thành phố'],
+                    ] as const).map(([id, label]) => (
+                      <button
+                        key={id}
+                        onClick={() => setView(id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                          view === id ? 'bg-stone-900 text-white shadow-sm' : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    <span className="ml-auto text-[11px] font-semibold text-stone-600">
+                      📍 {here.emoji} {here.name}
+                    </span>
+                  </div>
+                  {view === 'map' ? (
+                    <CityMap
+                      location={location}
+                      avatarId={avatarId}
+                      actions={PLAYABLE_ACTIONS}
+                      plans={plans}
+                      tags={habitTags}
+                      hoursRemaining={hoursRemaining}
+                      onSelectAction={takeAction}
+                      onTravel={travelTo}
+                    />
+                  ) : (
                   <Suspense fallback={<div className="h-[19rem] sm:h-80 lg:h-[30rem] rounded-2xl bg-indigo-950/90 animate-pulse" />}>
                     <RoomScene
                       avatarId={avatarId}
@@ -211,7 +251,7 @@ export default function App() {
                       hoursUsed={hoursUsed}
                       lastAction={lastAction}
                       crashRisk={crashRisk}
-                      actions={DOMAIN_ACTIONS}
+                      actions={PLAYABLE_ACTIONS}
                       hoursRemaining={hoursRemaining}
                       onSelectAction={takeAction}
                       lockReasons={lockReasons}
@@ -221,6 +261,7 @@ export default function App() {
                       sleeping={!!morningReport}
                     />
                   </Suspense>
+                  )}
                 </div>
 
                 <GoalsPanel goals={goals} />
@@ -259,7 +300,7 @@ export default function App() {
                     onClick={() => setShowCards((v) => !v)}
                     className={`px-3 py-2 text-xs font-medium rounded-xl border shadow-xs ${showCards ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50 text-stone-700 border-stone-200'}`}
                   >
-                    📋 Danh sách hành vi ({DOMAIN_ACTIONS.length})
+                    📋 Danh sách hành vi ({PLAYABLE_ACTIONS.length})
                   </button>
                 </div>
 
@@ -269,7 +310,7 @@ export default function App() {
 
                 {showCards && (
                   <ActionGrid
-                    actions={DOMAIN_ACTIONS}
+                    actions={PLAYABLE_ACTIONS}
                     currentStats={stats}
                     hoursRemaining={hoursRemaining}
                     onSelectAction={takeAction}

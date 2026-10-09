@@ -21,6 +21,11 @@ import {
   pickGoalIds,
   isGoalId,
   GOAL_COUNT_PER_RUN,
+  LocationId,
+  isLocationId,
+  planAction,
+  planTravel,
+  rollPlaceEvent,
 } from '../domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
@@ -43,6 +48,8 @@ export function useGameAdapter() {
   const [dayGrades, setDayGrades] = useState<DayGrade[]>([]);
   // Mục tiêu của ván này (bốc ngẫu nhiên khi bắt đầu ván mới)
   const [goalIds, setGoalIds] = useState<string[]>(() => pickGoalIds());
+  // Nhân vật đang ở đâu trong thành phố (mỗi sáng thức dậy ở nhà)
+  const [location, setLocation] = useState<LocationId>('home');
   const [isIntroOpen, setIsIntroOpen] = useState<boolean>(() => !storageAdapter.hasSeenIntro());
 
   // Transient UX states
@@ -67,6 +74,7 @@ export function useGameAdapter() {
       if (isAvatarId(saved.avatarId)) setAvatarId(saved.avatarId);
       const savedGoals = (saved.goalIds ?? []).filter(isGoalId);
       if (savedGoals.length === GOAL_COUNT_PER_RUN) setGoalIds(savedGoals);
+      if (isLocationId(saved.location)) setLocation(saved.location);
       audioAdapter.enabled = saved.soundEnabled;
     }
   }, []);
@@ -86,8 +94,9 @@ export function useGameAdapter() {
       dayStartStats,
       dayGrades,
       goalIds,
+      location,
     });
-  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds]);
+  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds, location]);
 
   const hoursRemaining = Math.max(0, 24 - hoursUsed);
 
@@ -150,48 +159,93 @@ export function useGameAdapter() {
     [stats, actionsTodayIds, sleepDebt, day, dayStartStats]
   );
 
-  // Action dispatcher
-  const takeAction = useCallback(
-    (actionId: string) => {
-      const currentHoursLeft = Math.max(0, 24 - hoursUsed);
-      const result = executeActionById(actionId, stats, currentHoursLeft, actionsTodayIds, day, history);
+  // Chạy lần lượt các bước (đi đường rồi làm) và cập nhật trạng thái một lần
+  const runSteps = useCallback(
+    (steps: string[], realActionId: string | null, endLocation: LocationId) => {
+      let s = stats;
+      let ids = actionsTodayIds;
+      let left = Math.max(0, 24 - hoursUsed);
+      let last: ReturnType<typeof executeActionById> | null = null;
+      let traveled = false;
+      let blocked: string | null = null;
 
-      if (!result.success) {
-        setNotice(result.notice);
+      for (const stepId of steps) {
+        const r = executeActionById(stepId, s, left, ids, day, history);
+        if (!r.success) {
+          blocked = r.notice;
+          break;
+        }
+        s = r.newStats;
+        ids = [...ids, stepId];
+        left -= r.hoursSpent;
+        last = r;
+        if (stepId !== realActionId) traveled = true;
+      }
+
+      if (!last) {
+        setNotice(blocked);
         audioAdapter.playCue('neutral');
         return;
       }
 
-      audioAdapter.playCue(result.soundCue);
-
-      const nextHoursUsed = hoursUsed + result.hoursSpent;
-      const nextActionIds = [...actionsTodayIds, actionId];
-
-      setStats(result.newStats);
+      audioAdapter.playCue(last.soundCue);
+      const nextHoursUsed = 24 - left;
+      setStats(s);
       setHoursUsed(nextHoursUsed);
-      setActionsTodayIds(nextActionIds);
-      setLastAction((prev) => ({ id: actionId, n: (prev?.n ?? 0) + 1 }));
-      setNotice(result.notice);
+      setActionsTodayIds(ids);
+      setLocation(blocked ? location : endLocation);
+      if (realActionId) setLastAction((prev) => ({ id: realActionId, n: (prev?.n ?? 0) + 1 }));
+      setNotice(realActionId ? last.notice : null);
 
-      // Random event trigger check (pure roll)
-      if (!activeEvent && nextHoursUsed >= 8 && nextHoursUsed <= 18 && Math.random() < 0.35) {
-        const rolled = rollDomainEvent(day);
-        if (rolled) {
-          setTimeout(() => {
-            audioAdapter.playCue('event');
-            setActiveEvent(rolled);
-          }, 300);
-        }
+      // Sự kiện: trên đường đi, tại địa điểm, hoặc ngẫu nhiên chung (chỉ một sự kiện mỗi lần)
+      let rolled: EventPrimitive | null = null;
+      if (!activeEvent && !blocked) {
+        if (traveled && Math.random() < 0.3) rolled = rollPlaceEvent('road', day);
+        if (!rolled && realActionId && endLocation !== 'home' && Math.random() < 0.2) rolled = rollPlaceEvent(endLocation, day);
+        if (!rolled && nextHoursUsed >= 8 && nextHoursUsed <= 18 && Math.random() < 0.35) rolled = rollDomainEvent(day);
+      }
+      if (rolled) {
+        const ev = rolled;
+        setTimeout(() => {
+          audioAdapter.playCue('event');
+          setActiveEvent(ev);
+        }, 300);
       }
 
-      // If full 24h consumed, transition night
+      // Hết 24h: qua đêm
       if (nextHoursUsed >= 24) {
-        setTimeout(() => {
-          endDay(result.newStats, nextActionIds);
-        }, 400);
+        setTimeout(() => endDay(s, ids), 400);
       }
     },
-    [hoursUsed, stats, actionsTodayIds, activeEvent, day, endDay, history]
+    [stats, actionsTodayIds, hoursUsed, day, history, location, activeEvent, endDay]
+  );
+
+  // Action dispatcher: tự đi đến nơi diễn ra hành vi nếu đang ở chỗ khác
+  const takeAction = useCallback(
+    (actionId: string) => {
+      const plan = planAction(actionId, location, Math.max(0, 24 - hoursUsed), { day, actionsTodayIds, history });
+      if (!plan.ok) {
+        setNotice(plan.reason);
+        audioAdapter.playCue('neutral');
+        return;
+      }
+      runSteps(plan.steps, actionId, plan.endLocation);
+    },
+    [location, hoursUsed, day, actionsTodayIds, history, runSteps]
+  );
+
+  // Chỉ di chuyển đến một nơi (ví dụ về nhà)
+  const travelTo = useCallback(
+    (to: LocationId) => {
+      const plan = planTravel(location, to, Math.max(0, 24 - hoursUsed));
+      if (!plan.ok) {
+        setNotice(plan.reason);
+        audioAdapter.playCue('neutral');
+        return;
+      }
+      runSteps(plan.steps, null, plan.endLocation);
+    },
+    [location, hoursUsed, runSteps]
   );
 
   const advanceToNextDay = useCallback(() => {
@@ -199,6 +253,7 @@ export function useGameAdapter() {
     setNotice(null);
     setActionsTodayIds([]);
     setHoursUsed(0);
+    setLocation('home');
     setDayStartStats(stats); // chỉ số buổi sáng = mốc so sánh cho ngày mới
 
     // Kết thúc ván khi sụp đổ giữa chừng hoặc đã đủ 7 ngày
@@ -247,6 +302,7 @@ export function useGameAdapter() {
     setDayStartStats(INITIAL_STATS);
     setDayGrades([]);
     setGoalIds(pickGoalIds());
+    setLocation('home');
     setFinished(false);
   }, []);
 
@@ -294,5 +350,7 @@ export function useGameAdapter() {
     actionsTodayIds,
     goalIds,
     finished,
+    location,
+    travelTo,
   };
 }

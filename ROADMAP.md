@@ -182,3 +182,13 @@ Trước đây luật qua đêm coi `dopamine ≥ 75` từ **bất kỳ nguồn 
    - Giao diện và Storage chỉ là Adapter thông qua `src/adapters/`.
 3. **Không sửa số liệu bằng cảm giác**: Khi thay đổi chỉ số trong `domain/actions.ts` hoặc `domain/consequence.ts`, hãy chạy kiểm chứng qua tab **"Mô phỏng 1000 lần"** (`simulate.ts`) để bảo đảm tính cân bằng không bị vỡ.
 4. **Không cài đặt thêm thư viện cồng kềnh**: Giữ phong cách Tailwind tinh gọn và chống "AI slop" theo hiến pháp `frontend-design`.
+
+---
+
+### ✅ MỞ RỘNG GAMEPLAY (đợt này)
+- **Hành vi**: từ 23 lên 48 hành vi, có khung giờ / ngày / giới hạn mỗi ngày (`domain/actionsExtra.ts`, `domain/availability.ts`).
+- **Tiến triển & thói quen**: 4 kỹ năng (Trí tuệ/Thể lực/Giao tiếp/Nghề nghiệp) lên cấp, mở khóa hành vi nâng cao; thói quen 3 ngày liên tiếp, "nhờn" với cám dỗ lặp lại (`domain/progression.ts`). Mọi thứ suy ra từ `history`, không cần đổi định dạng save.
+- **Mục tiêu**: mỗi ván bốc 2/8 mục tiêu, tiến độ trực tiếp, tổng kết ở màn kết cục (`domain/goals.ts`).
+- **Thành phố & di chuyển** (`domain/map.ts`, `domain/planner.ts`, `ui/CityMap.tsx`): 8 địa điểm (nhà, công ty, trường, quán cà phê, gym, công viên, siêu thị, quán nhậu), mỗi hành vi có địa điểm và giờ mở cửa riêng. Đổi địa điểm tốn 0.25–1.25 giờ đi đường (một "hành vi" di chuyển thật, có trên thanh thời gian), chút năng lượng, tiền, tinh thần. Mỗi sáng thức dậy ở nhà.
+- **Sự kiện theo địa điểm** (`domain/placeEvents.ts`): 7 sự kiện trên đường (gặp bạn cũ, mưa, hàng rong, người hỏi đường, thủng lốp, mèo hoang, điện thoại rung) và 8 sự kiện tại địa điểm có NPC (bạn tập gym, barista, đồng nghiệp, giảng viên, người chạy cùng, siêu thị giảm giá, người lạ mời ly...).
+- **Cân bằng mô phỏng sau khi có di chuyển** (1000 ván × 7 ngày): Chaser sập ~3.0 ngày, Workaholic ~4.6, Sleeper ~4.1, Party ~87% sống / 13% phá sản, Balanced 100% sống. Chiến lược mô phỏng đã cập nhật để tôn trọng giờ mở cửa và đi đường. Mô phỏng chưa gồm sự kiện theo địa điểm.

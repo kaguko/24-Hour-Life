@@ -1,6 +1,7 @@
 import { ActionPrimitive, PlayerStatsPrimitive, ActionResultPrimitive, SoundCue } from './types';
 import { applyStatDeltas } from './stats';
 import { EXTRA_ACTIONS } from './actionsExtra';
+import { TRAVEL_ACTIONS } from './map';
 import { actionLockReason, clockFromHoursRemaining } from './availability';
 import { applyProgression, computeSkillXp, skillLevels } from './progression';
 
@@ -355,7 +356,11 @@ const CORE_ACTIONS: ActionPrimitive[] = [
   },
 ];
 
-export const DOMAIN_ACTIONS: ActionPrimitive[] = [...CORE_ACTIONS, ...EXTRA_ACTIONS];
+/** Hành vi người chơi chọn được (không gồm các bước di chuyển) */
+export const PLAYABLE_ACTIONS: ActionPrimitive[] = [...CORE_ACTIONS, ...EXTRA_ACTIONS];
+
+/** Mọi hành vi có thể xuất hiện trong lịch sử ngày, kể cả di chuyển */
+export const DOMAIN_ACTIONS: ActionPrimitive[] = [...PLAYABLE_ACTIONS, ...TRAVEL_ACTIONS];
 
 const NAPS_BEFORE_DIMINISHING = 4;
 const NAP_DIMINISHED_FACTOR = 0.25;

@@ -11,6 +11,8 @@ export * from './actions';
 export * from './availability';
 export * from './progression';
 export * from './goals';
+export * from './map';
+export * from './planner';
 export * from './dopamine';
 export * from './consequence';
 export * from './events';

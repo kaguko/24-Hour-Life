@@ -1,6 +1,8 @@
 import { PlayerStatsPrimitive, SimulationResultPrimitive } from './types';
 import { INITIAL_STATS, evaluateLifeStatus } from './stats';
-import { DOMAIN_ACTIONS, executeActionById } from './actions';
+import { DOMAIN_ACTIONS, PLAYABLE_ACTIONS, executeActionById } from './actions';
+import { LocationId } from './map';
+import { planAction } from './planner';
 import { actionLockReason, clockFromHoursRemaining } from './availability';
 import { computeSkillXp, skillLevels } from './progression';
 import { processOvernightCycle } from './consequence';
@@ -37,7 +39,9 @@ export const DOMAIN_STRATEGIES: DomainStrategy[] = [
       const free = hoursLeft - Math.max(0, 4 - naps) * 1.5; // dành chỗ cho 4 lần chợp mắt (6h)
       const workDone = actionsToday.filter((id) => id.startsWith('work_')).length;
       if (free >= 4 && workDone < 3) return workDone < 2 ? 'work_focused' : 'work_overtime';
-      if (free >= 0.5) return 'fast_food';
+      // Tan ca: cà phê ép tỉnh táo ở quán (mở đến 23h), hết giờ quán thì chợp mắt
+      if (free >= 0.5 && clockFromHoursRemaining(hoursLeft) < 22.5) return 'caffeine_spike';
+      if (free >= 2) return 'scroll_social';
       return 'sleep_nap';
     },
   },
@@ -59,10 +63,14 @@ export const DOMAIN_STRATEGIES: DomainStrategy[] = [
     decideActionId: (stats, hoursLeft, actionsToday) => {
       const slept = actionsToday.includes('sleep_deep');
       const free = hoursLeft - (slept ? 0 : 8); // dành chỗ cho giấc ngủ 8h
-      if (stats.money < 500 && free >= 4) return 'work_focused';
+      const clock = clockFromHoursRemaining(hoursLeft);
+      // Thiếu tiền: nhận ca part-time ở quán cà phê buổi sáng
+      if (stats.money < 1500 && free >= 6 && clock < 9) return 'part_time_shift';
+      if (stats.money < 500 && free >= 4 && clock < 18) return 'work_focused';
       const hadBeer = actionsToday.includes('beer_party');
-      if (!hadBeer && free >= 3.5 && stats.money >= 500) return 'beer_party';
-      if (free >= 2.5) return 'deep_talk';
+      // Quán nhậu chỉ mở từ 17h: ban ngày đi cà phê tám chuyện, tối mới nhậu
+      if (!hadBeer && free >= 3.5 && stats.money >= 500 && clock >= 17) return 'beer_party';
+      if (free >= 2.5 && (hadBeer || clock < 17 || stats.money < 500)) return 'deep_talk';
       if (!slept && hoursLeft >= 8) return 'sleep_deep';
       return 'sleep_nap';
     },
@@ -120,35 +128,45 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePr
   for (let day = 1; day <= daysPerRun; day++) {
     let hoursLeft = 24;
     const actionsToday: string[] = [];
+    let location: LocationId = 'home';
+    let stuck = false;
 
-    while (hoursLeft > 0) {
-      let chosenId = strategy.decideActionId(currentStats, hoursLeft, actionsToday);
-      let action = DOMAIN_ACTIONS.find((a) => a.id === chosenId);
+    while (hoursLeft > 0 && !stuck) {
+      const chosenId = strategy.decideActionId(currentStats, hoursLeft, actionsToday);
+      let plan = planAction(chosenId, location, hoursLeft, { day, actionsTodayIds: actionsToday, history });
 
-      if (!action || action.hours > hoursLeft) {
-        const fallback = DOMAIN_ACTIONS.filter(
-          (a) =>
-            a.hours <= hoursLeft &&
-            !actionLockReason(a, {
-              clock: clockFromHoursRemaining(hoursLeft),
-              day,
-              actionsTodayIds: actionsToday,
-              skillLevels: skillLevels(computeSkillXp(history, actionsToday)),
-            })
-        ).sort(
-          (a, b) => b.hours - a.hours
-        )[0];
-        if (!fallback) break;
-        chosenId = fallback.id;
-        action = fallback;
+      if (!plan.ok) {
+        // Không đi được (hết giờ, đóng cửa, đang bị khóa): về nhà chợp mắt, nếu không thì hành vi dài nhất còn làm được
+        // (không chọn giấc ngủ dài: nó là quyết định của chiến lược, không phải đường lui)
+        const ctx = { day, actionsTodayIds: actionsToday, history };
+        let best: ReturnType<typeof planAction> | null = planAction('sleep_nap', location, hoursLeft, ctx);
+        if (!best.ok) {
+          best = null;
+          let bestHours = -1;
+          for (const a of PLAYABLE_ACTIONS) {
+            if (a.category === 'rest') continue;
+            const p = planAction(a.id, location, hoursLeft, ctx);
+            if (p.ok && a.hours > bestHours) {
+              best = p;
+              bestHours = a.hours;
+            }
+          }
+        }
+        if (!best || !best.ok) break;
+        plan = best;
       }
 
-      const res = executeActionById(chosenId, currentStats, hoursLeft, actionsToday, day, history);
-      if (!res.success) break;
-
-      currentStats = res.newStats;
-      actionsToday.push(chosenId);
-      hoursLeft -= res.hoursSpent;
+      for (const stepId of plan.steps) {
+        const res = executeActionById(stepId, currentStats, hoursLeft, actionsToday, day, history);
+        if (!res.success) {
+          stuck = true;
+          break;
+        }
+        currentStats = res.newStats;
+        actionsToday.push(stepId);
+        hoursLeft -= res.hoursSpent;
+      }
+      location = plan.endLocation;
     }
 
     // Biến cố ngẫu nhiên: người chơi giả lập chọn ngẫu nhiên một lựa chọn (chỉ tính tác động chỉ số)

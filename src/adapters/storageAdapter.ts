@@ -24,6 +24,8 @@ export interface SerializedGameState {
   dayGrades?: string[];
   /** Mục tiêu đã bốc cho ván này */
   goalIds?: string[];
+  /** Địa điểm hiện tại của nhân vật */
+  location?: string;
 }
 
 const INTRO_KEY = '24h_life_intro_seen_v1';

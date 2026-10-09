@@ -13,7 +13,7 @@ export interface PlayerStatsPrimitive {
   willpower: number;    // 0 - 100
 }
 
-export type ActionCategory = 'rest' | 'work' | 'wellness' | 'social' | 'temptation';
+export type ActionCategory = 'rest' | 'work' | 'wellness' | 'social' | 'temptation' | 'travel';
 
 export type DopaminePathway = 'fast' | 'slow' | 'none';
 
@@ -112,6 +112,8 @@ export interface EventPrimitive {
   minDay: number;
   /** Nếu có: chỉ xuất hiện vào các ngày này (1 = Thứ 2 ... 7 = Chủ nhật) */
   onlyDays?: number[];
+  /** Nếu có: chỉ xuất hiện ở đây ('road' = trên đường đi, hoặc id địa điểm). Không có = bốc ngẫu nhiên chung */
+  places?: string[];
   choices: EventChoicePrimitive[];
 }
 

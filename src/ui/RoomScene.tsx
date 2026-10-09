@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { tagTone } from '../lib/tagTone';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -1138,7 +1139,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
                   <span className="block text-xs font-medium text-stone-800 leading-snug">{a.title}</span>
                   {locked && <span className="block text-[10px] mt-0.5 text-stone-500">🔒 {locked}</span>}
                   {!locked && habitTags[a.id] && (
-                    <span className={`block text-[10px] mt-0.5 ${habitTags[a.id].startsWith('⚠️') ? 'text-amber-700' : 'text-emerald-700'}`}>{habitTags[a.id]}</span>
+                    <span className={`block text-[10px] mt-0.5 ${tagTone(habitTags[a.id])}`}>{habitTags[a.id]}</span>
                   )}
                   {a.category === 'rest' && (() => {
                     const tip = SLEEP_TIP[sleepAdviceNow(a.id, hoursUsed).timing];
