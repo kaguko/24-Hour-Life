@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { ActionPrimitive, PlayerStatsPrimitive } from '../domain';
 import { AvatarId } from '../lib/avatars';
 import {
@@ -62,6 +63,20 @@ interface FloatDelta {
   text: string;
   good: boolean;
   slot: number;
+}
+
+/** Hoạt hình có sẵn trong mô hình Kenney mini-characters */
+type Clip = 'idle' | 'walk' | 'sit' | 'die' | 'interact-right' | 'jump' | 'emote-yes' | 'crouch';
+
+/** Dáng nhân vật khi đang làm hành vi tại một điểm đến */
+function actClip(mood: ActionMood, station: StationId): Clip {
+  if (mood === 'sleep') return 'die'; // nằm xuống
+  if (mood === 'work') return 'sit';
+  if (station === 'basketball') return 'jump';
+  if (station === 'dance') return 'emote-yes';
+  if (mood === 'fast') return 'interact-right';
+  if (mood === 'slow') return 'sit';
+  return 'emote-yes';
 }
 
 const CHAR_HEIGHT = 0.62;
@@ -211,9 +226,42 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     room.add(holder);
     let charModel: THREE.Object3D | null = null;
     let charMats: THREE.MeshStandardMaterial[] = [];
+    let mixer: THREE.AnimationMixer | null = null;
+    let clips = new Map<string, THREE.AnimationAction>();
+    let currentClip: THREE.AnimationAction | null = null;
+    let currentName: Clip | null = null;
 
+    const play = (name: Clip, fade = 0.25) => {
+      if (name === currentName) return;
+      const next = clips.get(name);
+      if (!next) return;
+      next.reset();
+      if (name === 'die') {
+        next.setLoop(THREE.LoopOnce, 1);
+        next.clampWhenFinished = true;
+      }
+      next.fadeIn(fade).play();
+      currentClip?.fadeOut(fade);
+      currentClip = next;
+      currentName = name;
+    };
+
+    const charCache = new Map<string, { scene: THREE.Group; animations: THREE.AnimationClip[] }>();
     const loadAvatar = async (id: AvatarId) => {
-      const obj = await getModel(`/models/characters/${id}.glb`);
+      const url = `/models/characters/${id}.glb`;
+      let src = charCache.get(url);
+      if (!src) {
+        const gltf = await loader.loadAsync(url);
+        src = { scene: gltf.scene, animations: gltf.animations };
+        charCache.set(url, src);
+      }
+      const obj = cloneSkinned(src.scene) as THREE.Group;
+      mixer?.stopAllAction();
+      mixer = new THREE.AnimationMixer(obj);
+      clips = new Map(src.animations.map((c) => [c.name, mixer!.clipAction(c)]));
+      currentClip = null;
+      currentName = null;
+      play(anim.phase === 'walk' || anim.phase === 'return' ? 'walk' : 'idle', 0);
       const box = new THREE.Box3().setFromObject(obj);
       const h = box.max.y - box.min.y || 1;
       const s = CHAR_HEIGHT / h;
@@ -280,7 +328,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       anim.station = v.station;
       anim.mood = v.mood;
       anim.t = 0;
-      anim.actDur = v.mood === 'sleep' ? 1.8 : v.mood === 'work' ? 1.3 : 1.0;
+      anim.actDur = v.mood === 'sleep' ? 2.6 : v.mood === 'work' || v.mood === 'slow' ? 2.0 : 1.4;
       anim.phase = 'walk';
       anim.glow = 1;
     };
@@ -385,7 +433,9 @@ const RoomScene: React.FC<RoomSceneProps> = ({
 
       room.rotation.y = Math.sin(time * 0.35) * 0.025;
 
-      // Hoạt hình nhân vật
+      // Hoạt hình nhân vật: dùng clip có sẵn trong mô hình; không có clip thì nhún bằng code
+      const animated = clips.size > 0;
+      mixer?.update(dt);
       const target = STATION_POS[anim.station];
       let bob = 0;
       if (anim.phase === 'walk' || anim.phase === 'return') {
@@ -398,10 +448,12 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           holder.position.x += (dx / dist) * step;
           holder.position.z += (dz / dist) * step;
           holder.rotation.y = Math.atan2(dx, dz);
-          bob = Math.abs(Math.sin(time * 14)) * 0.07;
+          if (animated) play('walk');
+          else bob = Math.abs(Math.sin(time * 14)) * 0.07;
         } else if (anim.phase === 'walk') {
           anim.phase = 'act';
           anim.t = 0;
+          if (animated) play(actClip(anim.mood, anim.station));
         } else {
           anim.phase = 'idle';
         }
@@ -410,7 +462,9 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         anim.t += dt;
         const face = STATION_FACING[anim.station];
         holder.rotation.y += (face - holder.rotation.y) * Math.min(1, dt * 10);
-        if (anim.mood === 'sleep') {
+        if (animated) {
+          // Dáng đã do clip đảm nhận
+        } else if (anim.mood === 'sleep') {
           anim.lie = Math.min(1, anim.lie + dt * 3);
         } else if (anim.mood === 'work') {
           bob = Math.abs(Math.sin(time * 9)) * 0.03;
@@ -425,6 +479,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         if (anim.t >= anim.actDur) {
           if (mats) mats.forEach((m) => { m.emissiveIntensity = 0; });
           anim.phase = anim.station === 'center' ? 'idle' : 'return';
+          if (animated) play(anim.phase === 'return' ? 'walk' : 'idle', 0.4);
         }
       } else {
         anim.lie = Math.max(0, anim.lie - dt * 3);
@@ -436,9 +491,10 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         const hoverMats = hoverStation ? props[hoverStation] : undefined;
         if (hoverMats) hoverMats.forEach((m) => { m.emissive.setHex(0xfff3c4); m.emissiveIntensity = 0.35; });
         if (anim.phase === 'idle') {
-          // Thở nhẹ, hơi nhún khi năng lượng thấp
+          // Thở nhẹ; năng lượng thấp thì ngồi thụp xuống
           const tired = st.energy < 30;
-          bob = (Math.sin(time * (tired ? 1.6 : 2.4)) * 0.5 + 0.5) * (tired ? 0.012 : 0.02);
+          if (animated) play(tired ? 'crouch' : 'idle', 0.4);
+          else bob = (Math.sin(time * (tired ? 1.6 : 2.4)) * 0.5 + 0.5) * (tired ? 0.012 : 0.02);
           holder.rotation.y += (0.6 - holder.rotation.y) * Math.min(1, dt * 3);
         }
       }
