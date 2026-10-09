@@ -45,7 +45,7 @@ export const BigEventModal: React.FC<BigEventModalProps> = ({ state, outcome, on
   const deltas = (Object.entries(outcome.deltas) as Array<[keyof PlayerStatsPrimitive, number]>).filter(([, v]) => v);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-3 overflow-y-auto bg-[#0b0817]/85 backdrop-blur-md font-nocturne">
+    <div role="dialog" aria-modal="true" aria-label="Sự kiện lớn của tuần" className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-3 overflow-y-auto bg-[#0b0817]/85 backdrop-blur-md font-nocturne">
       <div
         className={`relative w-full max-w-md my-auto rounded-[1.75rem] bg-[#18132f] border ${ts.ring} p-6 text-center animate-in zoom-in-95 duration-200`}
         style={{ boxShadow: `0 0 50px -4px ${ts.glow}, 0 24px 60px -12px rgba(0,0,0,0.7)` }}

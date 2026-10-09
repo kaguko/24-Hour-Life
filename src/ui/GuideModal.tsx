@@ -151,6 +151,37 @@ export const GuideModal: React.FC = () => {
         </div>
       </div>
 
+      {/* Cơ chế mở rộng */}
+      <div className="p-5 bg-white rounded-2xl border border-stone-200 space-y-3">
+        <h3 className="text-sm font-bold text-stone-900">🗺️ Thành phố, cám dỗ và sự kiện lớn</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs leading-relaxed">
+          <div className="p-3 bg-sky-50 rounded-xl border border-sky-200 space-y-1">
+            <div className="font-bold text-sky-900">🚶 Đi đường tốn giờ</div>
+            <p className="text-stone-700 text-[11px]">
+              Mỗi hành vi diễn ra ở một nơi: công ty, trường, quán cà phê, phòng gym, công viên, siêu thị, quán nhậu hoặc nhà. Đổi nơi mất 0.25–1.25 giờ cùng chút năng lượng, tiền và tinh thần. Mỗi nơi có giờ mở cửa, và sáng nào bạn cũng thức dậy ở nhà. Giữa đường đôi khi gặp chuyện bất ngờ.
+            </p>
+          </div>
+          <div className="p-3 bg-rose-50 rounded-xl border border-rose-200 space-y-1">
+            <div className="font-bold text-rose-900">📱 Cám dỗ xâm nhập</div>
+            <p className="text-stone-700 text-[11px]">
+              Ý chí dưới 45 thì cám dỗ tự tìm đến: điện thoại rung, ván game cuối, tủ lạnh, flash sale. Cưỡng lại tốn ý chí và mỗi vòng một khó hơn. Chiều theo thì mất giờ thật; video và game kéo bạn vào vòng lặp &quot;thêm một cái nữa&quot;. Ngủ đủ và giữ thói quen tốt là cách giữ ý chí cao.
+            </p>
+          </div>
+          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-1">
+            <div className="font-bold text-amber-900">🎯 Nhiệm vụ và sự kiện lớn</div>
+            <p className="text-stone-700 text-[11px]">
+              Mỗi ván có 2 nhiệm vụ và một sự kiện lớn vào Thứ Bảy 14:00 (thi, phỏng vấn, chốt dự án hoặc đám cưới bạn thân). Độ khó thật bị giấu: từ ngày 3 chỉ có tin đồn. Kết quả phụ thuộc cả mức chuẩn bị lẫn thể trạng lúc đó, nên đừng thức trắng đêm trước.
+            </p>
+          </div>
+          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-1">
+            <div className="font-bold text-emerald-900">📈 Kỹ năng và thói quen</div>
+            <p className="text-stone-700 text-[11px]">
+              Bốn kỹ năng (Trí tuệ, Thể lực, Giao tiếp, Nghề nghiệp) lên cấp khi bạn luyện đều, giúp hành vi liên quan hiệu quả hơn và mở khóa việc nâng cao. Làm một việc lành mạnh 3 ngày liền thì thành thói quen, còn cám dỗ lặp lại thì não &quot;nhờn&quot; và cho ít dopamine hơn.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Phân tích trường hợp đặc biệt: Học tập, Kỹ năng mềm & Chọc chó */}
       <div className="p-5 bg-stone-50 rounded-2xl border border-stone-200 space-y-3">
         <h3 className="text-sm font-bold text-stone-900">
@@ -180,7 +211,7 @@ export const GuideModal: React.FC = () => {
               <span>🐕 Nghịch Dại: &quot;Chọc Chó&quot;</span>
             </div>
             <p className="text-stone-600 text-[11px]">
-              <strong>Bẫy Dopamine Nhanh + Adrenaline:</strong> Tại sao con người lại thích nghịch dại? Vì não bộ bị kích động bởi sự hồi hộp và phần thưởng thoát hiểm tức thì! Nhưng rủi ro thực tế rất đắt: 55% bị rượt rơi dép mất sức, 25% bị cắn tốn 600k tiêm phòng dại!
+              <strong>Bẫy Dopamine Nhanh + Adrenaline:</strong> Tại sao con người lại thích nghịch dại? Vì não bộ bị kích động bởi sự hồi hộp và phần thưởng thoát hiểm tức thì! Nhưng rủi ro thực tế rất đắt: 30% bị rượt rơi dép mất sức, 25% bị cắn tốn 500k tiêm phòng dại!
             </p>
           </div>
         </div>

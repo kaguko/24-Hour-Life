@@ -46,7 +46,7 @@ export const MorningModal: React.FC<MorningModalProps> = ({ report, dayGrades = 
   const nextDay = report.dayCompleted + 1;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto bg-[#0b0817]/80 backdrop-blur-md font-nocturne">
+    <div role="dialog" aria-modal="true" aria-label="Báo cáo buổi sáng" className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto bg-[#0b0817]/80 backdrop-blur-md font-nocturne">
       {/* Quầng sáng nền */}
       <div aria-hidden className="pointer-events-none fixed -top-32 -left-32 w-[560px] h-[560px] rounded-full bg-amber-500/10 blur-[120px]" />
       <div aria-hidden className="pointer-events-none fixed top-1/4 right-0 w-[420px] h-[420px] rounded-full bg-fuchsia-700/15 blur-[130px]" />

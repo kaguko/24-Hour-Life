@@ -48,7 +48,8 @@ export const TopNav: React.FC<TopNavProps> = ({
             }`}
           >
             <Play className="w-3.5 h-3.5 text-stone-700" />
-            <span className={currentTab === 'game' ? '' : 'hidden sm:inline'}>Chơi thực tế</span>
+            <span className="sm:hidden">Chơi</span>
+            <span className="hidden sm:inline">Chơi thực tế</span>
           </button>
           <button
             onClick={() => onTabChange('simulate')}
@@ -59,7 +60,8 @@ export const TopNav: React.FC<TopNavProps> = ({
             }`}
           >
             <Activity className="w-3.5 h-3.5 text-emerald-600" />
-            <span className={currentTab === 'simulate' ? '' : 'hidden sm:inline'}>Mô phỏng 1000 lần</span>
+            <span className="sm:hidden">Thí nghiệm</span>
+            <span className="hidden sm:inline">Mô phỏng 1000 lần</span>
           </button>
           <button
             onClick={() => onTabChange('guide')}
@@ -70,7 +72,8 @@ export const TopNav: React.FC<TopNavProps> = ({
             }`}
           >
             <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
-            <span className={currentTab === 'guide' ? '' : 'hidden sm:inline'}>Luật & Bài học</span>
+            <span className="sm:hidden">Luật</span>
+            <span className="hidden sm:inline">Luật & Bài học</span>
           </button>
         </nav>
 
