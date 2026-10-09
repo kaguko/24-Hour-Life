@@ -112,8 +112,17 @@ export default function App() {
               <div className="contents lg:block lg:sticky lg:top-[4.5rem] lg:space-y-4 lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto lg:pr-1">
                 {/* Căn phòng 3D: nhân vật phản ứng theo hành vi và chỉ số. Trên mobile dính ngay dưới thanh trên */}
                 <div className="sticky top-14 z-30 -mx-4 px-4 py-2 bg-stone-100/90 backdrop-blur-sm sm:mx-0 sm:px-0 sm:rounded-2xl lg:static lg:z-auto lg:mx-0 lg:p-0 lg:bg-transparent lg:backdrop-blur-none">
-                  <Suspense fallback={<div className="h-36 sm:h-52 lg:h-72 rounded-2xl bg-indigo-950/90 animate-pulse" />}>
-                    <RoomScene avatarId={avatarId} stats={stats} hoursUsed={hoursUsed} lastAction={lastAction} crashRisk={crashRisk} />
+                  <Suspense fallback={<div className="h-56 sm:h-72 lg:h-96 rounded-2xl bg-indigo-950/90 animate-pulse" />}>
+                    <RoomScene
+                      avatarId={avatarId}
+                      stats={stats}
+                      hoursUsed={hoursUsed}
+                      lastAction={lastAction}
+                      crashRisk={crashRisk}
+                      actions={DOMAIN_ACTIONS}
+                      hoursRemaining={hoursRemaining}
+                      onSelectAction={takeAction}
+                    />
                   </Suspense>
                 </div>
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { PlayerStatsPrimitive } from '../domain';
+import { ActionPrimitive, PlayerStatsPrimitive } from '../domain';
 import { AvatarId } from '../lib/avatars';
 import {
   ACTION_VISUALS,
@@ -9,9 +9,11 @@ import {
   MOOD_GLOW,
   SKY_KEYS,
   STATION_FACING,
+  STATION_LABEL,
   STATION_POS,
   StationId,
   ActionMood,
+  stationOf,
 } from '../lib/roomStations';
 
 export interface RoomAction {
@@ -27,6 +29,16 @@ interface RoomSceneProps {
   lastAction: RoomAction | null;
   /** Dồn nhiều dopamine nhanh trong ngày: phòng nháy hồng cảnh báo */
   crashRisk: boolean;
+  /** Danh sách hành vi để chọn trực tiếp bằng cách bấm vào đồ trong phòng */
+  actions?: ActionPrimitive[];
+  hoursRemaining?: number;
+  onSelectAction?: (actionId: string) => void;
+}
+
+interface Picked {
+  station: StationId;
+  x: number;
+  y: number;
 }
 
 interface SceneApi {
@@ -70,7 +82,21 @@ function uniqueMaterials(root: THREE.Object3D): THREE.MeshStandardMaterial[] {
   return mats;
 }
 
-const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastAction, crashRisk }) => {
+const RoomScene: React.FC<RoomSceneProps> = ({
+  avatarId,
+  stats,
+  hoursUsed,
+  lastAction,
+  crashRisk,
+  actions = [],
+  hoursRemaining = 0,
+  onSelectAction,
+}) => {
+  const [picked, setPicked] = useState<Picked | null>(null);
+  const [hovered, setHovered] = useState<StationId | null>(null);
+  const interactive = !!onSelectAction && actions.length > 0;
+  const interactiveRef = useRef(interactive);
+  interactiveRef.current = interactive;
   const mountRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<SceneApi | null>(null);
   const liveRef = useRef({ stats, hoursUsed, crashRisk });
@@ -133,7 +159,10 @@ const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastA
       obj.position.set(x, 0, z);
       obj.rotation.y = rotY;
       const mats = uniqueMaterials(obj);
-      if (station) props[station] = [...(props[station] ?? []), ...mats];
+      if (station) {
+        props[station] = [...(props[station] ?? []), ...mats];
+        obj.traverse((o) => { o.userData.station = station; });
+      }
       room.add(obj);
     };
 
@@ -154,8 +183,46 @@ const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastA
       if (charModel) holder.remove(charModel);
       charModel = obj;
       charMats = uniqueMaterials(obj);
+      obj.traverse((o) => { o.userData.station = 'center'; });
       holder.add(obj);
     };
+
+    // Bấm vào đồ vật / nhân vật trong phòng để chọn hành vi
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    let hoverStation: StationId | null = null;
+    const stationAt = (e: PointerEvent | MouseEvent): StationId | null => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+      raycaster.setFromCamera(ndc, camera);
+      for (const hit of raycaster.intersectObject(room, true)) {
+        const s = hit.object.userData.station as StationId | undefined;
+        if (s) return s;
+      }
+      return null;
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!interactiveRef.current || e.pointerType === 'touch') return;
+      const s = stationAt(e);
+      if (s !== hoverStation) {
+        hoverStation = s;
+        setHovered(s);
+        renderer.domElement.style.cursor = s ? 'pointer' : 'default';
+      }
+    };
+    const onLeave = () => {
+      hoverStation = null;
+      setHovered(null);
+    };
+    const onClick = (e: MouseEvent) => {
+      if (!interactiveRef.current) return;
+      const s = stationAt(e);
+      const rect = mount.getBoundingClientRect();
+      setPicked(s ? { station: s, x: e.clientX - rect.left, y: e.clientY - rect.top } : null);
+    };
+    renderer.domElement.addEventListener('pointermove', onMove);
+    renderer.domElement.addEventListener('pointerleave', onLeave);
+    renderer.domElement.addEventListener('click', onClick);
 
     // Trạng thái hoạt hình
     const anim = {
@@ -326,6 +393,9 @@ const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastA
           const mats = props[k as StationId];
           if (mats) mats.forEach((m) => { if (m.emissiveIntensity > 0) m.emissiveIntensity = Math.max(0, m.emissiveIntensity - dt * 3); });
         }
+        // Rê chuột: món đồ sáng nhẹ để báo "bấm được"
+        const hoverMats = hoverStation ? props[hoverStation] : undefined;
+        if (hoverMats) hoverMats.forEach((m) => { m.emissive.setHex(0xfff3c4); m.emissiveIntensity = 0.35; });
         if (anim.phase === 'idle') {
           // Thở nhẹ, hơi nhún khi năng lượng thấp
           const tired = st.energy < 30;
@@ -350,6 +420,9 @@ const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastA
       disposed = true;
       cancelAnimationFrame(raf);
       ro.disconnect();
+      renderer.domElement.removeEventListener('pointermove', onMove);
+      renderer.domElement.removeEventListener('pointerleave', onLeave);
+      renderer.domElement.removeEventListener('click', onClick);
       apiRef.current = null;
       scene.traverse((o) => {
         const mesh = o as THREE.Mesh;
@@ -384,11 +457,15 @@ const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastA
   const mm = Math.round((clockHours - hh) * 60);
   const clock = `${String(hh % 24).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 
+  const pickedActions = picked ? actions.filter((a) => stationOf(a.id) === picked.station) : [];
+  // Giữ menu trong khung phòng
+  const menuW = 240;
+  const menuLeft = picked ? Math.max(8, Math.min(picked.x - menuW / 2, (mountRef.current?.clientWidth ?? menuW) - menuW - 8)) : 0;
+
   return (
     <div
-      className="relative w-full h-36 sm:h-52 lg:h-72 rounded-2xl overflow-hidden border border-stone-200 shadow-xs bg-indigo-950"
-      role="img"
-      aria-label="Căn phòng của bạn: nhân vật di chuyển theo hành vi bạn chọn"
+      className="relative w-full h-56 sm:h-72 lg:h-96 rounded-2xl overflow-hidden border border-stone-200 shadow-xs bg-indigo-950"
+      aria-label="Căn phòng của bạn: bấm vào đồ vật hoặc nhân vật để chọn hành vi"
     >
       <div ref={mountRef} className="absolute inset-0" />
       {!ready && (
@@ -399,6 +476,45 @@ const RoomScene: React.FC<RoomSceneProps> = ({ avatarId, stats, hoursUsed, lastA
       <span className="absolute top-2.5 left-3 px-2 py-1 rounded-lg bg-black/35 text-white text-xs font-semibold tabular-nums backdrop-blur-xs">
         {clock}
       </span>
+      {interactive && ready && !picked && (
+        <span className="absolute bottom-2.5 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-black/40 text-white text-[11px] backdrop-blur-xs pointer-events-none whitespace-nowrap">
+          {hovered ? STATION_LABEL[hovered] : '👆 Bấm vào đồ vật hoặc nhân vật để hành động'}
+        </span>
+      )}
+      {picked && (
+        <div
+          className="absolute z-10 rounded-xl bg-white/95 backdrop-blur-sm shadow-lg border border-stone-200 p-2 max-h-[85%] overflow-y-auto"
+          style={{ width: menuW, left: menuLeft, top: 8 }}
+        >
+          <div className="flex items-center justify-between gap-2 px-1 pb-1.5">
+            <span className="text-xs font-bold text-stone-900">{STATION_LABEL[picked.station]}</span>
+            <button onClick={() => setPicked(null)} className="text-stone-400 hover:text-stone-800 text-sm px-1" aria-label="Đóng">
+              ✕
+            </button>
+          </div>
+          {pickedActions.length === 0 && <p className="text-xs text-stone-500 px-1 py-2">Chưa có hành vi nào ở đây.</p>}
+          {pickedActions.map((a) => {
+            const tooLong = a.hours > hoursRemaining;
+            const tone =
+              a.dopaminePathway === 'fast' ? 'border-l-pink-400' : a.category === 'work' ? 'border-l-amber-400' : a.category === 'rest' ? 'border-l-sky-400' : 'border-l-emerald-400';
+            return (
+              <button
+                key={a.id}
+                disabled={tooLong}
+                title={a.description}
+                onClick={() => {
+                  onSelectAction?.(a.id);
+                  setPicked(null);
+                }}
+                className={`w-full text-left px-2 py-1.5 mb-1 rounded-lg border-l-4 ${tone} bg-stone-50 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-between gap-2`}
+              >
+                <span className="text-xs font-medium text-stone-800 leading-snug">{a.title}</span>
+                <span className="text-[11px] font-semibold text-stone-500 tabular-nums shrink-0">{a.hours}h</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

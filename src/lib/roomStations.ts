@@ -32,6 +32,8 @@ export const STATION_POS: Record<StationId, [number, number]> = {
   center: [0, 0.35],
 };
 
+export const DEFAULT_VISUAL: ActionVisual = { station: 'center', mood: 'neutral' };
+
 export const ACTION_VISUALS: Record<string, ActionVisual> = {
   // Dopamine nhanh
   scroll_social: { station: 'arcade', mood: 'fast' },
@@ -61,6 +63,22 @@ export const ACTION_VISUALS: Record<string, ActionVisual> = {
   sleep_nap: { station: 'center', mood: 'sleep' },
 };
 
+/** Tên hiển thị khi người chơi bấm vào món đồ trong phòng. */
+export const STATION_LABEL: Record<StationId, string> = {
+  arcade: '🕹️ Máy game – Mạng xã hội & game',
+  pinball: '🎯 Pinball',
+  vending: '🥤 Máy bán hàng – Đồ ăn & cà phê',
+  claw: '🧸 Máy gắp – Mua sắm',
+  dance: '🪩 Sàn nhảy – Tiệc tùng',
+  basketball: '🏀 Bóng rổ – Vận động',
+  register: '💼 Quầy – Công việc',
+  center: '🧍 Bản thân – Học, nghỉ, kết nối',
+};
+
+/** Hành vi thuộc về món đồ nào (không có trong bản đồ thì về 'center'). */
+export const stationOf = (actionId: string): StationId =>
+  (ACTION_VISUALS[actionId] ?? DEFAULT_VISUAL).station;
+
 /** Hướng nhân vật quay mặt khi tương tác (rad quanh trục Y; mô hình mặc định nhìn về +Z). */
 export const STATION_FACING: Record<StationId, number> = {
   arcade: Math.PI,
@@ -73,7 +91,6 @@ export const STATION_FACING: Record<StationId, number> = {
   center: 0.6,
 };
 
-export const DEFAULT_VISUAL: ActionVisual = { station: 'center', mood: 'neutral' };
 
 /** Màu phát sáng khi nhân vật tương tác (hex). */
 export const MOOD_GLOW: Record<ActionMood, number> = {
