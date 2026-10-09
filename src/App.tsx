@@ -113,9 +113,9 @@ export default function App() {
 
             {/* Bố cục game: phòng 3D là màn hình chính; thời gian bên dưới; chi tiết mở khi cần */}
             <div className="space-y-4">
-                {/* Căn phòng 3D: bấm đồ vật để hành động. Trên mobile dính ngay dưới thanh trên */}
-                <div className="sticky top-14 z-30 -mx-4 px-4 py-2 bg-stone-100/90 backdrop-blur-sm sm:mx-0 sm:px-0 sm:rounded-2xl lg:static lg:z-auto lg:p-0 lg:bg-transparent lg:backdrop-blur-none">
-                  <Suspense fallback={<div className="h-56 sm:h-80 lg:h-[30rem] rounded-2xl bg-indigo-950/90 animate-pulse" />}>
+                {/* Căn phòng 3D: bấm đồ vật để hành động */}
+                <div>
+                  <Suspense fallback={<div className="h-[19rem] sm:h-80 lg:h-[30rem] rounded-2xl bg-indigo-950/90 animate-pulse" />}>
                     <RoomScene
                       avatarId={avatarId}
                       stats={stats}

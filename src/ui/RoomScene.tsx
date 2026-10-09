@@ -369,6 +369,27 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       }
       return null;
     };
+    /** Chạm trượt (đồ nhỏ trên điện thoại): chọn món đồ gần điểm chạm nhất trong bán kính cho phép */
+    const anchor = new THREE.Vector3();
+    const nearestStation = (e: MouseEvent, maxPx: number): StationId | null => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      let best: StationId | null = null;
+      let bestD = maxPx;
+      for (const id of Object.keys(props) as StationId[]) {
+        const [x, z] = id === 'outside' ? [0.12, 1.8] : STATION_POS[id];
+        anchor.set(x, 0.3, z);
+        room.localToWorld(anchor).project(camera);
+        const d = Math.hypot((anchor.x + 1) / 2 * rect.width - (e.clientX - rect.left), (1 - anchor.y) / 2 * rect.height - (e.clientY - rect.top));
+        if (d < bestD) { bestD = d; best = id; }
+      }
+      // Nhân vật
+      holder.getWorldPosition(anchor);
+      anchor.y += CHAR_HEIGHT / 2;
+      anchor.project(camera);
+      const dc = Math.hypot((anchor.x + 1) / 2 * rect.width - (e.clientX - rect.left), (1 - anchor.y) / 2 * rect.height - (e.clientY - rect.top));
+      if (dc < bestD) best = 'center';
+      return best;
+    };
     const onMove = (e: PointerEvent) => {
       if (!interactiveRef.current || e.pointerType === 'touch') return;
       const s = stationAt(e);
@@ -384,10 +405,14 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     };
     const onClick = (e: MouseEvent) => {
       if (!interactiveRef.current) return;
-      const s = stationAt(e);
+      // Ngón tay to hơn con trỏ chuột: cho phép chạm lệch nhiều hơn
+      const s = stationAt(e) ?? nearestStation(e, lastPointer === 'touch' ? 52 : 24);
       const rect = mount.getBoundingClientRect();
       setPicked(s ? { station: s, x: e.clientX - rect.left, y: e.clientY - rect.top } : null);
     };
+    let lastPointer = 'mouse';
+    const onDown = (e: PointerEvent) => { lastPointer = e.pointerType; };
+    renderer.domElement.addEventListener('pointerdown', onDown);
     renderer.domElement.addEventListener('pointermove', onMove);
     renderer.domElement.addEventListener('pointerleave', onLeave);
     renderer.domElement.addEventListener('click', onClick);
@@ -483,7 +508,9 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       renderer.domElement.style.width = '100%';
       renderer.domElement.style.height = '100%';
       const aspect = w / h;
-      const halfH = Math.max(2.35, 3.5 / aspect);
+      // Màn hình hẹp (điện thoại): phóng to hơn một chút, chấp nhận cắt bớt mép tường ngoài cùng
+      const fitW = w < 640 ? 3.15 : 3.5;
+      const halfH = Math.max(2.35, fitW / aspect);
       const halfW = halfH * aspect;
       camera.left = -halfW;
       camera.right = halfW;
@@ -697,6 +724,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       disposed = true;
       cancelAnimationFrame(raf);
       ro.disconnect();
+      renderer.domElement.removeEventListener('pointerdown', onDown);
       renderer.domElement.removeEventListener('pointermove', onMove);
       renderer.domElement.removeEventListener('pointerleave', onLeave);
       renderer.domElement.removeEventListener('click', onClick);
@@ -740,8 +768,9 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   const menuLeft = picked ? Math.max(8, Math.min(picked.x - menuW / 2, (mountRef.current?.clientWidth ?? menuW) - menuW - 8)) : 0;
 
   return (
+    <div className="space-y-2">
     <div
-      className="relative w-full h-56 sm:h-80 lg:h-[30rem] rounded-2xl overflow-hidden border border-stone-200 shadow-xs bg-indigo-950"
+      className="relative w-full h-[19rem] sm:h-80 lg:h-[30rem] rounded-2xl overflow-hidden border border-stone-200 shadow-xs bg-indigo-950 touch-manipulation"
       aria-label="Căn phòng của bạn: bấm vào đồ vật hoặc nhân vật để chọn hành vi"
     >
       <div ref={mountRef} className="absolute inset-0" />
@@ -773,7 +802,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       )}
 
       {/* Chỉ số thu gọn trong phòng */}
-      <div className="absolute top-2.5 right-3 w-28 sm:w-32 px-2 py-1.5 rounded-lg bg-black/35 backdrop-blur-xs space-y-1 pointer-events-none">
+      <div className="hidden sm:block absolute top-2.5 right-3 w-32 px-2 py-1.5 rounded-lg bg-black/35 backdrop-blur-xs space-y-1 pointer-events-none">
         {ROOM_STATS.map((s) => {
           const v = Math.max(0, Math.min(100, stats[s.key]));
           return (
@@ -812,7 +841,14 @@ const RoomScene: React.FC<RoomSceneProps> = ({
 
       {interactive && ready && !picked && (
         <span className="absolute bottom-3.5 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-black/40 text-white text-[11px] backdrop-blur-xs pointer-events-none whitespace-nowrap">
-          {hovered ? STATION_LABEL[hovered] : '👆 Bấm vào đồ vật hoặc nhân vật để hành động'}
+          {hovered ? (
+            STATION_LABEL[hovered]
+          ) : (
+            <>
+              <span className="sm:hidden">👆 Chạm đồ vật để hành động</span>
+              <span className="hidden sm:inline">👆 Bấm vào đồ vật hoặc nhân vật để hành động</span>
+            </>
+          )}
         </span>
       )}
       {picked && (
@@ -822,7 +858,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         >
           <div className="flex items-center justify-between gap-2 px-1 pb-1.5">
             <span className="text-xs font-bold text-stone-900">{STATION_LABEL[picked.station]}</span>
-            <button onClick={() => setPicked(null)} className="text-stone-400 hover:text-stone-800 text-sm px-1" aria-label="Đóng">
+            <button onClick={() => setPicked(null)} className="text-stone-400 hover:text-stone-800 text-sm px-2 py-1 -my-1" aria-label="Đóng">
               ✕
             </button>
           </div>
@@ -840,7 +876,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
                   onSelectAction?.(a.id);
                   setPicked(null);
                 }}
-                className={`w-full text-left px-2 py-1.5 mb-1 rounded-lg border-l-4 ${tone} bg-stone-50 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-between gap-2`}
+                className={`w-full text-left px-2 py-2.5 sm:py-1.5 mb-1 rounded-lg border-l-4 ${tone} bg-stone-50 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-between gap-2`}
               >
                 <span className="text-xs font-medium text-stone-800 leading-snug">{a.title}</span>
                 <span className="text-[11px] font-semibold text-stone-500 tabular-nums shrink-0">{a.hours}h</span>
@@ -849,6 +885,27 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           })}
         </div>
       )}
+    </div>
+
+    {/* Điện thoại: chỉ số nằm dưới phòng để không che đồ vật */}
+    <div className="sm:hidden grid grid-cols-6 gap-1 px-2 py-1.5 rounded-xl bg-stone-900/90 text-white">
+      {ROOM_STATS.map((s) => {
+        const v = Math.max(0, Math.min(100, stats[s.key]));
+        return (
+          <div key={s.key} className="flex flex-col items-center gap-0.5 min-w-0">
+            <span className="text-[11px] leading-none">
+              {s.icon} <span className="tabular-nums font-semibold">{Math.round(v)}</span>
+            </span>
+            <div className="w-full h-1 rounded-full bg-white/20 overflow-hidden">
+              <div className={`h-full ${s.bar} ${v < 25 ? 'animate-pulse' : ''} transition-[width] duration-500`} style={{ width: `${v}%` }} />
+            </div>
+          </div>
+        );
+      })}
+      <div className="flex flex-col items-center justify-center min-w-0">
+        <span className={`text-[11px] leading-none font-semibold tabular-nums ${stats.money < 0 ? 'text-rose-300' : ''}`}>💰{formatMoney(stats.money)}</span>
+      </div>
+    </div>
     </div>
   );
 };
