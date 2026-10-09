@@ -387,7 +387,6 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           addProp('dance-machine', 2.0, 0.15, -Math.PI / 2, 'dance'),
           addProp('pinball', -2.0, 0.2, Math.PI / 2, 'pinball'),
           addProp('basketball-game', -2.0, 1.2, Math.PI / 2, 'basketball'),
-          addProp('column', 2.35, 1.7, 0),
           // Góc sinh hoạt
           addFurniture('rugRound', 0, 0.35, 0),
           addFurniture('bedSingle', 1.2, 1.55, Math.PI / 2, 'bed'),
