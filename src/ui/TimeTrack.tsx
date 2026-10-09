@@ -1,11 +1,14 @@
 import React from 'react';
-import { Clock, Moon, CheckCircle2 } from 'lucide-react';
+import { Moon } from 'lucide-react';
+
+export type SegmentKind = 'fast' | 'slow' | 'work' | 'rest' | 'other';
 
 interface ActivitySegment {
   id: string;
   title: string;
   hours: number;
   timeLabel: string;
+  kind: SegmentKind;
 }
 
 interface TimeTrackProps {
@@ -14,124 +17,121 @@ interface TimeTrackProps {
   onEndDayEarly: () => void;
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  sleep_deep: 'bg-indigo-600 text-white',
-  sleep_nap: 'bg-indigo-400 text-white',
-  work_focused: 'bg-amber-600 text-white',
-  work_overtime: 'bg-amber-700 text-white',
-  learn_skill: 'bg-teal-600 text-white',
-  study_deep: 'bg-blue-700 text-white',
-  learn_soft_skills: 'bg-indigo-600 text-white',
-  practice_soft_skills: 'bg-indigo-500 text-white',
-  exercise: 'bg-emerald-600 text-white',
-  short_walk: 'bg-emerald-500 text-white',
-  pet_bonding: 'bg-teal-500 text-white',
-  deep_talk: 'bg-cyan-600 text-white',
-  meditate_breathe: 'bg-sky-600 text-white',
-  cook_tyrosine: 'bg-green-600 text-white',
-  listen_music: 'bg-teal-600 text-white',
-  clean_room: 'bg-slate-500 text-white',
-  call_family: 'bg-sky-600 text-white',
-  beer_party: 'bg-rose-600 text-white',
-  scroll_social: 'bg-fuchsia-600 text-white',
-  binge_gaming: 'bg-purple-600 text-white',
-  fast_food: 'bg-orange-500 text-white',
-  impulse_shopping: 'bg-rose-500 text-white',
-  caffeine_spike: 'bg-amber-500 text-white',
-  tease_dog: 'bg-red-600 text-white',
-  choc_cho: 'bg-red-600 text-white',
+const WAKE_HOUR = 7;
+
+const KIND_STYLE: Record<SegmentKind, { bar: string; chip: string; label: string }> = {
+  fast: { bar: 'bg-gradient-to-b from-pink-400 to-fuchsia-600', chip: 'bg-pink-500/20 text-pink-200 border-pink-400/30', label: '⚡ Nhanh' },
+  slow: { bar: 'bg-gradient-to-b from-emerald-400 to-teal-600', chip: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30', label: '🌱 Chậm' },
+  work: { bar: 'bg-gradient-to-b from-amber-300 to-orange-500', chip: 'bg-amber-500/20 text-amber-200 border-amber-400/30', label: '💼 Việc' },
+  rest: { bar: 'bg-gradient-to-b from-sky-400 to-indigo-600', chip: 'bg-sky-500/20 text-sky-200 border-sky-400/30', label: '😴 Nghỉ' },
+  other: { bar: 'bg-gradient-to-b from-slate-300 to-slate-500', chip: 'bg-slate-500/20 text-slate-200 border-slate-400/30', label: 'Khác' },
 };
 
-export const TimeTrack: React.FC<TimeTrackProps> = ({
-  hoursUsed,
-  actionsToday,
-  onEndDayEarly,
-}) => {
+const clockLabel = (hoursUsed: number) => {
+  const c = WAKE_HOUR + hoursUsed;
+  const h = Math.floor(c) % 24;
+  const m = Math.round((c - Math.floor(c)) * 60);
+  return `${String(h).padStart(2, '0')}:${String(m === 60 ? 0 : m).padStart(2, '0')}`;
+};
+
+const periodOf = (clock: number) => {
+  const h = clock % 24;
+  if (h >= 5 && h < 11) return { icon: '🌅', text: 'Buổi sáng' };
+  if (h >= 11 && h < 14) return { icon: '☀️', text: 'Buổi trưa' };
+  if (h >= 14 && h < 18) return { icon: '🌤️', text: 'Buổi chiều' };
+  if (h >= 18 && h < 22) return { icon: '🌆', text: 'Buổi tối' };
+  return { icon: '🌙', text: 'Đêm khuya' };
+};
+
+// Các mốc giờ dọc thanh (ngày bắt đầu 07:00 nên thanh chạy 07 → 07)
+const TICKS = [0, 4, 8, 12, 16, 20, 24].map((off) => ({ off, label: `${String((WAKE_HOUR + off) % 24).padStart(2, '0')}h` }));
+
+export const TimeTrack: React.FC<TimeTrackProps> = ({ hoursUsed, actionsToday, onEndDayEarly }) => {
   const hoursRemaining = Math.max(0, 24 - hoursUsed);
   const percentUsed = Math.min(100, (hoursUsed / 24) * 100);
+  const period = periodOf(WAKE_HOUR + hoursUsed);
 
   return (
-    <div className="bg-white rounded-xl border border-stone-200 p-3 sm:p-4 space-y-2 sm:space-y-3">
-      {/* Header bar */}
+    <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border border-white/10 shadow-lg p-3 sm:p-4 space-y-3">
+      {/* Đồng hồ + còn lại */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-stone-600" />
-          <span className="text-sm font-semibold text-stone-800">
-            <span className="sm:hidden">Thời gian hôm nay</span>
-            <span className="hidden sm:inline">Quỹ Thời Gian 24 Giờ Trong Ngày</span>
+        <div className="flex items-center gap-3">
+          <span className="text-2xl sm:text-3xl leading-none" aria-hidden>
+            {period.icon}
           </span>
-          <span className="hidden sm:inline text-xs text-stone-400">·</span>
-          <span className="hidden sm:inline text-xs text-stone-600">
-            Đã dùng: <strong className="tabular-nums text-stone-900">{hoursUsed.toFixed(1)}h</strong> / 24h
-          </span>
+          <div className="leading-tight">
+            <div className="text-xl sm:text-2xl font-extrabold tabular-nums tracking-tight">{clockLabel(hoursUsed)}</div>
+            <div className="text-[11px] text-indigo-200">{period.text}</div>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-stone-600">
-            Còn lại: <strong className="tabular-nums text-emerald-700 text-sm">{hoursRemaining.toFixed(1)}h</strong>
-          </span>
-
+          <div className="text-right leading-tight">
+            <div className="text-[11px] text-indigo-200">Còn lại</div>
+            <div className="text-lg font-extrabold tabular-nums text-emerald-300">{hoursRemaining.toFixed(1)}h</div>
+          </div>
           {hoursUsed >= 16 && (
             <button
               onClick={onEndDayEarly}
-              className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
+              className="px-3 py-2 text-xs font-bold bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl transition-colors flex items-center gap-1.5 shadow-md ring-1 ring-white/20"
             >
               <Moon className="w-3.5 h-3.5" />
-              <span>Chuyển sang ngày mới</span>
+              <span>Đi ngủ, sang ngày mới</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Visual Timeline Bar */}
-      <div className="space-y-1.5">
-        <div className="h-6 w-full bg-stone-100 rounded-lg overflow-hidden flex border border-stone-200/80">
-          {actionsToday.map((act, idx) => {
-            const widthPct = (act.hours / 24) * 100;
-            const colorClass = CATEGORY_COLORS[act.id] || 'bg-stone-600 text-white';
-            return (
+      {/* Thanh ngày: nền đổi màu theo giờ (sáng → trưa → tối → đêm), khối hành vi nổi lên trên */}
+      <div className="space-y-1">
+        <div
+          className="relative h-9 w-full rounded-xl overflow-hidden border border-white/15"
+          style={{
+            background:
+              'linear-gradient(90deg, #f6b57a 0%, #8fd0ff 16%, #bfe3ff 45%, #ffae78 62%, #3a2f6e 78%, #14143c 100%)',
+          }}
+        >
+          <div className="absolute inset-0 flex">
+            {actionsToday.map((act, idx) => (
               <div
                 key={`${act.id}-${idx}`}
-                style={{ width: `${widthPct}%` }}
-                className={`h-full ${colorClass} flex items-center justify-center text-[10px] font-medium px-1 truncate border-r border-white/20 transition-all`}
+                style={{ width: `${(act.hours / 24) * 100}%` }}
+                className={`h-full ${KIND_STYLE[act.kind].bar} flex items-center justify-center text-[10px] font-semibold text-white px-1 truncate border-r border-white/40 shadow-inner animate-in fade-in duration-300`}
                 title={`${act.title} (${act.hours}h)`}
               >
-                {widthPct > 5 && <span className="truncate">{act.title.split('(')[0]}</span>}
+                {(act.hours / 24) * 100 > 6 && <span className="truncate drop-shadow">{act.title.split('(')[0].trim()}</span>}
               </div>
-            );
-          })}
-          {hoursRemaining > 0 && (
-            <div
-              style={{ width: `${(hoursRemaining / 24) * 100}%` }}
-              className="h-full bg-stone-50 flex items-center justify-center text-[10px] text-stone-400 font-medium"
-            >
-              {hoursRemaining >= 2 && <span>{hoursRemaining.toFixed(1)}h trống</span>}
-            </div>
-          )}
+            ))}
+          </div>
+          {/* Vạch "bây giờ" */}
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_8px_2px_rgba(255,255,255,0.9)] transition-[left] duration-500"
+            style={{ left: `${percentUsed}%` }}
+          />
         </div>
-
-        {/* 24h tick marks */}
-        <div className="hidden sm:flex justify-between text-[10px] text-stone-400 font-mono px-0.5">
-          <span>00:00</span>
-          <span>06:00</span>
-          <span>12:00</span>
-          <span>18:00</span>
-          <span>24:00</span>
+        <div className="relative h-3 text-[10px] text-indigo-200/80 font-mono">
+          {TICKS.map((t) => (
+            <span
+              key={t.off}
+              className="absolute -translate-x-1/2"
+              style={{ left: `${(t.off / 24) * 100}%`, ...(t.off === 0 ? { transform: 'none' } : {}), ...(t.off === 24 ? { transform: 'translateX(-100%)' } : {}) }}
+            >
+              {t.label}
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Activities list for today */}
+      {/* Hành vi hôm nay */}
       {actionsToday.length > 0 && (
-        <div className="pt-2 border-t border-stone-100 flex flex-nowrap sm:flex-wrap overflow-x-auto scrollbar-none gap-1.5 text-xs">
-          <span className="text-stone-400 text-xs py-0.5 shrink-0">Hành vi hôm nay:</span>
+        <div className="flex flex-nowrap sm:flex-wrap overflow-x-auto scrollbar-none gap-1.5 text-xs">
           {actionsToday.map((act, idx) => (
             <span
               key={`${act.id}-${idx}`}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-stone-100 text-stone-700 rounded text-[11px] whitespace-nowrap shrink-0"
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] whitespace-nowrap shrink-0 ${KIND_STYLE[act.kind].chip}`}
             >
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
               <span>{act.title.split('(')[0].trim()}</span>
-              <span className="text-stone-400 font-mono">({act.hours}h)</span>
+              <span className="opacity-60 font-mono">{act.hours}h</span>
             </span>
           ))}
         </div>

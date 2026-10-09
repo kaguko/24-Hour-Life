@@ -147,7 +147,7 @@ export default function App() {
   }, [history]);
 
   return (
-    <div className="min-h-screen bg-stone-100/70 text-stone-900 font-sans flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-indigo-50/60 to-stone-100 text-stone-900 font-sans flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
       {/* Top Bar Contract (3 zones) */}
       <TopNav
         currentTab={currentTab}
@@ -233,6 +233,16 @@ export default function App() {
                     title: a.title,
                     hours: a.hours,
                     timeLabel: `${a.hours}h`,
+                    kind:
+                      a.dopaminePathway === 'fast'
+                        ? ('fast' as const)
+                        : a.category === 'rest'
+                        ? ('rest' as const)
+                        : a.category === 'work'
+                        ? ('work' as const)
+                        : a.dopaminePathway === 'slow'
+                        ? ('slow' as const)
+                        : ('other' as const),
                   }))}
                   onEndDayEarly={endDayEarly}
                 />

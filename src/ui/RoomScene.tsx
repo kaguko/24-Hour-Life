@@ -699,7 +699,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       const aspect = w / h;
       // Màn hình hẹp (điện thoại): phóng to hơn một chút, chấp nhận cắt bớt mép tường ngoài cùng
       const fitW = w < 640 ? 3.15 : 3.5;
-      const halfH = Math.max(2.35, fitW / aspect);
+      const halfH = Math.max(2.1, fitW / aspect);
       const halfW = halfH * aspect;
       camera.left = -halfW;
       camera.right = halfW;
@@ -997,10 +997,19 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   return (
     <div className="space-y-2">
     <div
-      className="relative w-full h-[19rem] sm:h-80 lg:h-[30rem] rounded-2xl overflow-hidden border border-stone-200 shadow-xs bg-indigo-950 touch-manipulation"
+      className="relative w-full h-[19rem] sm:h-80 lg:h-[32rem] rounded-3xl overflow-hidden border-2 border-white/60 shadow-xl ring-1 ring-black/10 bg-indigo-950 touch-manipulation"
       aria-label="Căn phòng của bạn: bấm vào đồ vật hoặc nhân vật để chọn hành vi"
     >
       <div ref={mountRef} className="absolute inset-0" />
+      {/* Viền tối nhẹ + ánh sáng mềm trên cùng cho cảm giác "màn hình game" */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(10,8,40,0.38) 100%), linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 22%)',
+        }}
+      />
       {/* Biểu cảm nhân vật: vị trí cập nhật mỗi khung hình theo đầu nhân vật */}
       <div
         ref={bubbleRef}

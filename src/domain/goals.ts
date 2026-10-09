@@ -124,11 +124,11 @@ const GOALS: GoalDef[] = [
     id: 'calm',
     emoji: '🧘',
     title: 'Bình tâm',
-    description: 'Kết thúc tuần với Tinh thần ≥ 75 và Ý chí ≥ 60.',
+    description: 'Kết thúc tuần với Tinh thần ≥ 85 và Ý chí ≥ 75.',
     evaluate: (c) => {
-      const ok = c.stats.mental >= 75 && c.stats.willpower >= 60;
-      const p = (clamp01(c.stats.mental / 75) + clamp01(c.stats.willpower / 60)) / 2;
-      return { progress: ok ? 1 : p, label: `Tinh thần ${c.stats.mental}/75 · Ý chí ${c.stats.willpower}/60` };
+      const ok = c.stats.mental >= 85 && c.stats.willpower >= 75;
+      const p = (clamp01(c.stats.mental / 85) + clamp01(c.stats.willpower / 75)) / 2;
+      return { progress: ok ? 1 : p, label: `Tinh thần ${c.stats.mental}/85 · Ý chí ${c.stats.willpower}/75` };
     },
   },
 ];

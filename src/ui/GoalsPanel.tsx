@@ -5,7 +5,7 @@ interface GoalsPanelProps {
   goals: GoalResultPrimitive[];
 }
 
-/** Mục tiêu của tuần này: luôn hiện gọn dưới phòng để người chơi có đích đến. */
+/** Mục tiêu của tuần này: nhiệm vụ gọn, đồng bộ phong cách tối với phòng và thanh thời gian. */
 export const GoalsPanel: React.FC<GoalsPanelProps> = ({ goals }) => {
   if (goals.length === 0) return null;
   return (
@@ -13,27 +13,33 @@ export const GoalsPanel: React.FC<GoalsPanelProps> = ({ goals }) => {
       {goals.map((g) => {
         const done = g.state === 'done';
         const failed = g.state === 'failed';
+        const ring = done ? 'ring-emerald-400/70' : failed ? 'ring-rose-400/60' : 'ring-white/10';
+        const bar = done ? 'from-emerald-300 to-emerald-500' : failed ? 'from-rose-300 to-rose-500' : 'from-amber-300 to-orange-500';
         return (
           <div
             key={g.id}
-            className={`rounded-xl border p-2.5 text-xs ${
-              done ? 'bg-emerald-50 border-emerald-200' : failed ? 'bg-rose-50 border-rose-200' : 'bg-white border-stone-200'
-            }`}
+            className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-3 ring-1 ${ring} shadow-md`}
             title={g.description}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-bold text-stone-900 truncate">
-                🎯 {g.emoji} {g.title}
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl leading-none shrink-0" aria-hidden>
+                {done ? '🏆' : g.emoji}
               </span>
-              <span className={`shrink-0 tabular-nums font-semibold ${done ? 'text-emerald-700' : failed ? 'text-rose-700' : 'text-stone-500'}`}>
-                {done ? 'Đạt ✓' : failed ? 'Hỏng' : g.label}
-              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300">Nhiệm vụ</span>
+                  <span className={`text-[11px] font-bold tabular-nums ${done ? 'text-emerald-300' : failed ? 'text-rose-300' : 'text-indigo-200'}`}>
+                    {done ? 'Đang đạt ✓' : failed ? 'Hỏng' : g.label}
+                  </span>
+                </div>
+                <div className="text-sm font-bold leading-snug truncate">{g.title}</div>
+              </div>
             </div>
-            <p className="text-[11px] text-stone-600 leading-snug mt-0.5">{g.description}</p>
-            <div className="h-1 rounded-full bg-stone-100 overflow-hidden mt-1.5">
+            <p className="text-[11px] text-indigo-200/90 leading-snug mt-1.5 line-clamp-2">{g.description}</p>
+            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mt-2">
               <div
-                className={`h-full transition-[width] duration-500 ${done ? 'bg-emerald-500' : failed ? 'bg-rose-400' : 'bg-indigo-400'}`}
-                style={{ width: `${Math.round(g.progress * 100)}%` }}
+                className={`h-full rounded-full bg-gradient-to-r ${bar} transition-[width] duration-500`}
+                style={{ width: `${Math.max(3, Math.round(g.progress * 100))}%` }}
               />
             </div>
           </div>
