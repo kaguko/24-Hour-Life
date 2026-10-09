@@ -321,6 +321,75 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       petPlay('idle');
     };
 
+    // Husky mập (cùng mô hình chó Kenney, nhuộm xám-trắng, thân to ngang): đi tuần qua lại cho phòng sinh động
+    const HUSKY_PATH: [number, number] = [-0.4, 0.35];
+    const HUSKY_Z = 1.1;
+    const husky = new THREE.Group();
+    const huskyClips = new Map<string, THREE.AnimationAction>();
+    let huskyMixer: THREE.AnimationMixer | null = null;
+    let huskyCurrent: THREE.AnimationAction | null = null;
+    const huskyState = { dir: 1, wait: 1.5 };
+    const huskyPlay = (name: string) => {
+      const next = huskyClips.get(name);
+      if (!next || next === huskyCurrent) return;
+      next.reset().fadeIn(0.3).play();
+      huskyCurrent?.fadeOut(0.3);
+      huskyCurrent = next;
+    };
+    const addHusky = async () => {
+      const gltf = await loader.loadAsync('/models/pets/animal-dog.glb');
+      const inner = gltf.scene;
+      const box = new THREE.Box3().setFromObject(inner);
+      const c = box.getCenter(new THREE.Vector3());
+      const s = (PET_HEIGHT * 1.15) / (box.max.y - box.min.y || 1);
+      inner.position.set(-c.x * s * 1.4, -box.min.y * s, -c.z * s * 1.4);
+      inner.scale.set(s * 1.4, s, s * 1.4);
+      inner.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh) return;
+        const mat = (m.material as THREE.MeshStandardMaterial).clone();
+        // Đổi bộ lông nâu thành xám-trắng kiểu husky: vùng sáng -> trắng, vùng tối -> xám xanh (mắt, mũi vẫn tối)
+        mat.onBeforeCompile = (sh) => {
+          sh.fragmentShader = sh.fragmentShader.replace(
+            '#include <map_fragment>',
+            `#include <map_fragment>
+            float hl = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+            diffuseColor.rgb = hl < 0.08 ? diffuseColor.rgb : mix(vec3(0.32, 0.37, 0.45), vec3(0.96), smoothstep(0.18, 0.42, hl));`
+          );
+        };
+        mat.customProgramCacheKey = () => 'husky';
+        m.material = mat;
+      });
+      husky.add(inner);
+      husky.position.set(HUSKY_PATH[0], 0, HUSKY_Z);
+      room.add(husky);
+      huskyMixer = new THREE.AnimationMixer(inner);
+      gltf.animations.forEach((clip) => huskyClips.set(clip.name, huskyMixer!.clipAction(clip)));
+      huskyPlay('idle');
+    };
+    const updateHusky = (dt: number) => {
+      if (!huskyMixer) return;
+      huskyMixer.update(dt);
+      if (huskyState.wait > 0) {
+        huskyState.wait -= dt;
+        huskyPlay('idle');
+        husky.rotation.y += ((huskyState.dir > 0 ? Math.PI / 2 : -Math.PI / 2) - husky.rotation.y) * Math.min(1, dt * 4);
+        return;
+      }
+      const goal = huskyState.dir > 0 ? HUSKY_PATH[1] : HUSKY_PATH[0];
+      const dx = goal - husky.position.x;
+      // Đi chậm, lạch bạch
+      husky.position.x += Math.sign(dx) * Math.min(Math.abs(dx), 0.28 * dt);
+      husky.rotation.y = huskyState.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+      husky.rotation.z = Math.sin(performance.now() / 120) * 0.04;
+      huskyPlay('walk');
+      if (Math.abs(dx) < 0.01) {
+        huskyState.dir *= -1;
+        huskyState.wait = 1.5 + Math.random() * 2.5;
+        husky.rotation.z = 0;
+      }
+    };
+
     // Nhân vật
     const holder = new THREE.Group();
     holder.position.set(HOME[0], 0, HOME[1]);
@@ -511,6 +580,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           addFurniture('rugDoormat', 0.12, 1.8, 0, 'outside', 0, 1.4),
           addFurniture('coatRackStanding', 0.42, 1.95, 0, 'outside'),
           addPet(),
+          addHusky(),
         ]);
         if (disposed) return;
         if (pendingRef.current.action) trigger(pendingRef.current.action);
@@ -617,6 +687,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       const animated = clips.size > 0;
       mixer?.update(dt);
       petMixer?.update(dt);
+      updateHusky(dt);
       const petBusy = anim.phase === 'act' && anim.station === 'pet';
       petPlay(petBusy ? (anim.mood === 'fast' ? 'gesture-negative' : 'gesture-positive') : 'idle');
       const target = STATION_POS[anim.station];
