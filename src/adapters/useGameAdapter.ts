@@ -227,6 +227,15 @@ export function useGameAdapter() {
     setFinished(false);
   }, []);
 
+  // Hướng dẫn trong phòng 3D: tắt sau hành vi đầu tiên
+  const [showCoach, setShowCoach] = useState(() => !storageAdapter.hasSeenCoach());
+  useEffect(() => {
+    if (lastAction && showCoach) {
+      storageAdapter.markCoachSeen();
+      setShowCoach(false);
+    }
+  }, [lastAction, showCoach]);
+
   const playRoomSfx = useCallback((name: string, volume?: number) => audioAdapter.playRoomSfx(name, volume), []);
 
   return {
@@ -256,5 +265,6 @@ export function useGameAdapter() {
     setNotice,
     dismissIntro,
     playRoomSfx,
+    showCoach,
   };
 }

@@ -21,7 +21,8 @@ export interface SerializedGameState {
 }
 
 const INTRO_KEY = '24h_life_intro_seen_v1';
-const STORAGE_KEY = '24h_life_clean_architecture_state_v2';
+const COACH_KEY = '24h_life_room_coach_seen_v1';
+const STORAGE_KEY ='24h_life_clean_architecture_state_v2';
 
 export const storageAdapter = {
   save(state: SerializedGameState): void {
@@ -58,6 +59,25 @@ export const storageAdapter = {
     if (typeof window === 'undefined') return;
     try {
       window.localStorage.setItem(INTRO_KEY, '1');
+    } catch {
+      // ignore
+    }
+  },
+
+  /** Hướng dẫn "chạm vào đồ vật" trong phòng 3D: chỉ hiện đến khi người chơi làm hành vi đầu tiên */
+  hasSeenCoach(): boolean {
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.localStorage.getItem(COACH_KEY) === '1';
+    } catch {
+      return true;
+    }
+  },
+
+  markCoachSeen(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(COACH_KEY, '1');
     } catch {
       // ignore
     }

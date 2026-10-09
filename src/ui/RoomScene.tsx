@@ -33,6 +33,10 @@ interface RoomSceneProps {
   lastAction: RoomAction | null;
   /** Dồn nhiều dopamine nhanh trong ngày: phòng nháy hồng cảnh báo */
   crashRisk: boolean;
+  /** Lần đầu chơi: chỉ vào một món đồ và nhắc "chạm vào đây" */
+  coach?: boolean;
+  /** Hết ngày: phòng tối, nhân vật lên giường ngủ và nằm yên đến sáng */
+  sleeping?: boolean;
   /** Danh sách hành vi để chọn trực tiếp bằng cách bấm vào đồ trong phòng */
   actions?: ActionPrimitive[];
   hoursRemaining?: number;
@@ -135,6 +139,8 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   hoursRemaining = 0,
   onSelectAction,
   onSound,
+  coach = false,
+  sleeping = false,
 }) => {
   const soundRef = useRef(onSound);
   soundRef.current = onSound;
@@ -167,13 +173,14 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   const mountRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const petBubbleRef = useRef<HTMLDivElement>(null);
+  const coachRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<SceneApi | null>(null);
-  const liveRef = useRef({ stats, hoursUsed, crashRisk });
+  const liveRef = useRef({ stats, hoursUsed, crashRisk, sleeping, coachOn: false });
   const pendingRef = useRef<{ avatar: AvatarId; action: string | null }>({ avatar: avatarId, action: null });
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  liveRef.current = { stats, hoursUsed, crashRisk };
+  liveRef.current = { stats, hoursUsed, crashRisk, sleeping, coachOn: coach && !picked && interactive };
 
   // Dựng cảnh một lần
   useEffect(() => {
@@ -263,6 +270,10 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     const screenLight = new THREE.PointLight(0x9fd0ff, 0, 1.4, 1.6);
     screenLight.position.set(-0.6, 0.45, 1.65);
     room.add(screenLight);
+    // Điểm neo cho vòng tròn hướng dẫn (trên mặt bàn học)
+    const coachAnchor = new THREE.Object3D();
+    coachAnchor.position.set(-0.6, 0.42, 1.55);
+    room.add(coachAnchor);
     let lampMats: THREE.MeshStandardMaterial[] = [];
     let screenMats: THREE.MeshStandardMaterial[] = [];
     let lampOn = 0;
@@ -563,8 +574,9 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       const dt = Math.min(sinceRender, 0.08);
       sinceRender = 0;
       const time = clock.elapsedTime;
-      const { stats: st, hoursUsed: used, crashRisk: risk } = liveRef.current;
-      const hrs = used + WAKE_HOUR;
+      const { stats: st, hoursUsed: used, crashRisk: risk, sleeping: asleep, coachOn } = liveRef.current;
+      // Hết 24h không quay về 07:00 sáng; lúc ngủ qua đêm cố định 01:00 (tối)
+      const hrs = asleep ? 25 : Math.min(used, 23.9) + WAKE_HOUR;
 
       // Ánh sáng theo giờ & chỉ số
       const sky = skyColor(hrs, skyNow);
@@ -650,9 +662,11 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         // Món đồ phát sáng
         const pulse = 0.55 + 0.45 * Math.sin(time * 12);
         const mats = props[anim.station];
-        if (mats) mats.forEach((m) => { m.emissive.setHex(MOOD_GLOW[anim.mood]); m.emissiveIntensity = pulse * 0.9; });
+        // Ngủ qua đêm: giường không nhấp nháy, nhân vật nằm yên đến sáng
+        const overnight = asleep && anim.station === 'bed';
+        if (mats) mats.forEach((m) => { m.emissive.setHex(MOOD_GLOW[anim.mood]); m.emissiveIntensity = overnight ? 0 : pulse * 0.9; });
         if (anim.mood !== 'sleep') anim.glow = Math.max(anim.glow, 0.5);
-        if (anim.t >= anim.actDur) {
+        if (anim.t >= anim.actDur && !overnight) {
           if (mats) mats.forEach((m) => { m.emissiveIntensity = 0; });
           anim.phase = anim.station === 'center' ? 'idle' : 'return';
           afterUntil = time + 2.2; // pha "sau khi làm xong"
@@ -705,7 +719,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           : st.mental < 35 ? '😔'
           : st.energy >= 70 && st.mental >= 70 && st.willpower >= 70 ? '😄'
           : '';
-        if (mood && time % 7 < 2.2) face = mood;
+        if (mood && time % 7 < 2.2 && !coachOn) face = mood;
       }
       placeBubble(bubbleRef.current, holder, CHAR_HEIGHT + 0.22 + lift, face);
 
@@ -717,6 +731,21 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         else if (time < afterUntil) petFace = teased ? '😒' : '🐾';
       }
       placeBubble(petBubbleRef.current, petGroup, PET_HEIGHT + 0.2, petFace);
+
+      // Hướng dẫn lần đầu: vòng tròn nhấp nháy trên bàn học
+      const coachEl = coachRef.current;
+      if (coachEl) {
+        if (coachOn && anim.phase === 'idle') {
+          coachAnchor.getWorldPosition(headPos);
+          headPos.project(camera);
+          const x = ((headPos.x + 1) / 2) * mount.clientWidth;
+          const y = ((1 - headPos.y) / 2) * mount.clientHeight;
+          coachEl.style.transform = `translate(${x}px, ${y}px)`;
+          coachEl.style.opacity = '1';
+        } else {
+          coachEl.style.opacity = '0';
+        }
+      }
 
       renderer.render(scene, camera);
     };
@@ -757,6 +786,14 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     apiRef.current?.trigger(lastAction.id);
   }, [lastAction]);
 
+  // Hết ngày: lên giường ngủ (nằm yên đến khi sleeping tắt, sáng hôm sau tự dậy)
+  useEffect(() => {
+    if (!sleeping) return;
+    setPicked(null);
+    const t = setTimeout(() => apiRef.current?.trigger('sleep_deep'), 300);
+    return () => clearTimeout(t);
+  }, [sleeping]);
+
   if (failed) return null;
 
   const clockHours = hoursUsed + WAKE_HOUR;
@@ -783,6 +820,14 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         className="absolute left-0 top-0 pointer-events-none select-none px-1.5 py-0.5 rounded-full bg-white/95 shadow-md text-lg sm:text-xl leading-none transition-opacity duration-200 after:content-[''] after:absolute after:left-1/2 after:-bottom-1 after:-translate-x-1/2 after:border-x-4 after:border-t-4 after:border-x-transparent after:border-t-white/95"
         style={{ opacity: 0 }}
       />
+      {/* Hướng dẫn lần đầu: vị trí cập nhật mỗi khung hình theo bàn học */}
+      <div ref={coachRef} aria-hidden className="absolute left-0 top-0 pointer-events-none transition-opacity duration-300" style={{ opacity: 0 }}>
+        <span className="absolute -left-5 -top-5 w-10 h-10 rounded-full border-2 border-amber-300 animate-ping" />
+        <span className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-amber-300/50 border-2 border-amber-200" />
+        <span className="absolute left-1/2 -top-14 -translate-x-1/2 whitespace-nowrap px-2.5 py-1 rounded-lg bg-amber-300 text-stone-900 text-[11px] font-bold shadow-md animate-bounce">
+          👆 Chạm vào đây để học bài
+        </span>
+      </div>
       <div
         ref={petBubbleRef}
         aria-hidden
@@ -795,7 +840,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         </div>
       )}
       <span className="absolute top-2.5 left-3 px-2 py-1 rounded-lg bg-black/35 text-white text-xs font-semibold tabular-nums backdrop-blur-xs">
-        {clock}
+        {sleeping ? '🌙' : clock}
       </span>
       {(stats.willpower < 35 || crashRisk) && (
         <span className="absolute top-10 left-3 max-w-[45%] px-2 py-1 rounded-lg bg-rose-600/85 text-white text-[10px] font-semibold leading-snug animate-pulse pointer-events-none">
@@ -841,7 +886,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
         <div className="h-full bg-gradient-to-r from-amber-300 via-sky-300 to-indigo-400 transition-[width] duration-500" style={{ width: `${Math.min(100, (hoursUsed / 24) * 100)}%` }} />
       </div>
 
-      {interactive && ready && !picked && (
+      {interactive && ready && !picked && !coach && !sleeping && (
         <span className="absolute bottom-3.5 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-black/40 text-white text-[11px] backdrop-blur-xs pointer-events-none whitespace-nowrap">
           {hovered ? (
             STATION_LABEL[hovered]
@@ -864,6 +909,11 @@ const RoomScene: React.FC<RoomSceneProps> = ({
               ✕
             </button>
           </div>
+          {coach && (
+            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 mb-1.5 leading-snug">
+              Mỗi hành vi tốn vài giờ trong 24h và làm thay đổi chỉ số. Chọn một hành vi để bắt đầu!
+            </p>
+          )}
           {pickedActions.length === 0 && <p className="text-xs text-stone-500 px-1 py-2">Chưa có hành vi nào ở đây.</p>}
           {pickedActions.map((a) => {
             const tooLong = a.hours > hoursRemaining;

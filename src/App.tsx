@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { useGameAdapter } from './adapters/useGameAdapter';
 import { shareAdapter } from './adapters/shareAdapter';
 import { DOMAIN_ACTIONS, summarizeFastDopamine } from './domain';
@@ -52,7 +52,30 @@ export default function App() {
     toggleSound,
     setNotice,
     playRoomSfx,
+    showCoach,
   } = useGameAdapter();
+
+  // Chuyển ngày: nhân vật lên giường, phòng tối ("Ngày N khép lại"), rồi bình minh, rồi mới hiện báo cáo sáng
+  const [nightPhase, setNightPhase] = useState<'none' | 'dusk' | 'dawn'>('none');
+  // Báo cáo sáng chỉ hiện sau khi màn chuyển đêm chạy xong (tránh chớp modal ở khung hình đầu)
+  const [revealedReport, setRevealedReport] = useState<typeof morningReport>(null);
+  useEffect(() => {
+    if (!morningReport) {
+      setNightPhase('none');
+      return;
+    }
+    setNightPhase('dusk');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const t1 = setTimeout(() => setNightPhase('dawn'), 2600);
+    const t2 = setTimeout(() => {
+      setNightPhase('none');
+      setRevealedReport(morningReport);
+    }, 4300);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [morningReport]);
 
   // Chỉ dopamine NHANH trong ngày mới gây sụp; dopamine cao nhờ hoạt động lành mạnh thì không
   const crashRisk = summarizeFastDopamine(actionsToday.map((a) => a.id)).atRisk;
@@ -126,6 +149,8 @@ export default function App() {
                       hoursRemaining={hoursRemaining}
                       onSelectAction={takeAction}
                       onSound={playRoomSfx}
+                      coach={showCoach && !isIntroOpen}
+                      sleeping={!!morningReport}
                     />
                   </Suspense>
                 </div>
@@ -178,7 +203,28 @@ export default function App() {
       </main>
 
       {/* Modals */}
-      {morningReport && (
+      {/* Màn chuyển đêm -> bình minh (phòng 3D phía sau vẫn thấy nhân vật đang ngủ) */}
+      {morningReport && morningReport !== revealedReport && (
+        <div
+          className={`fixed inset-0 z-40 flex items-center justify-center transition-colors duration-1000 ${
+            nightPhase === 'dawn' ? 'bg-amber-200/45' : 'bg-indigo-950/55'
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          <div key={nightPhase} className="text-center animate-in fade-in zoom-in-95 duration-700 px-6">
+            <div className="text-5xl mb-2">{nightPhase !== 'dawn' ? '💤' : '☀️'}</div>
+            <div className={`text-2xl sm:text-3xl font-extrabold drop-shadow ${nightPhase !== 'dawn' ? 'text-white' : 'text-stone-900'}`}>
+              {nightPhase !== 'dawn' ? `Ngày ${morningReport.dayCompleted} khép lại` : 'Bình minh'}
+            </div>
+            <div className={`text-sm mt-1 ${nightPhase !== 'dawn' ? 'text-indigo-100' : 'text-stone-800'}`}>
+              {nightPhase !== 'dawn' ? 'Cơ thể và tâm trí bắt đầu "tính sổ" qua đêm…' : 'Xem điều gì đã thay đổi sau một đêm'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {morningReport && morningReport === revealedReport && (
         <MorningModal report={morningReport} onContinue={advanceToNextDay} />
       )}
 
