@@ -18,6 +18,9 @@ import {
   evaluateEnding,
   buildJourney,
   DayGrade,
+  pickGoalIds,
+  isGoalId,
+  GOAL_COUNT_PER_RUN,
 } from '../domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
@@ -38,6 +41,8 @@ export function useGameAdapter() {
   // Chỉ số lúc đầu ngày (để tổng kết cả ngày) và hạng của các ngày đã qua
   const [dayStartStats, setDayStartStats] = useState<PlayerStatsPrimitive>(INITIAL_STATS);
   const [dayGrades, setDayGrades] = useState<DayGrade[]>([]);
+  // Mục tiêu của ván này (bốc ngẫu nhiên khi bắt đầu ván mới)
+  const [goalIds, setGoalIds] = useState<string[]>(() => pickGoalIds());
   const [isIntroOpen, setIsIntroOpen] = useState<boolean>(() => !storageAdapter.hasSeenIntro());
 
   // Transient UX states
@@ -60,6 +65,8 @@ export function useGameAdapter() {
       setDayStartStats(saved.dayStartStats ?? saved.stats);
       setDayGrades((saved.dayGrades ?? []) as DayGrade[]);
       if (isAvatarId(saved.avatarId)) setAvatarId(saved.avatarId);
+      const savedGoals = (saved.goalIds ?? []).filter(isGoalId);
+      if (savedGoals.length === GOAL_COUNT_PER_RUN) setGoalIds(savedGoals);
       audioAdapter.enabled = saved.soundEnabled;
     }
   }, []);
@@ -78,8 +85,9 @@ export function useGameAdapter() {
       avatarId,
       dayStartStats,
       dayGrades,
+      goalIds,
     });
-  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades]);
+  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds]);
 
   const hoursRemaining = Math.max(0, 24 - hoursUsed);
 
@@ -238,6 +246,7 @@ export function useGameAdapter() {
     setHistory([]);
     setDayStartStats(INITIAL_STATS);
     setDayGrades([]);
+    setGoalIds(pickGoalIds());
     setFinished(false);
   }, []);
 
@@ -283,5 +292,7 @@ export function useGameAdapter() {
     dayGrades,
     history,
     actionsTodayIds,
+    goalIds,
+    finished,
   };
 }

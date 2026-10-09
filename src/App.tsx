@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useGameAdapter } from './adapters/useGameAdapter';
 import { shareAdapter } from './adapters/shareAdapter';
 import {
@@ -9,8 +9,10 @@ import {
   computeSkillXp,
   skillLevels,
   habitTag,
+  evaluateGoals,
 } from './domain';
 import { SkillsPanel } from './ui/SkillsPanel';
+import { GoalsPanel } from './ui/GoalsPanel';
 
 import { TopNav } from './ui/TopNav';
 import { StatsHUD } from './ui/StatsHUD';
@@ -64,6 +66,8 @@ export default function App() {
     showCoach,
     dayGrades,
     history,
+    goalIds,
+    finished,
   } = useGameAdapter();
 
   // Chuyển ngày: nhân vật lên giường, phòng tối ("Ngày N khép lại"), rồi bình minh, rồi mới hiện báo cáo sáng
@@ -107,6 +111,30 @@ export default function App() {
     }
     return out;
   }, [hoursRemaining, day, actionsToday, skillXp]);
+
+  // Mục tiêu trong tuần: tiến độ tính từ lịch sử + chỉ số hiện tại
+  const goals = useMemo(
+    () => evaluateGoals(goalIds, { history, todayIds: actionsToday.map((a) => a.id), stats, final: finished }),
+    [goalIds, history, actionsToday, stats, finished]
+  );
+
+  // Báo khi vừa hoàn thành một mục tiêu (bỏ qua lần dựng đầu)
+  const doneGoalsRef = useRef<Set<string> | null>(null);
+  const goalKeyRef = useRef('');
+  useEffect(() => {
+    const done = new Set(goals.filter((g) => g.state === 'done').map((g) => g.id));
+    const key = goalIds.join(',');
+    if (goalKeyRef.current !== key) {
+      // Bộ mục tiêu mới (nạp save hoặc ván mới): lấy mốc, không báo
+      goalKeyRef.current = key;
+      doneGoalsRef.current = null;
+    }
+    if (doneGoalsRef.current) {
+      const fresh = goals.find((g) => g.state === 'done' && !doneGoalsRef.current!.has(g.id));
+      if (fresh && !finished) setNotice(`🎯 Hoàn thành mục tiêu: ${fresh.title}! Giữ vững tới hết tuần nhé.`);
+    }
+    doneGoalsRef.current = done;
+  }, [goals, goalIds, finished, setNotice]);
 
   // Nhãn thói quen (đang tạo / đã thành nếp / đã nhờn) theo các ngày trước
   const habitTags = useMemo(() => {
@@ -195,6 +223,8 @@ export default function App() {
                   </Suspense>
                 </div>
 
+                <GoalsPanel goals={goals} />
+
                 {/* Visual 24h Time Track */}
                 <TimeTrack
                   hoursUsed={hoursUsed}
@@ -280,6 +310,7 @@ export default function App() {
         <EndingModal
           ending={ending}
           journey={journey}
+          goals={goals}
           stats={stats}
           avatarId={avatarId}
           onRestart={resetGame}

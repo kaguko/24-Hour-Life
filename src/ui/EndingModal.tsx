@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { EndingPrimitive, JourneyPrimitive, PlayerStatsPrimitive } from '../domain';
+import { EndingPrimitive, JourneyPrimitive, PlayerStatsPrimitive, GoalResultPrimitive } from '../domain';
 import { stationOf } from '../lib/roomStations';
 import type { EndingStageHandle } from './EndingStage';
 import { JOURNEY_SERIES, WEEKDAY_SHORT } from '../lib/journeyColors';
@@ -11,6 +11,7 @@ import confetti from 'canvas-confetti';
 interface EndingModalProps {
   ending: EndingPrimitive;
   journey: JourneyPrimitive;
+  goals?: GoalResultPrimitive[];
   stats: PlayerStatsPrimitive;
   avatarId: AvatarId;
   onRestart: () => void;
@@ -28,7 +29,7 @@ const OUTCOME_LABEL: Record<EndingPrimitive['outcome'], string> = {
   burnout: 'Gục ngã vì kiệt quệ',
 };
 
-export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, stats, avatarId, onRestart, onShare, onCopy }) => {
+export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals = [], stats, avatarId, onRestart, onShare, onCopy }) => {
   const pal = ENDING_PALETTES[ending.palette];
   const [reflection, setReflection] = useState<'less' | 'same' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -181,6 +182,22 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, stats
                   </span>
                 ))}
               </p>
+            )}
+            {goals.length > 0 && (
+              <div className="rounded-xl border border-stone-200 bg-white p-3 space-y-1.5">
+                <div className="text-xs font-bold text-stone-900">
+                  🎯 Mục tiêu tuần: {goals.filter((g) => g.state === 'done').length}/{goals.length}
+                  {goals.every((g) => g.state === 'done') && <span className="text-emerald-700"> · Hoàn thành tất cả!</span>}
+                </div>
+                {goals.map((g) => (
+                  <div key={g.id} className="flex items-start justify-between gap-2 text-xs">
+                    <span className={g.state === 'done' ? 'text-emerald-800 font-medium' : 'text-stone-500'}>
+                      {g.state === 'done' ? '✅' : '❌'} {g.emoji} {g.title}
+                    </span>
+                    <span className="text-stone-400 tabular-nums shrink-0">{g.label}</span>
+                  </div>
+                ))}
+              </div>
             )}
             {journey.insights.map((t) => (
               <p key={t} className="text-[11px] text-stone-600 bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5">

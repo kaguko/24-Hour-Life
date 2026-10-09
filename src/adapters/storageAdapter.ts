@@ -22,6 +22,8 @@ export interface SerializedGameState {
   dayStartStats?: PlayerStatsPrimitive;
   /** Hạng S/A/B/C/D của các ngày đã qua */
   dayGrades?: string[];
+  /** Mục tiêu đã bốc cho ván này */
+  goalIds?: string[];
 }
 
 const INTRO_KEY = '24h_life_intro_seen_v1';
