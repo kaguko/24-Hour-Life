@@ -2,6 +2,7 @@ import { ActionPrimitive, PlayerStatsPrimitive, ActionResultPrimitive, SoundCue 
 import { applyStatDeltas } from './stats';
 import { EXTRA_ACTIONS } from './actionsExtra';
 import { actionLockReason, clockFromHoursRemaining } from './availability';
+import { applyProgression, computeSkillXp, skillLevels } from './progression';
 
 const CORE_ACTIONS: ActionPrimitive[] = [
   // ========================================================
@@ -369,7 +370,8 @@ export function executeActionById(
   stats: PlayerStatsPrimitive,
   hoursRemaining: number,
   actionsTodayIds: string[] = [],
-  day = 1
+  day = 1,
+  history: string[][] = []
 ): ActionResultPrimitive {
   const action = DOMAIN_ACTIONS.find((a) => a.id === actionId);
   if (!action) {
@@ -400,6 +402,7 @@ export function executeActionById(
     clock: clockFromHoursRemaining(hoursRemaining),
     day,
     actionsTodayIds,
+    skillLevels: skillLevels(computeSkillXp(history, actionsTodayIds)),
   });
   if (lockReason) {
     return {
@@ -520,7 +523,14 @@ export function executeActionById(
     }
   }
 
-  const newStats = applyStatDeltas(stats, deltas);
+  // Kỹ năng đã luyện và thói quen nhiều ngày liên tiếp
+  const prog = applyProgression(action, deltas, history, actionsTodayIds);
+  if (prog.notes.length > 0) {
+    notice = [notice, ...prog.notes].filter(Boolean).join(' ');
+    if (soundCue === 'neutral') soundCue = 'healthy';
+  }
+
+  const newStats = applyStatDeltas(stats, prog.deltas);
 
   return {
     success: true,

@@ -9,6 +9,7 @@ export * from './types';
 export * from './stats';
 export * from './actions';
 export * from './availability';
+export * from './progression';
 export * from './dopamine';
 export * from './consequence';
 export * from './events';

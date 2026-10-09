@@ -9,6 +9,8 @@ interface ActionCardProps {
   onSelect: (actionId: string) => void;
   /** Lý do đang bị khóa (khung giờ / ngày / số lần), null nếu làm được */
   lockReason?: string | null;
+  /** Nhãn thói quen (đang tạo / đã thành nếp / đã nhờn) */
+  habitTag?: string | null;
 }
 
 export const ActionCard: React.FC<ActionCardProps> = ({
@@ -17,6 +19,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   hoursRemaining,
   onSelect,
   lockReason = null,
+  habitTag = null,
 }) => {
   const isAffordableTime = hoursRemaining >= action.hours && !lockReason;
   const isLowWillpower = currentStats.willpower < 35;
@@ -91,6 +94,9 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         <h4 className="text-sm font-bold text-stone-900 mb-1 leading-snug">
           {action.title}
         </h4>
+        {habitTag && (
+          <p className={`text-[11px] font-medium mb-1 ${habitTag.startsWith('⚠️') ? 'text-amber-700' : 'text-emerald-700'}`}>{habitTag}</p>
+        )}
         <p className="text-xs text-stone-600 mb-3 line-clamp-2 leading-relaxed">
           {action.description}
         </p>

@@ -43,6 +43,8 @@ interface RoomSceneProps {
   onSelectAction?: (actionId: string) => void;
   /** Hành vi nào đang bị khóa và vì sao */
   lockReasons?: Record<string, string>;
+  /** Nhãn thói quen của từng hành vi */
+  habitTags?: Record<string, string>;
   /** Phát âm thanh trong phòng (bước chân, đồ vật, cửa) */
   onSound?: (name: string, volume?: number) => void;
 }
@@ -150,6 +152,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   hoursRemaining = 0,
   onSelectAction,
   lockReasons = {},
+  habitTags = {},
   onSound,
   coach = false,
   sleeping = false,
@@ -1125,6 +1128,9 @@ const RoomScene: React.FC<RoomSceneProps> = ({
                 <span className="min-w-0">
                   <span className="block text-xs font-medium text-stone-800 leading-snug">{a.title}</span>
                   {locked && <span className="block text-[10px] mt-0.5 text-stone-500">🔒 {locked}</span>}
+                  {!locked && habitTags[a.id] && (
+                    <span className={`block text-[10px] mt-0.5 ${habitTags[a.id].startsWith('⚠️') ? 'text-amber-700' : 'text-emerald-700'}`}>{habitTags[a.id]}</span>
+                  )}
                   {a.category === 'rest' && (() => {
                     const tip = SLEEP_TIP[sleepAdviceNow(a.id, hoursUsed).timing];
                     return tip ? <span className={`block text-[10px] mt-0.5 ${tip.tone}`}>{tip.text}</span> : null;

@@ -1,7 +1,16 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useGameAdapter } from './adapters/useGameAdapter';
 import { shareAdapter } from './adapters/shareAdapter';
-import { DOMAIN_ACTIONS, summarizeFastDopamine, actionLockReason, clockFromHoursRemaining } from './domain';
+import {
+  DOMAIN_ACTIONS,
+  summarizeFastDopamine,
+  actionLockReason,
+  clockFromHoursRemaining,
+  computeSkillXp,
+  skillLevels,
+  habitTag,
+} from './domain';
+import { SkillsPanel } from './ui/SkillsPanel';
 
 import { TopNav } from './ui/TopNav';
 import { StatsHUD } from './ui/StatsHUD';
@@ -54,6 +63,7 @@ export default function App() {
     playRoomSfx,
     showCoach,
     dayGrades,
+    history,
   } = useGameAdapter();
 
   // Chuyển ngày: nhân vật lên giường, phòng tối ("Ngày N khép lại"), rồi bình minh, rồi mới hiện báo cáo sáng
@@ -82,15 +92,31 @@ export default function App() {
   const crashRisk = summarizeFastDopamine(actionsToday.map((a) => a.id)).atRisk;
 
   // Hành vi đang bị khóa theo giờ / ngày / số lần trong ngày
+  const skillXp = useMemo(() => computeSkillXp(history, actionsToday.map((a) => a.id)), [history, actionsToday]);
   const lockReasons = useMemo(() => {
-    const ctx = { clock: clockFromHoursRemaining(hoursRemaining), day, actionsTodayIds: actionsToday.map((a) => a.id) };
+    const ctx = {
+      clock: clockFromHoursRemaining(hoursRemaining),
+      day,
+      actionsTodayIds: actionsToday.map((a) => a.id),
+      skillLevels: skillLevels(skillXp),
+    };
     const out: Record<string, string> = {};
     for (const a of DOMAIN_ACTIONS) {
       const reason = actionLockReason(a, ctx);
       if (reason) out[a.id] = reason;
     }
     return out;
-  }, [hoursRemaining, day, actionsToday]);
+  }, [hoursRemaining, day, actionsToday, skillXp]);
+
+  // Nhãn thói quen (đang tạo / đã thành nếp / đã nhờn) theo các ngày trước
+  const habitTags = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const a of DOMAIN_ACTIONS) {
+      const tag = habitTag(a, history);
+      if (tag) out[a.id] = tag;
+    }
+    return out;
+  }, [history]);
 
   return (
     <div className="min-h-screen bg-stone-100/70 text-stone-900 font-sans flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
@@ -161,6 +187,7 @@ export default function App() {
                       hoursRemaining={hoursRemaining}
                       onSelectAction={takeAction}
                       lockReasons={lockReasons}
+                      habitTags={habitTags}
                       onSound={playRoomSfx}
                       coach={showCoach && !isIntroOpen}
                       sleeping={!!morningReport}
@@ -196,6 +223,8 @@ export default function App() {
                   </button>
                 </div>
 
+                {showStats && <SkillsPanel xp={skillXp} />}
+
                 {showStats && <StatsHUD stats={stats} lifeStatus={lifeStatus} sleepDebt={sleepDebt} crashRisk={crashRisk} />}
 
                 {showCards && (
@@ -205,6 +234,7 @@ export default function App() {
                     hoursRemaining={hoursRemaining}
                     onSelectAction={takeAction}
                     lockReasons={lockReasons}
+                    habitTags={habitTags}
                   />
                 )}
             </div>

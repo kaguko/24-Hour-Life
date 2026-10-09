@@ -10,6 +10,8 @@ interface ActionGridProps {
   onSelectAction: (actionId: string) => void;
   /** Hành vi nào đang bị khóa và vì sao */
   lockReasons?: Record<string, string>;
+  /** Nhãn thói quen của từng hành vi */
+  habitTags?: Record<string, string>;
 }
 
 type FilterView = 'all' | 'slow_dopamine' | 'fast_dopamine' | 'work' | 'social' | 'rest';
@@ -20,6 +22,7 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
   hoursRemaining,
   onSelectAction,
   lockReasons = {},
+  habitTags = {},
 }) => {
   const [filter, setFilter] = useState<FilterView>('all');
 
@@ -89,6 +92,7 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
             hoursRemaining={hoursRemaining}
             onSelect={onSelectAction}
             lockReason={lockReasons[action.id] ?? null}
+            habitTag={habitTags[action.id] ?? null}
           />
         ))}
       </div>

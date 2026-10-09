@@ -5,6 +5,7 @@
 import { ActionPrimitive } from './types';
 
 const WAKE_HOUR = 7;
+const SKILL_NAMES: Record<string, string> = { mind: 'Trí tuệ', body: 'Thể lực', heart: 'Giao tiếp', craft: 'Nghề nghiệp' };
 const WEEKDAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
 /** Giờ đồng hồ (0-24) khi còn `hoursRemaining` giờ của ngày (ngày bắt đầu lúc 07:00) */
@@ -18,8 +19,11 @@ const fmtHour = (h: number) => `${String(Math.floor(h) % 24).padStart(2, '0')}h`
 /** Lý do hành vi đang bị khóa, hoặc null nếu làm được. */
 export function actionLockReason(
   action: ActionPrimitive,
-  ctx: { clock: number; day: number; actionsTodayIds: string[] }
+  ctx: { clock: number; day: number; actionsTodayIds: string[]; skillLevels?: Record<string, number> }
 ): string | null {
+  if (action.requiresSkill && ctx.skillLevels && (ctx.skillLevels[action.requiresSkill.skill] ?? 0) < action.requiresSkill.level) {
+    return `Cần ${SKILL_NAMES[action.requiresSkill.skill] ?? action.requiresSkill.skill} cấp ${action.requiresSkill.level}`;
+  }
   if (action.minDay && ctx.day < action.minDay) return `Mở từ ngày ${action.minDay}`;
   if (action.onlyDays && !action.onlyDays.includes(ctx.day)) {
     return `Chỉ vào ${action.onlyDays.map((d) => WEEKDAYS[d - 1]).join(' / ')}`;

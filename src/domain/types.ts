@@ -41,6 +41,8 @@ export interface ActionPrimitive {
   onlyDays?: number[];
   /** Số lần tối đa mỗi ngày */
   maxPerDay?: number;
+  /** Cần kỹ năng đạt cấp này mới làm được (skill: mind | body | heart | craft) */
+  requiresSkill?: { skill: string; level: number };
 }
 
 export type SoundCue =

@@ -114,6 +114,10 @@ export const ACTION_VISUALS: Record<string, ActionVisual> = {
   freelance_gig: { station: 'desk', mood: 'work' },
   sell_old_stuff: { station: 'desk', mood: 'work' },
   online_course: { station: 'desk', mood: 'slow' },
+  marathon_training: { station: 'outside', mood: 'slow' },
+  public_speaking: { station: 'sofa', mood: 'slow' },
+  side_project: { station: 'desk', mood: 'work' },
+  deep_research: { station: 'desk', mood: 'slow' },
   // Công việc & nghỉ
   work_focused: { station: 'desk', mood: 'work' },
   work_overtime: { station: 'register', mood: 'work' },
@@ -170,6 +174,10 @@ export const ACTION_EMOTE: Record<string, [string, string]> = {
   freelance_gig: ['💻', '😮‍💨'],
   sell_old_stuff: ['📦', '😊'],
   online_course: ['🎓', '💡'],
+  marathon_training: ['🏃', '🏅'],
+  public_speaking: ['🎤', '😎'],
+  side_project: ['🚀', '😊'],
+  deep_research: ['🔬', '💡'],
 };
 
 /** Tên hiển thị khi người chơi bấm vào món đồ trong phòng. */

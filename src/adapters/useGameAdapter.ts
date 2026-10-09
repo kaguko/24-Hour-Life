@@ -146,7 +146,7 @@ export function useGameAdapter() {
   const takeAction = useCallback(
     (actionId: string) => {
       const currentHoursLeft = Math.max(0, 24 - hoursUsed);
-      const result = executeActionById(actionId, stats, currentHoursLeft, actionsTodayIds, day);
+      const result = executeActionById(actionId, stats, currentHoursLeft, actionsTodayIds, day, history);
 
       if (!result.success) {
         setNotice(result.notice);
@@ -183,7 +183,7 @@ export function useGameAdapter() {
         }, 400);
       }
     },
-    [hoursUsed, stats, actionsTodayIds, activeEvent, day, endDay]
+    [hoursUsed, stats, actionsTodayIds, activeEvent, day, endDay, history]
   );
 
   const advanceToNextDay = useCallback(() => {
@@ -281,5 +281,7 @@ export function useGameAdapter() {
     playRoomSfx,
     showCoach,
     dayGrades,
+    history,
+    actionsTodayIds,
   };
 }
