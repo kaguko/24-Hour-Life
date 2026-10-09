@@ -26,10 +26,26 @@ import {
   planAction,
   planTravel,
   rollPlaceEvent,
+  IntrusionDef,
+  INTRUSIONS,
+  IntrusionKind,
+  MAX_INTRUSION_ROUNDS,
+  rollIntrusion,
+  resistCost,
+  applyStatDeltas,
+  clockFromHoursRemaining,
 } from '../domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
 import { AvatarId, DEFAULT_AVATAR, isAvatarId } from '../lib/avatars';
+
+interface IntrusionState {
+  kind: IntrusionKind;
+  round: number;
+  chunks: number;
+  hoursSpent: number;
+  note: string | null;
+}
 
 export function useGameAdapter() {
   const [day, setDay] = useState<number>(1);
@@ -56,6 +72,9 @@ export function useGameAdapter() {
   const [notice, setNotice] = useState<string | null>(null);
   const [morningReport, setMorningReport] = useState<NightResultPrimitive | null>(null);
   const [activeEvent, setActiveEvent] = useState<EventPrimitive | null>(null);
+  // Cám dỗ đang xâm nhập (ý chí thấp): round tăng mỗi lần chiều theo, dừng lại càng khó
+  const [intrusion, setIntrusion] = useState<IntrusionState | null>(null);
+  const [intrusionsToday, setIntrusionsToday] = useState<number>(0);
 
   // Restore on mount via storageAdapter
   useEffect(() => {
@@ -204,6 +223,25 @@ export function useGameAdapter() {
         if (!rolled && realActionId && endLocation !== 'home' && Math.random() < 0.2) rolled = rollPlaceEvent(endLocation, day);
         if (!rolled && nextHoursUsed >= 8 && nextHoursUsed <= 18 && Math.random() < 0.35) rolled = rollDomainEvent(day);
       }
+      // Ý chí thấp: cám dỗ tự tìm đến (không chồng lên sự kiện đang hiện)
+      if (!rolled && !activeEvent && !intrusion && !blocked && nextHoursUsed < 24) {
+        const lastId = realActionId ?? ids[ids.length - 1];
+        const lastAction = DOMAIN_ACTIONS.find((a) => a.id === lastId);
+        const def: IntrusionDef | null = rollIntrusion(s, {
+          clock: clockFromHoursRemaining(left),
+          hoursLeft: left,
+          intrusionsToday,
+          lastActionId: lastId,
+          lastWasRest: lastAction?.category === 'rest',
+        });
+        if (def) {
+          setTimeout(() => {
+            audioAdapter.playCue('temptation');
+            setIntrusion({ kind: def.kind, round: 0, chunks: 0, hoursSpent: 0, note: null });
+            setIntrusionsToday((c) => c + 1);
+          }, 350);
+        }
+      }
       if (rolled) {
         const ev = rolled;
         setTimeout(() => {
@@ -217,7 +255,7 @@ export function useGameAdapter() {
         setTimeout(() => endDay(s, ids), 400);
       }
     },
-    [stats, actionsTodayIds, hoursUsed, day, history, location, activeEvent, endDay]
+    [stats, actionsTodayIds, hoursUsed, day, history, location, activeEvent, intrusion, intrusionsToday, endDay]
   );
 
   // Action dispatcher: tự đi đến nơi diễn ra hành vi nếu đang ở chỗ khác
@@ -248,12 +286,66 @@ export function useGameAdapter() {
     [location, hoursUsed, runSteps]
   );
 
+  // Trả lời cám dỗ: cưỡng lại (tốn ý chí, nếu đủ) hoặc chiều theo (mất giờ, có thể bị kéo vào vòng lặp)
+  const answerIntrusion = useCallback(
+    (choice: 'resist' | 'yield') => {
+      if (!intrusion) return;
+      const def = INTRUSIONS[intrusion.kind];
+      const cost = resistCost(intrusion.round);
+
+      if (choice === 'resist' && stats.willpower >= cost) {
+        audioAdapter.playCue('healthy');
+        setStats(applyStatDeltas(stats, { willpower: -cost, mental: 2 }));
+        setNotice(
+          intrusion.chunks === 0
+            ? `Bạn cưỡng lại được "${def.title}" (-${cost} ý chí).`
+            : `Cuối cùng bạn cũng dừng lại được, sau ${intrusion.hoursSpent}h.`
+        );
+        setIntrusion(null);
+        return;
+      }
+
+      // Chiều theo, hoặc muốn dừng nhưng ý chí không đủ
+      const left = Math.max(0, 24 - hoursUsed);
+      const r = executeActionById(def.actionId, stats, left, actionsTodayIds, day, history);
+      if (!r.success) {
+        setIntrusion(null);
+        return;
+      }
+      audioAdapter.playCue('temptation');
+      const ids = [...actionsTodayIds, def.actionId];
+      const nextLeft = left - r.hoursSpent;
+      const spent = intrusion.hoursSpent + r.hoursSpent;
+      setStats(r.newStats);
+      setHoursUsed(24 - nextLeft);
+      setActionsTodayIds(ids);
+      setLastAction((prev) => ({ id: def.actionId, n: (prev?.n ?? 0) + 1 }));
+
+      if (def.loop && nextLeft >= 0.5 && intrusion.round < MAX_INTRUSION_ROUNDS) {
+        setIntrusion({
+          ...intrusion,
+          round: intrusion.round + 1,
+          chunks: intrusion.chunks + 1,
+          hoursSpent: spent,
+          note: choice === 'resist' ? 'Bạn cố dừng nhưng ý chí không còn đủ. Video kế tiếp đã chạy.' : null,
+        });
+      } else {
+        setIntrusion(null);
+        setNotice(`Bạn đã mất ${spent}h cho "${def.title}".`);
+      }
+      if (nextLeft <= 0) setTimeout(() => endDay(r.newStats, ids), 400);
+    },
+    [intrusion, stats, hoursUsed, actionsTodayIds, day, history, endDay]
+  );
+
   const advanceToNextDay = useCallback(() => {
     setMorningReport(null);
     setNotice(null);
     setActionsTodayIds([]);
     setHoursUsed(0);
     setLocation('home');
+    setIntrusion(null);
+    setIntrusionsToday(0);
     setDayStartStats(stats); // chỉ số buổi sáng = mốc so sánh cho ngày mới
 
     // Kết thúc ván khi sụp đổ giữa chừng hoặc đã đủ 7 ngày
@@ -303,6 +395,8 @@ export function useGameAdapter() {
     setDayGrades([]);
     setGoalIds(pickGoalIds());
     setLocation('home');
+    setIntrusion(null);
+    setIntrusionsToday(0);
     setFinished(false);
   }, []);
 
@@ -352,5 +446,7 @@ export function useGameAdapter() {
     finished,
     location,
     travelTo,
+    intrusion,
+    answerIntrusion,
   };
 }

@@ -32,8 +32,8 @@ interface EndingText {
 }
 
 const THEME_ACTIONS: Record<Exclude<Theme, 'rest' | 'dog' | 'balanced' | 'generic'>, string[]> = {
-  scroll: ['scroll_social', 'binge_gaming', 'caffeine_spike', 'drama_news', 'binge_series', 'late_night_snack'],
-  shopper: ['impulse_shopping', 'fast_food', 'lottery_ticket'],
+  scroll: ['scroll_social', 'binge_gaming', 'caffeine_spike', 'drama_news', 'binge_series', 'late_night_snack', 'intrusion_phone', 'intrusion_game'],
+  shopper: ['impulse_shopping', 'fast_food', 'lottery_ticket', 'intrusion_snack', 'intrusion_sale'],
   party: ['beer_party'],
   hustle: ['work_focused', 'work_overtime', 'part_time_shift', 'freelance_gig', 'sell_old_stuff', 'side_project'],
   scholar: ['study_deep', 'learn_skill', 'learn_soft_skills', 'online_course', 'read_book', 'deep_research'],

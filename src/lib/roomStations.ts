@@ -118,6 +118,11 @@ export const ACTION_VISUALS: Record<string, ActionVisual> = {
   public_speaking: { station: 'sofa', mood: 'slow' },
   side_project: { station: 'desk', mood: 'work' },
   deep_research: { station: 'desk', mood: 'slow' },
+  // Cám dỗ xâm nhập
+  intrusion_phone: { station: 'arcade', mood: 'fast' },
+  intrusion_game: { station: 'arcade', mood: 'fast' },
+  intrusion_snack: { station: 'vending', mood: 'fast' },
+  intrusion_sale: { station: 'claw', mood: 'fast' },
   // Công việc & nghỉ
   work_focused: { station: 'desk', mood: 'work' },
   work_overtime: { station: 'register', mood: 'work' },
@@ -174,6 +179,10 @@ export const ACTION_EMOTE: Record<string, [string, string]> = {
   freelance_gig: ['💻', '😮‍💨'],
   sell_old_stuff: ['📦', '😊'],
   online_course: ['🎓', '💡'],
+  intrusion_phone: ['🤩', '😶'],
+  intrusion_game: ['🤩', '😶'],
+  intrusion_snack: ['😋', '😪'],
+  intrusion_sale: ['🤑', '😬'],
   marathon_training: ['🏃', '🏅'],
   public_speaking: ['🎤', '😎'],
   side_project: ['🚀', '😊'],

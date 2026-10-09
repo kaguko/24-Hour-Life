@@ -6,6 +6,7 @@ import {
   planAction,
   locationDef,
   PlanResult,
+  INTRUSIONS,
   summarizeFastDopamine,
   computeSkillXp,
   habitTag,
@@ -14,6 +15,7 @@ import {
 import { SkillsPanel } from './ui/SkillsPanel';
 import { GoalsPanel } from './ui/GoalsPanel';
 import { CityMap } from './ui/CityMap';
+import { IntrusionModal } from './ui/IntrusionModal';
 
 import { TopNav } from './ui/TopNav';
 import { StatsHUD } from './ui/StatsHUD';
@@ -71,6 +73,8 @@ export default function App() {
     finished,
     location,
     travelTo,
+    intrusion,
+    answerIntrusion,
   } = useGameAdapter();
 
   // Chuyển ngày: nhân vật lên giường, phòng tối ("Ngày N khép lại"), rồi bình minh, rồi mới hiện báo cáo sáng
@@ -351,6 +355,18 @@ export default function App() {
 
       {morningReport && morningReport === revealedReport && (
         <MorningModal report={morningReport} dayGrades={dayGrades} onContinue={advanceToNextDay} />
+      )}
+
+      {intrusion && !activeEvent && (
+        <IntrusionModal
+          def={INTRUSIONS[intrusion.kind]}
+          round={intrusion.round}
+          chunks={intrusion.chunks}
+          hoursSpent={intrusion.hoursSpent}
+          willpower={stats.willpower}
+          note={intrusion.note}
+          onAnswer={answerIntrusion}
+        />
       )}
 
       {activeEvent && (

@@ -7,6 +7,12 @@
 @import "@fontsource/be-vietnam-pro/400-italic.css";
 @import "@fontsource/be-vietnam-pro/600.css";
 
+@keyframes intrusion-shake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-6deg) scale(1.06); }
+  75% { transform: rotate(6deg) scale(1.06); }
+}
+
 @theme {
   --font-display: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --font-label: "Space Grotesk Variable", ui-sans-serif, system-ui, sans-serif;

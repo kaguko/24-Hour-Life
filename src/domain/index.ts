@@ -13,6 +13,7 @@ export * from './progression';
 export * from './goals';
 export * from './map';
 export * from './planner';
+export * from './intrusion';
 export * from './dopamine';
 export * from './consequence';
 export * from './events';
