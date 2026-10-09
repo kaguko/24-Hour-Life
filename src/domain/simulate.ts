@@ -42,7 +42,7 @@ export const DOMAIN_STRATEGIES: DomainStrategy[] = [
   {
     id: 'pure_sleeper',
     name: 'Trốn tránh thực tại (Chỉ ngủ & nằm)',
-    description: 'Ngủ tối đa 8h, chợp mắt tiếp, rất ngại làm việc và giao tiếp.',
+    description: 'Ngủ 8h ngay từ sáng (ngủ ngày), chợp mắt tiếp, rất ngại làm việc và giao tiếp.',
     decideActionId: (_stats, hoursLeft, actionsToday) => {
       if (!actionsToday.includes('sleep_deep') && hoursLeft >= 8) return 'sleep_deep';
       if (hoursLeft >= 1.5) return 'sleep_nap';
@@ -68,19 +68,22 @@ export const DOMAIN_STRATEGIES: DomainStrategy[] = [
   {
     id: 'balanced',
     name: 'Cân bằng có kỷ luật (Balanced Realist)',
-    description: 'Ngủ đủ 8h, làm việc 4h, tập thể dục/nấu ăn, kết nối bạn bè vừa phải.',
+    description: 'Ngủ đủ 8h ban đêm, làm việc 4h, tập thể dục/nấu ăn, kết nối bạn bè vừa phải.',
     decideActionId: (stats, hoursLeft, actionsToday) => {
       const slept = actionsToday.includes('sleep_deep');
       const worked = actionsToday.some((id) => id.startsWith('work_'));
       const wellness = actionsToday.some((id) => ['exercise', 'cook_tyrosine', 'short_walk'].includes(id));
+      // Dành 8h cuối ngày (từ 23:00) cho giấc ngủ đêm, đúng nhịp sinh học
+      const free = hoursLeft - (slept ? 0 : 8);
 
+      if (!worked && free >= 4) return 'work_focused';
+      if (!wellness && free >= 1.5 && stats.energy > 35) return 'exercise';
+      if (free >= 1.5 && stats.energy < 50) return 'cook_tyrosine';
+      if (stats.social < 50 && free >= 1) return 'call_family';
+      if (free >= 2 && stats.willpower >= 30) return 'learn_skill';
+      if (free >= 1) return 'meditate_breathe';
+      if (free >= 0.5) return 'short_walk';
       if (!slept && hoursLeft >= 8) return 'sleep_deep';
-      if (!worked && hoursLeft >= 4) return 'work_focused';
-      if (!wellness && hoursLeft >= 1.5 && stats.energy > 35) return 'exercise';
-      if (hoursLeft >= 1.5 && stats.energy < 50) return 'cook_tyrosine';
-      if (stats.social < 50 && hoursLeft >= 1) return 'call_family';
-      if (hoursLeft >= 2 && stats.willpower >= 30) return 'learn_skill';
-      if (hoursLeft >= 1.5) return 'sleep_nap';
       return 'meditate_breathe';
     },
   },

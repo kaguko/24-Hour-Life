@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { ActionPrimitive, PlayerStatsPrimitive } from '../domain';
+import { ActionPrimitive, PlayerStatsPrimitive, SleepTiming, sleepAdviceNow } from '../domain';
 import { AvatarId } from '../lib/avatars';
 import {
   ACTION_EMOTE,
@@ -65,7 +65,16 @@ const ROOM_STATS: Array<{ key: keyof PlayerStatsPrimitive; icon: string; bar: st
   { key: 'social', icon: '👥', bar: 'bg-emerald-400' },
 ];
 
-const formatMoney = (k: number) => (Math.abs(k) >= 1000 ? `${(k / 1000).toFixed(1)}tr` : `${Math.round(k)}k`);
+/** Nhãn nhịp sinh học hiện trong menu giường (null = bình thường, không cần nhắc) */
+const SLEEP_TIP: Partial<Record<SleepTiming, { text: string; tone: string }>> = {
+  day: { text: '☀️ Đang là ban ngày: ngủ lúc này chỉ hiệu quả ~60%', tone: 'text-amber-700' },
+  twilight: { text: '🌗 Hơi lệch giờ: hiệu quả ~80%', tone: 'text-amber-700' },
+  evening_nap: { text: '🌆 Chợp mắt chiều tối: kém hiệu quả, tối khó ngủ', tone: 'text-amber-700' },
+  midday_nap: { text: '🌤 Giờ trưa: chợp mắt lúc này rất tốt', tone: 'text-emerald-700' },
+  night: { text: '🌙 Đúng giờ ngủ đêm', tone: 'text-indigo-700' },
+};
+
+const formatMoney =(k: number) => (Math.abs(k) >= 1000 ? `${(k / 1000).toFixed(1)}tr` : `${Math.round(k)}k`);
 
 interface FloatDelta {
   id: number;
@@ -930,7 +939,13 @@ const RoomScene: React.FC<RoomSceneProps> = ({
                 }}
                 className={`w-full text-left px-2 py-2.5 sm:py-1.5 mb-1 rounded-lg border-l-4 ${tone} bg-stone-50 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-between gap-2`}
               >
-                <span className="text-xs font-medium text-stone-800 leading-snug">{a.title}</span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-medium text-stone-800 leading-snug">{a.title}</span>
+                  {a.category === 'rest' && (() => {
+                    const tip = SLEEP_TIP[sleepAdviceNow(a.id, hoursUsed).timing];
+                    return tip ? <span className={`block text-[10px] mt-0.5 ${tip.tone}`}>{tip.text}</span> : null;
+                  })()}
+                </span>
                 <span className="text-[11px] font-semibold text-stone-500 tabular-nums shrink-0">{a.hours}h</span>
               </button>
             );

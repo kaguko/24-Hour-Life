@@ -3,6 +3,9 @@ import { DAILY_RENT_COST, MIN_SLEEP_HOURS, applyStatDeltas } from './stats';
 import { DOMAIN_ACTIONS } from './actions';
 import { PhilosophicalQuote, getContextualQuote } from './quotes';
 import { summarizeFastDopamine } from './dopamine';
+import { sleepSegments } from './circadian';
+
+const fmtClock = (h: number) => `${String(Math.floor(h) % 24).padStart(2, '0')}:${h % 1 ? '30' : '00'}`;
 
 const OVERSLEEP_THRESHOLD_HOURS = 9;
 const OVERSLEEP_MENTAL_PER_HOUR = 2;
@@ -45,27 +48,52 @@ export function processOvernightCycle(
     .filter((a) => a.dopaminePathway === 'slow' && a.id !== 'sleep_deep')
     .reduce((sum, a) => sum + a.hours, 0);
 
-  // 2. Tính nợ ngủ
-  const sleepHours = actionsToday
-    .filter((a) => a.category === 'rest')
-    .reduce((sum, a) => sum + a.hours, 0);
+  // 2. Tính nợ ngủ (theo nhịp sinh học: ngủ ngày chỉ tính một phần)
+  const segments = sleepSegments(actionIdsToday);
+  const sleepHours = segments.reduce((sum, s) => sum + s.hours, 0); // số giờ nằm ngủ thực tế
+  const restedHours = Math.round(segments.reduce((sum, s) => sum + s.hours * s.efficiency, 0) * 2) / 2; // số giờ ngủ "có giá trị"
 
-  const sleepDiff = MIN_SLEEP_HOURS - sleepHours;
+  const daySleep = segments.filter((s) => s.timing === 'day');
+  if (daySleep.length > 0) {
+    const h = daySleep.reduce((sum, s) => sum + s.hours, 0);
+    notes.push(
+      `Ngủ lệch nhịp sinh học: ${h}h ngủ giữa ban ngày (bắt đầu lúc ${fmtClock(daySleep[0].start)}). Giấc ngủ ban ngày nông và chập chờn, chỉ có giá trị bằng khoảng ${Math.round(h * 0.6)}h ngủ đêm.`
+    );
+    deltas.mental = (deltas.mental ?? 0) - 6;
+    deltas.willpower = (deltas.willpower ?? 0) - 6;
+    drivers.push({ theme: 'balance_moderation', weight: -22 });
+    if (dayNumber >= 3) {
+      revealedMechanics.push(
+        '💡 [Nhịp sinh học]: Cơ thể tiết melatonin và hormone phục hồi chủ yếu vào ban đêm. Ngủ ban ngày không bù được ngủ đêm, còn khiến tối hôm sau khó ngủ hơn.'
+      );
+    }
+  } else if (segments.some((s) => s.timing === 'twilight' || s.timing === 'evening_nap')) {
+    notes.push('Ngủ hơi lệch giờ (chạng vạng hoặc gần sáng): giấc ngủ kém sâu hơn một chút so với ngủ đêm đúng giờ.');
+  }
+  if (segments.some((s) => s.timing === 'midday_nap')) {
+    notes.push('Giấc trưa đúng lúc (12h-15h): chợp mắt ngắn buổi trưa giúp hồi sức cho buổi chiều.');
+    deltas.energy = (deltas.energy ?? 0) + 5;
+    deltas.mental = (deltas.mental ?? 0) + 3;
+  }
+
+  const sleepDiff = MIN_SLEEP_HOURS - restedHours;
   const newSleepDebt = Math.max(0, previousSleepDebt + (sleepDiff > 0 ? sleepDiff : sleepDiff * 0.5));
 
-  if (sleepHours < 5) {
-    notes.push(`Thiếu ngủ nghiêm trọng (${sleepHours}h/7h chuẩn). Cơ thể bạn phát tín hiệu cầu cứu, thụ thể dopamine không được tái tạo.`);
+  // Nhãn giờ ngủ: nếu có ngủ lệch giờ thì ghi rõ số giờ "có giá trị"
+  const sleepLabel = restedHours < sleepHours ? `${sleepHours}h, chỉ tương đương ${restedHours}h ngủ đêm` : `${sleepHours}h`;
+  if (restedHours < 5) {
+    notes.push(`Thiếu ngủ nghiêm trọng (${sleepLabel}/7h chuẩn). Cơ thể bạn phát tín hiệu cầu cứu, thụ thể dopamine không được tái tạo.`);
     deltas.energy = (deltas.energy ?? 0) - 20;
     deltas.mental = (deltas.mental ?? 0) - 15;
     deltas.willpower = (deltas.willpower ?? 0) - 22;
     drivers.push({ theme: 'burnout_rest', weight: -57 });
-  } else if (sleepHours < 7) {
+  } else if (restedHours < 7) {
     drivers.push({ theme: 'burnout_rest', weight: -20 });
-    notes.push(`Ngủ chập chờn (${sleepHours}h). Nợ ngủ bắt đầu tích tụ âm ỉ.`);
+    notes.push(`Ngủ chập chờn (${sleepLabel}). Nợ ngủ bắt đầu tích tụ âm ỉ.`);
     deltas.energy = (deltas.energy ?? 0) - 10;
     deltas.willpower = (deltas.willpower ?? 0) - 10;
   } else {
-    notes.push(`Giấc ngủ trọn vẹn (${sleepHours}h). Hệ thần kinh phục hồi, các thụ thể dopamine được tái thiết lập nhịp nhàng.`);
+    notes.push(`Giấc ngủ trọn vẹn (${sleepLabel}). Hệ thần kinh phục hồi, các thụ thể dopamine được tái thiết lập nhịp nhàng.`);
     deltas.energy = (deltas.energy ?? 0) + 20;
     deltas.willpower = (deltas.willpower ?? 0) + 15;
     deltas.mental = (deltas.mental ?? 0) + 10;
@@ -74,8 +102,10 @@ export function processOvernightCycle(
   }
 
   // Ngủ quá nhiều: nặng nề, uể oải, bào mòn tinh thần
-  if (sleepHours > OVERSLEEP_THRESHOLD_HOURS) {
-    const excess = sleepHours - OVERSLEEP_THRESHOLD_HOURS;
+  // Giấc trưa đúng giờ không tính là "nằm quá lâu"
+  const lyingHours = sleepHours - segments.filter((s) => s.timing === 'midday_nap').reduce((sum, s) => sum + s.hours, 0);
+  if (lyingHours > OVERSLEEP_THRESHOLD_HOURS) {
+    const excess = lyingHours - OVERSLEEP_THRESHOLD_HOURS;
     notes.push(
       `Nằm quá lâu (${sleepHours}h nghỉ/ngày): Ngủ nhiều hơn mức cần thiết khiến đầu óc nặng nề, người rã rời và tinh thần đi xuống.`
     );

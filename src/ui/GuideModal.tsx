@@ -145,6 +145,9 @@ export const GuideModal: React.FC = () => {
           <p className="text-xs text-stone-600 leading-relaxed">
             Chỉ khi bạn ngủ đủ 7-8 tiếng, các thụ thể dopamine mới có cơ hội tự phục hồi độ nhạy bén. Thiếu ngủ liên tục làm thụ thể bị thoái hóa, khiến bạn luôn trong trạng thái &quot;đói kích thích&quot; và dễ sa vào các thói quen xấu vào ngày hôm sau.
           </p>
+          <p className="text-xs text-stone-600 leading-relaxed">
+            <strong>Giờ ngủ cũng quan trọng:</strong> ngủ ban ngày (bắt đầu 7h-17h) nông và chập chờn, chỉ có giá trị khoảng 60% so với ngủ đêm. Ngược lại, chợp mắt ngắn buổi trưa (12h-15h) giúp hồi sức cho buổi chiều.
+          </p>
         </div>
       </div>
 
