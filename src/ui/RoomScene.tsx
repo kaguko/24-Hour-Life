@@ -514,8 +514,10 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       const halfW = halfH * aspect;
       camera.left = -halfW;
       camera.right = halfW;
-      camera.top = halfH;
-      camera.bottom = -halfH;
+      // Điện thoại: dịch khung nhìn để căn phòng nằm giữa khung (không sát mép trên)
+      const offY = w < 640 ? halfH * 0.16 : 0;
+      camera.top = halfH + offY;
+      camera.bottom = -halfH + offY;
       camera.updateProjectionMatrix();
     };
     const ro = new ResizeObserver(resize);
