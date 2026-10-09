@@ -1,6 +1,7 @@
 import { PlayerStatsPrimitive, SimulationResultPrimitive } from './types';
 import { INITIAL_STATS, evaluateLifeStatus } from './stats';
 import { DOMAIN_ACTIONS, executeActionById } from './actions';
+import { actionLockReason, clockFromHoursRemaining } from './availability';
 import { processOvernightCycle } from './consequence';
 import { rollDomainEvent, resolveDomainChoice } from './events';
 
@@ -124,7 +125,11 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePr
       let action = DOMAIN_ACTIONS.find((a) => a.id === chosenId);
 
       if (!action || action.hours > hoursLeft) {
-        const fallback = DOMAIN_ACTIONS.filter((a) => a.hours <= hoursLeft).sort(
+        const fallback = DOMAIN_ACTIONS.filter(
+          (a) =>
+            a.hours <= hoursLeft &&
+            !actionLockReason(a, { clock: clockFromHoursRemaining(hoursLeft), day, actionsTodayIds: actionsToday })
+        ).sort(
           (a, b) => b.hours - a.hours
         )[0];
         if (!fallback) break;
@@ -132,7 +137,7 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePr
         action = fallback;
       }
 
-      const res = executeActionById(chosenId, currentStats, hoursLeft, actionsToday);
+      const res = executeActionById(chosenId, currentStats, hoursLeft, actionsToday, day);
       if (!res.success) break;
 
       currentStats = res.newStats;

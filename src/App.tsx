@@ -1,7 +1,7 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useGameAdapter } from './adapters/useGameAdapter';
 import { shareAdapter } from './adapters/shareAdapter';
-import { DOMAIN_ACTIONS, summarizeFastDopamine } from './domain';
+import { DOMAIN_ACTIONS, summarizeFastDopamine, actionLockReason, clockFromHoursRemaining } from './domain';
 
 import { TopNav } from './ui/TopNav';
 import { StatsHUD } from './ui/StatsHUD';
@@ -81,6 +81,17 @@ export default function App() {
   // Chỉ dopamine NHANH trong ngày mới gây sụp; dopamine cao nhờ hoạt động lành mạnh thì không
   const crashRisk = summarizeFastDopamine(actionsToday.map((a) => a.id)).atRisk;
 
+  // Hành vi đang bị khóa theo giờ / ngày / số lần trong ngày
+  const lockReasons = useMemo(() => {
+    const ctx = { clock: clockFromHoursRemaining(hoursRemaining), day, actionsTodayIds: actionsToday.map((a) => a.id) };
+    const out: Record<string, string> = {};
+    for (const a of DOMAIN_ACTIONS) {
+      const reason = actionLockReason(a, ctx);
+      if (reason) out[a.id] = reason;
+    }
+    return out;
+  }, [hoursRemaining, day, actionsToday]);
+
   return (
     <div className="min-h-screen bg-stone-100/70 text-stone-900 font-sans flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
       {/* Top Bar Contract (3 zones) */}
@@ -149,6 +160,7 @@ export default function App() {
                       actions={DOMAIN_ACTIONS}
                       hoursRemaining={hoursRemaining}
                       onSelectAction={takeAction}
+                      lockReasons={lockReasons}
                       onSound={playRoomSfx}
                       coach={showCoach && !isIntroOpen}
                       sleeping={!!morningReport}
@@ -192,6 +204,7 @@ export default function App() {
                     currentStats={stats}
                     hoursRemaining={hoursRemaining}
                     onSelectAction={takeAction}
+                    lockReasons={lockReasons}
                   />
                 )}
             </div>

@@ -1,7 +1,9 @@
 import { ActionPrimitive, PlayerStatsPrimitive, ActionResultPrimitive, SoundCue } from './types';
 import { applyStatDeltas } from './stats';
+import { EXTRA_ACTIONS } from './actionsExtra';
+import { actionLockReason, clockFromHoursRemaining } from './availability';
 
-export const DOMAIN_ACTIONS: ActionPrimitive[] = [
+const CORE_ACTIONS: ActionPrimitive[] = [
   // ========================================================
   // 1. NHÓM DOPAMINE NHANH (FAST / "CHEAP" DOPAMINE)
   // Đặc điểm: Ít nỗ lực, kích thích tức thì, tụt dốc nhanh (crash), gây hao mòn ý chí
@@ -352,6 +354,8 @@ export const DOMAIN_ACTIONS: ActionPrimitive[] = [
   },
 ];
 
+export const DOMAIN_ACTIONS: ActionPrimitive[] = [...CORE_ACTIONS, ...EXTRA_ACTIONS];
+
 const NAPS_BEFORE_DIMINISHING = 4;
 const NAP_DIMINISHED_FACTOR = 0.25;
 
@@ -364,7 +368,8 @@ export function executeActionById(
   actionId: string,
   stats: PlayerStatsPrimitive,
   hoursRemaining: number,
-  actionsTodayIds: string[] = []
+  actionsTodayIds: string[] = [],
+  day = 1
 ): ActionResultPrimitive {
   const action = DOMAIN_ACTIONS.find((a) => a.id === actionId);
   if (!action) {
@@ -387,6 +392,23 @@ export function executeActionById(
       hoursSpent: 0,
       newStats: stats,
       notice: 'Không đủ thời gian còn lại trong ngày.',
+      soundCue: 'neutral',
+    };
+  }
+
+  const lockReason = actionLockReason(action, {
+    clock: clockFromHoursRemaining(hoursRemaining),
+    day,
+    actionsTodayIds,
+  });
+  if (lockReason) {
+    return {
+      success: false,
+      actionId,
+      actionTitle: action.title,
+      hoursSpent: 0,
+      newStats: stats,
+      notice: `Chưa làm được lúc này: ${lockReason}.`,
       soundCue: 'neutral',
     };
   }
@@ -450,6 +472,22 @@ export function executeActionById(
       deltas.willpower = -22;
       deltas.dopamine = -15;
       notice = 'Họa vô đơn chí! Bạn vấp ngã và bị chó táp trúng chân, tốn sức khỏe trầm trọng và mất 500k VNĐ đi trạm y tế tiêm phòng dại! (-38 Năng lượng, -28 Tinh thần, -500k VNĐ)';
+      soundCue = 'sigh';
+    }
+  }
+
+  // 4b. Vé số / cá cược: gần như luôn thua, thỉnh thoảng trúng để giữ người chơi quay lại
+  if (action.id === 'lottery_ticket') {
+    const roll = Math.random();
+    if (roll < 0.03) {
+      deltas.money = 900;
+      deltas.dopamine = 45;
+      notice = 'Trúng lớn! +900k và một cú dopamine dội thẳng lên đầu. Não bạn vừa học rằng "thử thêm lần nữa sẽ lại trúng".';
+    } else if (roll < 0.15) {
+      deltas.money = 60;
+      notice = 'Trúng nhỏ, lời 60k. Đủ để bạn tin lần sau sẽ trúng nữa.';
+    } else {
+      notice = 'Trượt rồi. Bạn mất 100k và chỉ còn lại cảm giác muốn thử thêm lần nữa.';
       soundCue = 'sigh';
     }
   }

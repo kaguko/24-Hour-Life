@@ -1,22 +1,25 @@
 import React, { useState } from 'react';
 import { ActionPrimitive, PlayerStatsPrimitive } from '../domain';
 import { ActionCard } from './ActionCard';
-import { AlertCircle, Sprout, Zap, Briefcase, Moon, LayoutGrid } from 'lucide-react';
+import { AlertCircle, Sprout, Zap, Briefcase, Moon, LayoutGrid, Users } from 'lucide-react';
 
 interface ActionGridProps {
   actions: ActionPrimitive[];
   currentStats: PlayerStatsPrimitive;
   hoursRemaining: number;
   onSelectAction: (actionId: string) => void;
+  /** Hành vi nào đang bị khóa và vì sao */
+  lockReasons?: Record<string, string>;
 }
 
-type FilterView = 'all' | 'slow_dopamine' | 'fast_dopamine' | 'work' | 'rest';
+type FilterView = 'all' | 'slow_dopamine' | 'fast_dopamine' | 'work' | 'social' | 'rest';
 
 export const ActionGrid: React.FC<ActionGridProps> = ({
   actions,
   currentStats,
   hoursRemaining,
   onSelectAction,
+  lockReasons = {},
 }) => {
   const [filter, setFilter] = useState<FilterView>('all');
 
@@ -25,6 +28,7 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
     { id: 'slow_dopamine', label: '🌱 Dopamine Chậm (Bền vững)', icon: Sprout },
     { id: 'fast_dopamine', label: '⚡ Dopamine Nhanh (Dễ nghiện)', icon: Zap },
     { id: 'work', label: '💼 Công việc & Kỹ năng', icon: Briefcase },
+    { id: 'social', label: '🤝 Kết nối', icon: Users },
     { id: 'rest', label: '🌙 Giấc ngủ & Nghỉ ngơi', icon: Moon },
   ];
 
@@ -33,9 +37,10 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
     if (filter === 'slow_dopamine') return a.dopaminePathway === 'slow' && a.id !== 'sleep_deep';
     if (filter === 'fast_dopamine') return a.dopaminePathway === 'fast';
     if (filter === 'work') return a.category === 'work';
+    if (filter === 'social') return a.category === 'social';
     if (filter === 'rest') return a.category === 'rest';
     return true;
-  });
+  }).sort((a, b) => Number(!!lockReasons[a.id]) - Number(!!lockReasons[b.id])); // hành vi đang khóa xuống cuối
 
   const isLowWillpower = currentStats.willpower < 35;
 
@@ -83,6 +88,7 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
             currentStats={currentStats}
             hoursRemaining={hoursRemaining}
             onSelect={onSelectAction}
+            lockReason={lockReasons[action.id] ?? null}
           />
         ))}
       </div>

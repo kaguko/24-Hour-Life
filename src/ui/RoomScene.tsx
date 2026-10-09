@@ -41,6 +41,8 @@ interface RoomSceneProps {
   actions?: ActionPrimitive[];
   hoursRemaining?: number;
   onSelectAction?: (actionId: string) => void;
+  /** Hành vi nào đang bị khóa và vì sao */
+  lockReasons?: Record<string, string>;
   /** Phát âm thanh trong phòng (bước chân, đồ vật, cửa) */
   onSound?: (name: string, volume?: number) => void;
 }
@@ -147,6 +149,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   actions = [],
   hoursRemaining = 0,
   onSelectAction,
+  lockReasons = {},
   onSound,
   coach = false,
   sleeping = false,
@@ -1104,7 +1107,8 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           )}
           {pickedActions.length === 0 && <p className="text-xs text-stone-500 px-1 py-2">Chưa có hành vi nào ở đây.</p>}
           {pickedActions.map((a) => {
-            const tooLong = a.hours > hoursRemaining;
+            const locked = lockReasons[a.id];
+            const tooLong = a.hours > hoursRemaining || !!locked;
             const tone =
               a.dopaminePathway === 'fast' ? 'border-l-pink-400' : a.category === 'work' ? 'border-l-amber-400' : a.category === 'rest' ? 'border-l-sky-400' : 'border-l-emerald-400';
             return (
@@ -1120,6 +1124,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
               >
                 <span className="min-w-0">
                   <span className="block text-xs font-medium text-stone-800 leading-snug">{a.title}</span>
+                  {locked && <span className="block text-[10px] mt-0.5 text-stone-500">🔒 {locked}</span>}
                   {a.category === 'rest' && (() => {
                     const tip = SLEEP_TIP[sleepAdviceNow(a.id, hoursUsed).timing];
                     return tip ? <span className={`block text-[10px] mt-0.5 ${tip.tone}`}>{tip.text}</span> : null;

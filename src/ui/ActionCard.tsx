@@ -7,6 +7,8 @@ interface ActionCardProps {
   currentStats: PlayerStatsPrimitive;
   hoursRemaining: number;
   onSelect: (actionId: string) => void;
+  /** Lý do đang bị khóa (khung giờ / ngày / số lần), null nếu làm được */
+  lockReason?: string | null;
 }
 
 export const ActionCard: React.FC<ActionCardProps> = ({
@@ -14,8 +16,9 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   currentStats,
   hoursRemaining,
   onSelect,
+  lockReason = null,
 }) => {
-  const isAffordableTime = hoursRemaining >= action.hours;
+  const isAffordableTime = hoursRemaining >= action.hours && !lockReason;
   const isLowWillpower = currentStats.willpower < 35;
 
   // Ảo giác cám dỗ khi ý chí thấp
@@ -195,7 +198,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       >
         <span>
           {!isAffordableTime
-            ? 'Không đủ thời gian'
+            ? lockReason ?? 'Không đủ thời gian'
             : isTemptationIllusion
             ? 'Lướt liền cho sướng!'
             : isHealthyFriction

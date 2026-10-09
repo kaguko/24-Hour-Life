@@ -32,13 +32,13 @@ interface EndingText {
 }
 
 const THEME_ACTIONS: Record<Exclude<Theme, 'rest' | 'dog' | 'balanced' | 'generic'>, string[]> = {
-  scroll: ['scroll_social', 'binge_gaming', 'caffeine_spike'],
-  shopper: ['impulse_shopping', 'fast_food'],
+  scroll: ['scroll_social', 'binge_gaming', 'caffeine_spike', 'drama_news', 'binge_series', 'late_night_snack'],
+  shopper: ['impulse_shopping', 'fast_food', 'lottery_ticket'],
   party: ['beer_party'],
-  hustle: ['work_focused', 'work_overtime'],
-  scholar: ['study_deep', 'learn_skill', 'learn_soft_skills'],
-  athlete: ['exercise', 'short_walk', 'meditate_breathe', 'cook_tyrosine'],
-  social: ['deep_talk', 'call_family', 'pet_bonding'],
+  hustle: ['work_focused', 'work_overtime', 'part_time_shift', 'freelance_gig', 'sell_old_stuff'],
+  scholar: ['study_deep', 'learn_skill', 'learn_soft_skills', 'online_course', 'read_book'],
+  athlete: ['exercise', 'short_walk', 'meditate_breathe', 'cook_tyrosine', 'gym_session', 'morning_stretch', 'cold_shower', 'sunset_walk'],
+  social: ['deep_talk', 'call_family', 'pet_bonding', 'text_old_friend', 'cafe_friends', 'board_game_night', 'date_night', 'volunteer'],
 };
 
 const ENDINGS: Record<string, EndingText> = {

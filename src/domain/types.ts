@@ -33,6 +33,14 @@ export interface ActionPrimitive {
   baseSocial?: number;
   baseMoney?: number;
   baseWillpower?: number;
+  /** Khung giờ đồng hồ (0-24, có thể vắt qua nửa đêm) mà hành vi mới làm được */
+  window?: [number, number];
+  /** Chỉ làm được từ ngày này trở đi */
+  minDay?: number;
+  /** Chỉ làm được vào các ngày này (1 = Thứ 2 ... 7 = Chủ nhật) */
+  onlyDays?: number[];
+  /** Số lần tối đa mỗi ngày */
+  maxPerDay?: number;
 }
 
 export type SoundCue =
