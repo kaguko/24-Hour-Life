@@ -13,6 +13,8 @@
 - **Cube Pets** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
   The animated pet dog in the 3D room (`public/models/pets/`).
 
+- **Reaction stickers** (`public/stickers/`): original blob-mascot illustrations generated with Canva AI, background removed and white outline added locally. 5 so far (cooked, lockedin, rizz, win, loss).
+
 ## Audio
 - **Interface Sounds**, **Music Jingles** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
   8 clips converted to mono 32 kHz MP3 and volume-normalised (`public/sfx/`); the originals are not redistributed.
