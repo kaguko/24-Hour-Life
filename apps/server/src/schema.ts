@@ -61,6 +61,21 @@ export const OfferSchema = schema(
 );
 export type OfferSchema = SchemaType<typeof OfferSchema>;
 
+/** Con vật ngoài phố. Vị trí và tâm trạng do server quyết định. */
+export const AnimalSchema = schema(
+  {
+    id: t.string(),
+    kind: t.string(),
+    name: t.string(),
+    x: t.float32(),
+    z: t.float32(),
+    /** calm | happy | angry | flee */
+    mood: t.string(),
+  },
+  'Animal'
+);
+export type AnimalSchema = SchemaType<typeof AnimalSchema>;
+
 export const LifeState = schema(
   {
     /** Mã phòng 4 ký tự (cũng là roomId) */
@@ -74,6 +89,7 @@ export const LifeState = schema(
     players: t.map(PlayerSchema),
     offers: t.map(OfferSchema),
     chat: t.array(ChatMessageSchema),
+    animals: t.map(AnimalSchema),
   },
   'LifeState'
 );

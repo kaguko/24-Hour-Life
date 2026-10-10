@@ -84,6 +84,10 @@ export interface ClientMessages {
   joint: { op: 'offer'; actionId: string } | { op: 'join'; offerId: string } | { op: 'leave' } | { op: 'start' };
   /** Gửi lời nhắc / động viên cho người khác (hồi ý chí nhẹ cho họ) */
   nudge: { targetId: string };
+  /** Vuốt ve / chọc một con vật ngoài phố (phải đứng gần) */
+  animal: { animalId: string; op: AnimalOp };
+  /** Biểu cảm với bạn bè; hug và highfive cần `targetId` đứng gần */
+  emote: { kind: EmoteKind; targetId?: string };
 }
 
 /** Server -> client (chỉ gửi riêng cho người gửi) */
@@ -156,7 +160,82 @@ export interface PrivateStateMessage {
   dayGrades: string[];
 }
 
+/** Con vật ngoài phố (mô hình dựng bằng Blender: public/models/animals/<kind>.glb) */
+export const ANIMAL_KINDS = ['cat', 'capybara', 'duck', 'shiba', 'frog'] as const;
+export type AnimalKind = (typeof ANIMAL_KINDS)[number];
+export type AnimalMood = 'calm' | 'happy' | 'angry' | 'flee';
+export type AnimalOp = 'pet' | 'poke';
+export const isAnimalOp = (v: unknown): v is AnimalOp => v === 'pet' || v === 'poke';
+
+export interface AnimalDef {
+  id: string;
+  kind: AnimalKind;
+  name: string;
+  /** Chỗ ngồi thường ngày */
+  home: { x: number; z: number };
+  /** Chỗ chạy tới khi bị chọc cáu / hoảng. Mọi điểm đều nằm trên ô đi bộ được của city_nav.json. */
+  away: { x: number; z: number };
+}
+
+export const ANIMALS: readonly AnimalDef[] = [
+  { id: 'cat', kind: 'cat', name: 'Mèo Cáu', home: { x: 6, z: 5 }, away: { x: 10, z: 3 } },
+  { id: 'capybara', kind: 'capybara', name: 'Capybara Chill', home: { x: -7, z: 6 }, away: { x: -10, z: 9 } },
+  { id: 'duck', kind: 'duck', name: 'Vịt Quạc', home: { x: 8, z: -7 }, away: { x: 5, z: -9 } },
+  { id: 'shiba', kind: 'shiba', name: 'Cheems', home: { x: -8, z: -8 }, away: { x: -5, z: -10 } },
+  { id: 'frog', kind: 'frog', name: 'Ếch Phèo', home: { x: 15, z: 9 }, away: { x: 18, z: 10 } },
+];
+/** Phải đứng trong bán kính này mới tương tác được với con vật */
+export const ANIMAL_REACH = 4.5;
+/** Con vật tự bình tĩnh lại sau chừng này ms */
+export const ANIMAL_MOOD_MS = 6_000;
+
+export const EMOTE_KINDS = ['wave', 'highfive', 'hug', 'dance', 'cheer'] as const;
+export type EmoteKind = (typeof EMOTE_KINDS)[number];
+export const isEmoteKind = (v: unknown): v is EmoteKind => typeof v === 'string' && (EMOTE_KINDS as readonly string[]).includes(v);
+/** Biểu cảm nhắm vào một người (phải đứng gần) */
+export const TARGETED_EMOTES: readonly EmoteKind[] = ['highfive', 'hug'];
+export const EMOTE_REACH = 5;
+export const EMOTE_MIN_INTERVAL_MS = 1_200;
+
+/** Con vật phản ứng với một người (gửi cho cả phòng để mọi người cùng thấy) */
+export interface AnimalEventMessage {
+  animalId: string;
+  animalName: string;
+  byId: string;
+  byName: string;
+  op: AnimalOp;
+  mood: AnimalMood;
+  /** Câu thoại hài của con vật */
+  line: string;
+}
+
+export interface AnimalResultMessage {
+  ok: boolean;
+  animalId: string;
+  reason?: string;
+  /** Chỉ số nhận được (nếu có) để hiện nhẹ cho người chơi */
+  gained?: string | null;
+}
+
+export interface EmoteMessage {
+  fromId: string;
+  fromName: string;
+  kind: EmoteKind;
+  targetId?: string;
+  targetName?: string;
+}
+
+export interface EmoteResultMessage {
+  ok: boolean;
+  reason?: string;
+  gained?: string | null;
+}
+
 export interface ServerMessages {
+  animal_event: AnimalEventMessage;
+  animal_result: AnimalResultMessage;
+  emote: EmoteMessage;
+  emote_result: EmoteResultMessage;
   private_state: PrivateStateMessage;
   action_result: ActionResultMessage;
   morning: MorningReportMessage;

@@ -7,13 +7,23 @@ import { sanitizeText } from './chat.js';
 import { DEFAULT_LIMITS, RateLimiter, sanitizeName, scrubLinks, type Limits } from './limits.js';
 import { LifeEngine, type PlayerSession } from './engine.js';
 import { JointBoard, type Offer } from './joint.js';
+import { AnimalBoard } from './playground.js';
 import {
   CHAT_HISTORY,
   CHAT_MIN_INTERVAL_MS,
   DEFAULT_TIMING,
+  EMOTE_MIN_INTERVAL_MS,
+  EMOTE_REACH,
   MAX_MESSAGES_PER_SECOND,
   MAX_PLAYERS,
+  TARGETED_EMOTES,
+  isAnimalOp,
+  isEmoteKind,
   type ActionResultMessage,
+  type AnimalEventMessage,
+  type AnimalResultMessage,
+  type EmoteMessage,
+  type EmoteResultMessage,
   type InviteMessage,
   type JointResultMessage,
   type MorningReportMessage,
@@ -22,7 +32,7 @@ import {
   type Phase,
   type Timing,
 } from './protocol.js';
-import { ChatMessageSchema, LifeState, OfferSchema, PlayerSchema } from './schema.js';
+import { AnimalSchema, ChatMessageSchema, LifeState, OfferSchema, PlayerSchema } from './schema.js';
 
 /** Sinh mã 4 ký tự chưa có phòng nào dùng */
 async function uniqueRoomCode(): Promise<string> {
@@ -77,6 +87,8 @@ export class LifeRoom extends Room<{ state: LifeState }> {
 
   private engine!: LifeEngine;
   private board!: JointBoard;
+  private animals!: AnimalBoard;
+  private lastEmoteAt = new Map<string, number>();
   private lastChatAt = new Map<string, number>();
   private started = false;
   private phaseTimer?: Delayed;
@@ -105,12 +117,24 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     // roomSeed do server tự sinh và giữ kín (lộ seed là đoán được kết quả ngẫu nhiên)
     this.engine = new LifeEngine(randomBytes(16).toString('hex'));
     this.board = new JointBoard(this.engine);
+    this.animals = new AnimalBoard(this.engine.rngForLabel('animals', 0));
     const state = new LifeState();
     state.code = this.roomId;
     state.phase = 'planning';
     state.day = 1;
     state.phaseEndsAt = 0;
     this.setState(state);
+    for (const a of this.animals.animals.values()) {
+      const s = new AnimalSchema();
+      s.id = a.def.id;
+      s.kind = a.def.kind;
+      s.name = a.def.name;
+      this.state.animals.set(s.id, s);
+    }
+    this.syncAnimals();
+    this.clock.setInterval(() => {
+      if (this.animals.tick(Date.now()).length > 0) this.syncAnimals();
+    }, 500);
 
     this.onMessage('action', (client, message: unknown) => {
       const actionId = (message as { actionId?: unknown } | null)?.actionId;
@@ -169,6 +193,57 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       this.note(client.sessionId, `Bạn đã động viên ${this.nameOf(targetId)}.`);
       this.note(targetId, `${sender.name} đã động viên bạn.`);
       this.clients.getById(targetId)?.send('nudged', { fromId: sender.id, fromName: sender.name });
+    });
+
+    this.onMessage('animal', (client, message: unknown) => {
+      const m = message as { animalId?: unknown; op?: unknown } | null;
+      const animalId = typeof m?.animalId === 'string' ? m.animalId : '';
+      const reply = (r: AnimalResultMessage) => client.send('animal_result', r);
+      const session = this.engine.players.get(client.sessionId);
+      if (!session) return;
+      if ((this.state.phase !== 'planning' && this.state.phase !== 'morning') || !isAnimalOp(m?.op)) {
+        return reply({ ok: false, animalId, reason: 'Lúc này chưa chơi với con vật được.' });
+      }
+      const res = this.animals.interact(animalId, m.op, session.x, session.z, Date.now());
+      if (!res.ok) return reply({ ok: false, animalId, reason: res.reason });
+      const gained = this.engine.grantPlay(client.sessionId, res.deltas);
+      if (gained) this.syncSession(client.sessionId);
+      this.syncAnimals();
+      reply({ ok: true, animalId, gained });
+      const def = this.animals.animals.get(animalId)!.def;
+      const event: AnimalEventMessage = { animalId, animalName: def.name, byId: session.id, byName: session.name, op: m.op, mood: res.mood, line: res.line };
+      this.broadcast('animal_event', event);
+    });
+
+    this.onMessage('emote', (client, message: unknown) => {
+      const m = message as { kind?: unknown; targetId?: unknown } | null;
+      const reply = (r: EmoteResultMessage) => client.send('emote_result', r);
+      const from = this.engine.players.get(client.sessionId);
+      if (!from) return;
+      if (!isEmoteKind(m?.kind)) return reply({ ok: false, reason: 'Biểu cảm không hợp lệ.' });
+      const now = Date.now();
+      if (now - (this.lastEmoteAt.get(client.sessionId) ?? 0) < EMOTE_MIN_INTERVAL_MS) return reply({ ok: false, reason: 'Từ từ thôi.' });
+      const targeted = TARGETED_EMOTES.includes(m.kind);
+      const targetId = typeof m.targetId === 'string' ? m.targetId : undefined;
+      const to = targetId ? this.engine.players.get(targetId) : undefined;
+      if (targeted && !to) return reply({ ok: false, reason: 'Chọn một người để làm điều này cùng.' });
+      if (to && to.id === from.id) return reply({ ok: false, reason: 'Không thể tự làm với mình.' });
+      if (to && Math.hypot(to.x - from.x, to.z - from.z) > EMOTE_REACH) return reply({ ok: false, reason: `Đứng gần ${to.name} hơn nhé.` });
+      this.lastEmoteAt.set(client.sessionId, now);
+
+      let gained: string | null = null;
+      if (targeted && to) {
+        const ok = (this.state.phase === 'planning' || this.state.phase === 'morning');
+        if (ok) {
+          gained = this.engine.grantPlay(from.id, { social: 1.5 }, `${m.kind}:${to.id}`);
+          this.engine.grantPlay(to.id, { social: 1.5 }, `${m.kind}:${from.id}`);
+          this.syncSession(from.id);
+          this.syncSession(to.id);
+        }
+      }
+      reply({ ok: true, gained });
+      const event: EmoteMessage = { fromId: from.id, fromName: from.name, kind: m.kind, targetId: to?.id, targetName: to?.name };
+      this.broadcast('emote', event);
     });
 
     this.onMessage('move', (client, message: unknown) => {
@@ -454,6 +529,17 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     const session = this.engine.players.get(id);
     const target = this.state.players.get(id);
     if (session && target) syncPlayer(target, session, this.board.offerOf(id)?.id ?? '');
+  }
+
+  /** Ghi vị trí và tâm trạng con vật vào state công khai */
+  private syncAnimals(): void {
+    for (const a of this.animals.animals.values()) {
+      const s = this.state.animals.get(a.def.id);
+      if (!s) continue;
+      s.x = a.x;
+      s.z = a.z;
+      s.mood = a.mood;
+    }
   }
 
   private schedule(ms: number, fn: () => void): void {

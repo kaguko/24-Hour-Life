@@ -43,7 +43,15 @@ export interface PlayerSession {
   encouragedCount: number;
   /** Những người mình đã động viên trong ngày `encouragedDay` */
   nudgedTargets: Set<string>;
+  /** Số lần chơi với con vật / bạn bè đã được tính chỉ số trong ngày `playDay` (giới hạn mỗi ngày) */
+  playDay: number;
+  playCount: number;
+  /** Cặp (biểu cảm, người nhận) đã nhận thưởng trong ngày `playDay` */
+  playPairs: Set<string>;
 }
+
+/** Chơi với con vật / bạn bè chỉ nhích chỉ số nhẹ, tối đa chừng này lần mỗi ngày */
+export const MAX_PLAY_REWARDS_PER_DAY = 8;
 
 export type ActionOutcome = { ok: false; reason: string } | { ok: true; notice: string | null };
 
@@ -85,6 +93,9 @@ export class LifeEngine {
       encouragedDay: 0,
       encouragedCount: 0,
       nudgedTargets: new Set(),
+      playDay: 0,
+      playCount: 0,
+      playPairs: new Set(),
     };
     this.players.set(id, session);
     return session;
@@ -222,6 +233,31 @@ export class LifeEngine {
     from.encouragedCount++;
     from.nudgedTargets.add(targetId);
     return { ok: true };
+  }
+
+  /**
+   * Thưởng nhẹ khi chơi với con vật / bạn bè. Mỗi ngày tối đa MAX_PLAY_REWARDS_PER_DAY lần,
+   * `pairKey` (nếu có) chỉ được thưởng một lần mỗi ngày. Trả mô tả chỉ số nhận được, hoặc null nếu không có thưởng.
+   */
+  grantPlay(id: string, deltas: Partial<{ mental: number; social: number; willpower: number }>, pairKey?: string): string | null {
+    const p = this.players.get(id);
+    if (!p || p.state.finished) return null;
+    if (p.playDay !== p.state.day) {
+      p.playDay = p.state.day;
+      p.playCount = 0;
+      p.playPairs = new Set();
+    }
+    const entries = Object.entries(deltas).filter(([, v]) => v);
+    if (entries.length === 0) return null;
+    if (p.playCount >= MAX_PLAY_REWARDS_PER_DAY) return null;
+    if (pairKey) {
+      if (p.playPairs.has(pairKey)) return null;
+      p.playPairs.add(pairKey);
+    }
+    p.playCount++;
+    p.state = { ...p.state, stats: applyStatDeltas(p.state.stats, deltas) };
+    const names: Record<string, string> = { mental: 'Tinh thần', social: 'Kết nối', willpower: 'Ý chí' };
+    return entries.map(([k, v]) => `${names[k]} ${v! > 0 ? '+' : ''}${v}`).join(', ');
   }
 
   /** Hôm nay `supporterId` đã động viên `victimId` chưa (tính là "ở bên cạnh" khi bạn gặp chuyện) */
