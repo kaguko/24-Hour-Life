@@ -3,6 +3,7 @@ import { locationOf } from '@24h/domain';
 import { ANIMAL_REACH, EMOTE_REACH, RESIDENTS, RESIDENT_REACH, TARGETED_EMOTES, animForAction, type AnimalOp, type EmoteKind, type ResidentOp } from '@24h/protocol';
 import type { RoomConnection, RoomSnapshot } from '../../net/room';
 import { audioAdapter } from '../../adapters/audioAdapter';
+import { avatarUrl, type AvatarId } from '../../lib/avatars';
 import { CityRenderer } from '../../world/CityRenderer';
 import { EMOTE_EMOJI } from '../../world/animMap';
 
@@ -23,10 +24,12 @@ interface CityStageProps {
   quality: 'high' | 'low';
   /** Người chơi bấm vào một toà nhà: nhân vật đi tới cửa; khi tới nơi gọi lại với LocationId */
   onVisitLocation?: (locationId: string) => void;
+  /** Lớp HUD phủ lên cảnh: thanh trên, thông báo ở giữa, cột chỉ số bên trái (máy tính) */
+  hud?: { top?: React.ReactNode; center?: React.ReactNode; left?: React.ReactNode };
 }
 
 /** Cảnh thành phố 3D: dựng người chơi từ snapshot, đi bộ theo lưới, phát hoạt hình theo hành vi server xác nhận. */
-export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, onVisitLocation }) => {
+export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, onVisitLocation, hud }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<CityRenderer | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -40,6 +43,11 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
   /** Mức thân quen của mình với từng cư dân (server trả về sau mỗi lần tương tác) */
   const [levels, setLevels] = useState<Record<string, number>>({});
   const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [hintVisible, setHintVisible] = useState(true);
+  useEffect(() => {
+    const t = window.setTimeout(() => setHintVisible(false), 16000);
+    return () => window.clearTimeout(t);
+  }, []);
   const feedId = useRef(0);
   const snapRef = useRef(snapshot);
   snapRef.current = snapshot;
@@ -262,84 +270,108 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
   const activeLevel = activeResidentId ? levels[activeResidentId] ?? 0 : 0;
 
   return (
-    <div className="relative w-full h-[22rem] sm:h-[28rem] lg:h-[34rem] rounded-2xl overflow-hidden bg-sky-100 border border-stone-200" data-testid="city-stage">
+    <div className="relative w-full h-[29rem] sm:h-[31rem] lg:h-[38rem] rounded-3xl overflow-hidden bg-[#0b0a1f] ring-1 ring-white/15 shadow-[0_30px_80px_-30px_rgba(139,92,246,.55)]" data-testid="city-stage">
       <div ref={containerRef} className="absolute inset-0" />
-      {state === 'loading' && <div className="absolute inset-0 flex items-center justify-center text-sm font-semibold text-stone-600 animate-pulse">Đang dựng thành phố…</div>}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#0b0a1f]/75 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0b0a1f]/60 to-transparent" />
+
+      {state === 'loading' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm font-semibold text-white bg-[#0b0a1f]/70 backdrop-blur-sm">
+          <div className="w-11 h-11 rounded-full border-2 border-amber-300/25 border-t-amber-300 animate-spin" />
+          Đang dựng thành phố…
+        </div>
+      )}
       {state === 'error' && (
-        <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-stone-700 bg-stone-100">
+        <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-[var(--ink-dim)] bg-[#0b0a1f]">
           Không dựng được cảnh 3D (thiếu WebGL hoặc tải mô hình lỗi). Bạn vẫn chơi được bằng danh sách hành vi bên dưới, hoặc bật “Chế độ nhẹ”.
         </div>
       )}
-      <div className="absolute left-2 top-2 flex flex-col gap-1 max-w-[70%] pointer-events-none" aria-live="polite">
+
+      {/* HUD của phòng: thanh trên, thông báo, cột chỉ số */}
+      {hud?.top && <div className="absolute inset-x-0 top-0 p-2 sm:p-3 pointer-events-none">{hud.top}</div>}
+      {hud?.center && <div className="absolute inset-x-0 top-[5.4rem] sm:top-[5.1rem] px-2 flex justify-center pointer-events-none">{hud.center}</div>}
+      {hud?.left && (
+        <div className="absolute left-2 sm:left-3 top-[5.6rem] hidden sm:block pointer-events-none">
+          <div className="pointer-events-auto">{hud.left}</div>
+        </div>
+      )}
+
+      {/* Dòng sự kiện nhanh (ai vừa làm gì) */}
+      <div className="absolute right-2 sm:right-3 top-[6.6rem] sm:top-[5.6rem] flex flex-col items-end gap-1 max-w-[52%] pointer-events-none" aria-live="polite">
         {feed.map((f) => (
-          <div key={f.id} className="px-2.5 py-1 rounded-lg bg-white/90 text-[11px] text-stone-700 shadow-sm border border-stone-200">
+          <div key={f.id} className="px-2.5 py-1 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-[11px] font-semibold text-white shadow-lg anim-rise">
             {f.text}
           </div>
         ))}
       </div>
+
       {activeAnimal && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-12 flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/95 shadow-lg border border-amber-200" data-testid="animal-panel">
-          <span className="text-sm font-bold text-stone-800">
-            {ANIMAL_EMOJI[activeAnimal.kind] ?? '🐾'} {activeAnimal.name}
-          </span>
-          <button type="button" onClick={() => doAnimal('pet')} className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-900 hover:bg-emerald-100">
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-14 sm:bottom-16 flex items-center gap-2 px-3 py-2 glass-solid anim-pop" data-testid="animal-panel">
+          <span className="text-2xl" aria-hidden>{ANIMAL_EMOJI[activeAnimal.kind] ?? '🐾'}</span>
+          <span className="text-sm font-extrabold text-white pr-1">{activeAnimal.name}</span>
+          <button type="button" onClick={() => doAnimal('pet')} className="btn btn-good px-2.5 py-1.5 text-xs">
             🤚 Vuốt ve
           </button>
-          <button type="button" onClick={() => doAnimal('poke')} className="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-900 hover:bg-rose-100">
+          <button type="button" onClick={() => doAnimal('poke')} className="btn btn-danger-soft px-2.5 py-1.5 text-xs">
             👆 Chọc
           </button>
-          <button type="button" onClick={() => setActiveAnimalId(null)} aria-label="Đóng" className="px-1.5 text-stone-500 hover:text-stone-800">
+          <button type="button" onClick={() => setActiveAnimalId(null)} aria-label="Đóng" className="px-1.5 text-white/60 hover:text-white">
             ✕
           </button>
         </div>
       )}
+
       {activeResidentDef && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-12 w-[min(94%,27rem)] px-3 py-2 rounded-2xl bg-white/95 shadow-lg border border-emerald-200" data-testid="resident-panel">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <div className="min-w-0">
-              <div className="text-sm font-bold text-stone-800 truncate">
-                {activeResidentDef.emoji} {activeResidentDef.name}
-              </div>
-              <div className="text-[11px] text-stone-500 truncate">
-                {activeResidentDef.role} · <span className="font-semibold text-emerald-700">{'❤'.repeat(activeLevel + 1)} {LEVEL_NAME[activeLevel] ?? LEVEL_NAME[0]}</span>
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-14 sm:bottom-16 w-[min(94%,28rem)] p-3 glass-solid anim-pop" data-testid="resident-panel">
+          <div className="flex items-center gap-3 mb-2.5">
+            <span className="relative shrink-0">
+              <img src={avatarUrl(activeResidentDef.avatar as AvatarId)} alt="" className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400/25 to-sky-400/20 ring-2 ring-emerald-300/50 p-0.5" />
+              <span className="absolute -bottom-1 -right-1 text-base drop-shadow">{activeResidentDef.emoji}</span>
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-extrabold text-white truncate">{activeResidentDef.name}</div>
+              <div className="text-[11px] text-[var(--ink-dim)] truncate">{activeResidentDef.role}</div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-300">
+                <span aria-hidden className="tracking-tight">{[0, 1, 2].map((i) => (i <= activeLevel ? '❤️' : '🤍')).join('')}</span>
+                {LEVEL_NAME[activeLevel] ?? LEVEL_NAME[0]}
               </div>
             </div>
-            <button type="button" onClick={() => setActiveResidentId(null)} aria-label="Đóng" className="px-1.5 text-stone-500 hover:text-stone-800">
+            <button type="button" onClick={() => setActiveResidentId(null)} aria-label="Đóng" className="self-start px-1.5 text-white/60 hover:text-white">
               ✕
             </button>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            <button type="button" onClick={() => doResident('talk')} className="px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-xs font-semibold text-sky-900 hover:bg-sky-100">
+            <button type="button" onClick={() => doResident('talk')} className="btn btn-soft px-3 py-1.5 text-xs">
               💬 Trò chuyện
             </button>
-            <button type="button" onClick={() => doResident('help')} className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-900 hover:bg-emerald-100">
+            <button type="button" onClick={() => doResident('help')} className="btn btn-good px-3 py-1.5 text-xs">
               🤝 {activeResidentDef.helpLabel}
             </button>
             {activeResidentDef.treatLabel && (
-              <button type="button" onClick={() => doResident('treat')} className="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900 hover:bg-amber-100">
+              <button type="button" onClick={() => doResident('treat')} className="btn btn-primary px-3 py-1.5 text-xs">
                 🎁 {activeResidentDef.treatLabel} (−{activeResidentDef.treatCost}k)
               </button>
             )}
           </div>
         </div>
       )}
-      <div className="absolute right-2 bottom-2 flex flex-wrap justify-end items-center gap-1 max-w-[75%]" data-testid="emote-bar">
-        {selected && <span className="px-2 py-1 rounded-lg bg-amber-100 text-[11px] font-semibold text-amber-900">→ {selected.name}</span>}
+
+      {/* Biểu cảm: dock kính ở góc phải dưới */}
+      <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 flex flex-wrap justify-end items-center gap-1 max-w-[80%] px-1.5 py-1 rounded-2xl hud-glass" data-testid="emote-bar">
+        {selected && <span className="chip !bg-amber-300/20 !border-amber-300/40 !text-amber-100">→ {selected.name}</span>}
         {(['wave', 'highfive', 'hug', 'dance', 'cheer'] as const).map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => doEmote(k)}
-            title={EMOTE_LABEL[k]}
-            className="px-2 py-1 rounded-lg bg-white/90 border border-stone-200 text-xs font-semibold text-stone-700 shadow-sm hover:bg-indigo-50"
-          >
-            {EMOTE_EMOJI[k]} <span className="hidden sm:inline">{EMOTE_LABEL[k]}</span>
+          <button key={k} type="button" onClick={() => doEmote(k)} title={EMOTE_LABEL[k]} className="btn btn-soft h-8 px-2 text-xs !rounded-xl hover:!bg-amber-300/25">
+            <span className="text-base leading-none">{EMOTE_EMOJI[k]}</span>
+            <span className="hidden md:inline">{EMOTE_LABEL[k]}</span>
           </button>
         ))}
       </div>
-      <div className="absolute left-2 bottom-2 px-2 py-1 rounded-lg bg-white/80 text-[11px] text-stone-600 pointer-events-none max-w-[40%]">
-        Bấm đường để đi · toà nhà để tới cửa · bạn bè để chọn · cư dân để trò chuyện · con vật để vuốt ve hoặc chọc · kéo để xoay
-      </div>
+
+      {hintVisible && (
+        <div className="hidden sm:block absolute left-3 bottom-3 px-2.5 py-1.5 rounded-xl hud-glass text-[11px] text-[var(--ink-dim)] pointer-events-none max-w-[42%] anim-rise">
+          Bấm đường để đi · bấm toà nhà, cư dân hay thú cưng để tương tác · kéo để xoay
+        </div>
+      )}
     </div>
   );
 };

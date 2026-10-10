@@ -183,7 +183,8 @@ export default function App() {
   const here = locationDef(location);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-indigo-50/60 to-stone-100 text-stone-900 font-sans flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="app-bg relative min-h-screen text-[var(--ink)] font-sans flex flex-col selection:bg-amber-300/40 selection:text-white">
+      <div className="app-stars" aria-hidden />
       {/* Top Bar Contract (3 zones) */}
       <TopNav
         currentTab={currentTab}
@@ -196,23 +197,23 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-5">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto p-3 pb-24 sm:p-6 sm:pb-8 space-y-5">
         {currentTab === 'game' && (
           <>
             {/* Game Over Banner nếu sụp đổ */}
             {lifeStatus.isGameOver && (
-              <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
+              <div className="glass p-4 !border-rose-400/50 flex items-center justify-between gap-3 anim-pop">
                 <div className="flex items-center gap-3">
-                  <AlertOctagon className="w-5 h-5 text-rose-600 shrink-0" />
+                  <AlertOctagon className="w-5 h-5 text-rose-300 shrink-0" />
                   <div>
-                    <h4 className="text-sm font-bold text-rose-900">
+                    <h4 className="text-sm font-bold text-rose-100">
                       {lifeStatus.label}
                     </h4>
                   </div>
                 </div>
                 <button
                   onClick={resetGame}
-                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors whitespace-nowrap shadow-xs"
+                  className="btn btn-primary px-3 py-1.5 text-xs whitespace-nowrap"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Bắt đầu lại</span>
@@ -222,11 +223,11 @@ export default function App() {
 
             {/* Thông báo tức thời khi hành vi có hiệu ứng đặc biệt */}
             {notice && (
-              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-xl flex items-center justify-between animate-in fade-in duration-200">
-                <span>{notice.split(/(?<=[.!?…])\s/)[0]}</span>
+              <div className="glass px-3.5 py-2.5 !border-amber-300/40 text-amber-100 text-xs flex items-center justify-between gap-3 anim-pop">
+                <span className="flex items-center gap-2"><span aria-hidden>💡</span>{notice.split(/(?<=[.!?…])\s/)[0]}</span>
                 <button
                   onClick={() => setNotice(null)}
-                  className="text-amber-700 hover:text-amber-950 text-xs font-bold px-2 py-0.5"
+                  className="text-amber-200 hover:text-white text-xs font-bold px-2 py-0.5"
                 >
                   Đóng
                 </button>
@@ -246,14 +247,14 @@ export default function App() {
                       <button
                         key={id}
                         onClick={() => setView(id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                          view === id ? 'bg-stone-900 text-white shadow-sm' : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+                        className={`btn px-3.5 py-1.5 text-xs ${
+                          view === id ? 'btn-primary' : 'btn-soft'
                         }`}
                       >
                         {label}
                       </button>
                     ))}
-                    <span className="ml-auto text-[11px] font-semibold text-stone-600">
+                    <span className="ml-auto chip">
                       📍 {here.emoji} {here.name}
                     </span>
                   </div>
@@ -333,21 +334,24 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setShowStats((v) => !v)}
-                    className={`px-3 py-2 text-xs font-medium rounded-xl border shadow-xs ${showStats ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50 text-stone-700 border-stone-200'}`}
+                    className={`btn py-2.5 text-xs ${showStats ? 'btn-primary' : 'btn-soft'}`}
                   >
                     📊 Chỉ số chi tiết
                   </button>
                   <button
                     onClick={() => setShowCards((v) => !v)}
-                    className={`px-3 py-2 text-xs font-medium rounded-xl border shadow-xs ${showCards ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50 text-stone-700 border-stone-200'}`}
+                    className={`btn py-2.5 text-xs ${showCards ? 'btn-primary' : 'btn-soft'}`}
                   >
                     📋 Danh sách hành vi ({PLAYABLE_ACTIONS.length})
                   </button>
                 </div>
 
-                {showStats && <SkillsPanel xp={skillXp} />}
-
-                {showStats && <StatsHUD stats={stats} lifeStatus={lifeStatus} sleepDebt={sleepDebt} crashRisk={crashRisk} />}
+                {showStats && (
+                  <div className="paper p-3 sm:p-4 space-y-3 anim-rise">
+                    <SkillsPanel xp={skillXp} />
+                    <StatsHUD stats={stats} lifeStatus={lifeStatus} sleepDebt={sleepDebt} crashRisk={crashRisk} />
+                  </div>
+                )}
 
                 {showCards && (
                   <ActionGrid
@@ -364,14 +368,22 @@ export default function App() {
         )}
 
         {currentTab === 'multi' && (
-          <Suspense fallback={<div className="h-64 rounded-2xl bg-white/60 animate-pulse" />}>
+          <Suspense fallback={<div className="h-64 rounded-3xl skeleton" />}>
             <MultiplayerView />
           </Suspense>
         )}
 
-        {currentTab === 'simulate' && <SimulationBench />}
+        {currentTab === 'simulate' && (
+          <div className="paper p-4 sm:p-6 anim-rise">
+            <SimulationBench />
+          </div>
+        )}
 
-        {currentTab === 'guide' && <GuideModal />}
+        {currentTab === 'guide' && (
+          <div className="paper p-4 sm:p-6 anim-rise">
+            <GuideModal />
+          </div>
+        )}
       </main>
 
       {/* Modals */}

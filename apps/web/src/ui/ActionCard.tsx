@@ -33,6 +33,8 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   const meme = memeAction(action.id, action.title);
   const baseDopamine = action.baseDopamine ?? 0;
   const dopamine = isTemptationIllusion ? baseDopamine + (action.perceivedDopamineBonus ?? 20) : baseDopamine;
+  const slow = action.dopaminePathway === 'slow';
+  const fast = action.dopaminePathway === 'fast';
 
   const chips: Array<[StatKey, number | undefined, string]> = [
     ['dopamine', dopamine || undefined, ''],
@@ -45,40 +47,45 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
   return (
     <div
-      className={`relative p-3 rounded-2xl border transition-all flex flex-col items-center text-center gap-1.5 ${
+      className={`group relative p-3 pt-2.5 rounded-2xl border transition-all flex flex-col items-center text-center gap-1.5 overflow-hidden ${
         !isAffordableTime
-          ? 'bg-stone-50/70 border-stone-200 opacity-50 grayscale'
+          ? 'bg-white/[0.03] border-white/10 opacity-55'
           : isTemptationIllusion
-          ? 'bg-gradient-to-br from-fuchsia-50 via-pink-50 to-white border-fuchsia-300 ring-2 ring-fuchsia-300/60 shadow-md'
+          ? 'bg-gradient-to-br from-fuchsia-500/25 via-pink-500/15 to-transparent border-fuchsia-400/70 shadow-[0_0_28px_-8px_rgba(217,70,239,.8)]'
           : isHealthyFriction
-          ? 'bg-stone-50 border-stone-200'
-          : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-sm'
+          ? 'bg-white/[0.05] border-white/15'
+          : 'bg-gradient-to-b from-white/[0.10] to-white/[0.04] border-white/15 hover:border-amber-300/60 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-14px_rgba(251,191,36,.45)]'
       }`}
     >
-      <div className="absolute top-2 left-2.5 text-[11px] font-bold tabular-nums text-stone-500">⏱ {action.hours}h</div>
-      <button
-        type="button"
-        onClick={() => setShowInfo((v) => !v)}
-        aria-label="Xem chi tiết"
-        aria-expanded={showInfo}
-        className="absolute top-1.5 right-2 w-6 h-6 rounded-full text-[11px] font-bold text-stone-500 hover:bg-stone-100"
-      >
-        ⓘ
-      </button>
+      {/* ánh sáng nền theo loại dopamine */}
+      {isAffordableTime && <div aria-hidden className={`pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 w-32 h-32 rounded-full blur-3xl opacity-40 ${fast ? 'bg-pink-500' : slow ? 'bg-emerald-400' : 'bg-indigo-400'}`} />}
 
-      <div className={`text-5xl leading-none mt-4 ${isTemptationIllusion ? 'animate-bounce' : ''}`} aria-hidden>
+      <div className="relative w-full flex items-center justify-between">
+        <span className="chip tabular-nums">⏱ {action.hours}h</span>
+        <button
+          type="button"
+          onClick={() => setShowInfo((v) => !v)}
+          aria-label="Xem chi tiết"
+          aria-expanded={showInfo}
+          className="w-6 h-6 rounded-full text-[11px] font-bold text-[var(--ink-dim)] hover:bg-white/15 hover:text-white"
+        >
+          ⓘ
+        </button>
+      </div>
+
+      <div className={`relative text-5xl leading-none drop-shadow-[0_6px_10px_rgba(0,0,0,.5)] transition-transform group-hover:scale-110 ${isTemptationIllusion ? 'animate-bounce' : ''}`} aria-hidden>
         {meme.e}
       </div>
-      <div className="text-sm font-extrabold text-stone-900 leading-snug min-h-[2.5rem] flex items-center">{meme.line}</div>
+      <div className="relative text-sm font-extrabold text-white leading-snug min-h-[2.5rem] flex items-center">{meme.line}</div>
 
-      <div className="flex flex-wrap justify-center gap-1 text-[11px] tabular-nums font-semibold">
+      <div className="relative flex flex-wrap justify-center gap-1 text-[11px] tabular-nums font-bold">
         {chips.map(([key, value, suffix]) =>
           value ? (
             <span
               key={key}
-              className={`px-1.5 py-0.5 rounded-full ${
-                value > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-              } ${key === 'dopamine' && isTemptationIllusion ? 'ring-1 ring-fuchsia-400 font-extrabold' : ''}`}
+              className={`px-1.5 py-0.5 rounded-full border ${
+                value > 0 ? 'bg-emerald-400/15 border-emerald-300/30 text-emerald-200' : 'bg-rose-400/15 border-rose-300/30 text-rose-200'
+              } ${key === 'dopamine' && isTemptationIllusion ? 'ring-1 ring-fuchsia-300 font-extrabold' : ''}`}
             >
               {STAT_EMOJI[key]}
               {value > 0 ? '+' : ''}
@@ -90,14 +97,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       </div>
 
       {(habitTag || isTemptationIllusion) && (
-        <div className="text-[11px] font-semibold text-fuchsia-700">{isTemptationIllusion ? '🔥 Cực cuốn!' : habitTag}</div>
+        <div className={`relative text-[11px] font-bold ${isTemptationIllusion ? 'text-fuchsia-200' : 'text-emerald-300'}`}>{isTemptationIllusion ? '🔥 Cực cuốn!' : habitTag}</div>
       )}
 
       {showInfo && (
-        <div className="text-xs text-stone-600 leading-snug text-left bg-stone-50 rounded-lg p-2 w-full">
-          <b>{action.title}</b>
+        <div className="relative text-xs text-[var(--ink-dim)] leading-snug text-left bg-black/30 border border-white/10 rounded-xl p-2.5 w-full anim-pop">
+          <b className="text-white">{action.title}</b>
           <p className="mt-0.5">{action.description}</p>
-          {habitTag && <p className="mt-0.5 text-emerald-700 font-medium">{habitTag}</p>}
+          {habitTag && <p className="mt-0.5 text-emerald-300 font-semibold">{habitTag}</p>}
         </div>
       )}
 
@@ -105,12 +112,12 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         disabled={!isAffordableTime}
         onClick={() => onSelect(action.id)}
         aria-label={`Chọn hành vi này: ${action.title}`}
-        className={`w-full py-2 rounded-xl text-sm font-extrabold transition-all ${
+        className={`relative w-full py-2 rounded-xl text-sm font-extrabold transition-all active:scale-[.97] ${
           !isAffordableTime
-            ? 'bg-stone-200 text-stone-400 cursor-not-allowed text-xs font-semibold'
+            ? 'bg-white/8 text-[var(--ink-faint)] cursor-not-allowed text-xs font-semibold'
             : isTemptationIllusion
-            ? 'bg-fuchsia-600 hover:bg-fuchsia-700 text-white'
-            : 'bg-stone-900 hover:bg-stone-800 text-white'
+            ? 'bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white shadow-[0_8px_22px_-8px_rgba(217,70,239,.9)] hover:brightness-110'
+            : 'btn-primary'
         }`}
       >
         {!isAffordableTime ? lockReason ?? 'Hết giờ' : isTemptationIllusion ? 'Lướt liền!' : isHealthyFriction ? 'Cố lên 💪' : 'Làm!'}

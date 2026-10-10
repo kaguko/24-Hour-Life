@@ -44,3 +44,108 @@
 .animate-float-up {
   animation: float-up 1.6s ease-out forwards;
 }
+
+/* ======================================================================
+   Hệ thống giao diện "đêm phố thị": nền tối, kính mờ, nút hổ phách → cam.
+   Mọi màn dùng chung các lớp dưới đây để trông như một sản phẩm.
+   ====================================================================== */
+:root {
+  color-scheme: dark;
+  --ink: #f5f3ff;
+  --ink-dim: #b9b3dc;
+  --ink-faint: #8a84b3;
+  --line: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 255, 255, 0.24);
+  --bg0: #09081c;
+  --bg1: #12102c;
+  --amber: #fbbf24;
+  --orange: #f97316;
+  --violet: #8b5cf6;
+  --pink: #f472b6;
+  --green: #34d399;
+  --sky: #38bdf8;
+  --rose: #fb7185;
+}
+
+html, body { background: var(--bg0); }
+body { color: var(--ink); -webkit-tap-highlight-color: transparent; }
+
+.app-bg {
+  background:
+    radial-gradient(900px 520px at 10% -8%, rgba(139, 92, 246, 0.30), transparent 60%),
+    radial-gradient(800px 520px at 100% 8%, rgba(244, 114, 182, 0.16), transparent 60%),
+    radial-gradient(1000px 640px at 50% 118%, rgba(56, 189, 248, 0.14), transparent 60%),
+    linear-gradient(180deg, var(--bg1), var(--bg0));
+}
+/* Sao lấp lánh rất nhẹ phía sau nội dung */
+.app-stars {
+  position: fixed; inset: 0; pointer-events: none; opacity: 0.55; z-index: 0;
+  background-image:
+    radial-gradient(1.2px 1.2px at 24px 38px, rgba(255,255,255,.8), transparent),
+    radial-gradient(1px 1px at 120px 90px, rgba(255,255,255,.55), transparent),
+    radial-gradient(1.4px 1.4px at 190px 150px, rgba(255,230,180,.7), transparent),
+    radial-gradient(1px 1px at 70px 190px, rgba(255,255,255,.5), transparent);
+  background-size: 230px 230px;
+  animation: stars-drift 120s linear infinite;
+}
+@keyframes stars-drift { to { background-position: 230px 460px; } }
+
+/* Kính mờ: thẻ, thanh, bảng nổi */
+.glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.045));
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 14px 34px -16px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.07);
+}
+.glass-solid {
+  background: linear-gradient(180deg, rgba(30,26,66,.96), rgba(18,16,44,.96));
+  border: 1px solid var(--line-strong);
+  border-radius: 1.25rem;
+  box-shadow: 0 24px 60px -20px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.08);
+}
+/* Tờ giấy sáng cho trang nhiều chữ (luật chơi, mô phỏng) trên nền tối */
+.paper {
+  background: #f8f7fc; color: #1c1917; border-radius: 1.5rem;
+  box-shadow: 0 24px 60px -24px rgba(0,0,0,.7);
+}
+
+.btn { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: .4rem; font-weight: 700; border-radius: .9rem;
+  transition: transform .12s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease; cursor: pointer; }
+.btn:active:not(:disabled) { transform: scale(.96); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-primary { background: linear-gradient(135deg, #fbbf24, #f97316); color: #2b1400; font-weight: 800;
+  box-shadow: 0 8px 22px -8px rgba(249,115,22,.75), inset 0 1px 0 rgba(255,255,255,.4); }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.07); transform: translateY(-1px); }
+.btn-soft { background: rgba(255,255,255,.09); color: var(--ink); border: 1px solid var(--line); }
+.btn-soft:hover:not(:disabled) { background: rgba(255,255,255,.16); border-color: var(--line-strong); }
+.btn-good { background: linear-gradient(135deg, #34d399, #10b981); color: #032a1c; font-weight: 800;
+  box-shadow: 0 8px 22px -8px rgba(16,185,129,.7); }
+.btn-good:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.btn-danger-soft { background: rgba(251,113,133,.12); color: #fecdd3; border: 1px solid rgba(251,113,133,.35); }
+.btn-danger-soft:hover:not(:disabled) { background: rgba(251,113,133,.22); }
+
+.chip { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .55rem; border-radius: 999px; font-size: 11px; font-weight: 700;
+  background: rgba(255,255,255,.1); border: 1px solid var(--line); color: var(--ink); }
+
+.input-dark { background: rgba(0,0,0,.28); border: 1px solid var(--line-strong); color: var(--ink); border-radius: .9rem; }
+.input-dark::placeholder { color: var(--ink-faint); }
+.input-dark:focus { outline: none; border-color: var(--amber); box-shadow: 0 0 0 3px rgba(251,191,36,.25); }
+
+/* Kính tối cho HUD đặt trên cảnh 3D (đủ tương phản trên mọi nền) */
+.hud-glass { background: rgba(11,10,31,.66); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(12px) saturate(1.3); -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  box-shadow: 0 10px 28px -14px rgba(0,0,0,.85); }
+
+/* Hiệu ứng vào cảnh / nhấn mạnh */
+@keyframes pop-in { 0% { opacity: 0; transform: scale(.92) translateY(6px); } 100% { opacity: 1; transform: none; } }
+@keyframes rise-in { 0% { opacity: 0; transform: translateY(14px); } 100% { opacity: 1; transform: none; } }
+@keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,.55), 0 8px 22px -8px rgba(249,115,22,.75); } 50% { box-shadow: 0 0 0 9px rgba(251,191,36,0), 0 8px 22px -8px rgba(249,115,22,.75); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes bar-flash-up { 0% { filter: brightness(2); } 100% { filter: none; } }
+.anim-pop { animation: pop-in .28s cubic-bezier(.2,.9,.3,1.2) both; }
+.anim-rise { animation: rise-in .4s ease-out both; }
+.anim-glow { animation: glow-pulse 1.8s ease-in-out infinite; }
+.skeleton { background: linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.14), rgba(255,255,255,.05)); background-size: 200% 100%; animation: shimmer 1.6s linear infinite; }
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 6px; }

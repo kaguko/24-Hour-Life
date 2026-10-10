@@ -51,13 +51,13 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
     <div className="space-y-4">
       {/* Ý chí thấp: cảnh báo ngắn */}
       {isLowWillpower && (
-        <div className="px-3 py-2 bg-fuchsia-50 border border-fuchsia-200 rounded-xl text-fuchsia-900 text-sm font-bold text-center">
+        <div className="px-3 py-2 glass !border-fuchsia-400/60 text-fuchsia-200 text-sm font-bold text-center anim-pop">
           🛡️ Ý chí {currentStats.willpower}% — não đang bị brainrot, cẩn thận ⚡
         </div>
       )}
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
         {filterTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = filter === tab.id;
@@ -65,13 +65,9 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors flex items-center gap-1.5 ${
-                isActive
-                  ? 'bg-stone-900 text-white font-semibold shadow-xs'
-                  : 'bg-stone-100 text-stone-600 hover:text-stone-900 hover:bg-stone-200'
-              }`}
+              className={`btn px-3 py-1.5 text-xs whitespace-nowrap ${isActive ? 'btn-primary' : 'btn-soft'}`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-stone-500'}`} />
+              <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
             </button>
           );
