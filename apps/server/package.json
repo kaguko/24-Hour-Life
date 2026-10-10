@@ -1,0 +1,25 @@
+{
+  "name": "@24h/server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch --conditions=source src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "lint": "tsc --noEmit",
+    "test": "tsx --conditions=source --test src/*.test.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@24h/domain": "^0.0.0",
+    "@colyseus/core": "^0.18.18",
+    "@colyseus/schema": "^5.0.36",
+    "@colyseus/ws-transport": "^0.18.4"
+  },
+  "devDependencies": {
+    "@colyseus/sdk": "^0.18.5",
+    "@colyseus/testing": "^0.18.6"
+  }
+}
