@@ -8,6 +8,7 @@ Các script chạy qua công cụ `execute_blender_code` của blender MCP (Blen
 | `build_city.py` | `public/models/city.glb` | Cần import `road-straight.glb`, `road-crossroad.glb` (Kenney City Kit Roads, giải nén vào `assets-raw/city-kit-roads`) và tạo bảng màu `pal_*` trước (xem `ARTBIBLE.md`) |
 | `gen_nav.py` | `public/models/city_nav.json` | `python art/blender/gen_nav.py`: lưới đi bộ 1 m + toạ độ cửa; kiểm tra mọi cửa tới được từ nhà |
 | `build_room_home.py` | `public/models/room_home.glb` | Từ Kenney Furniture Kit |
+| `build_animals.py` | `public/models/animals/<kind>.glb` | 5 con vật meme (mèo cáu, capybara, vịt, shiba Cheems, ếch), mỗi con < 600 tris. Bộ phận đặt tên `body, head, ear_l, ear_r, tail, wing_l, wing_r, leg_l, leg_r, yuzu` (gốc ở khớp xoay, có thể có hậu tố `.001`); client làm hoạt hình bằng cách xoay từng bộ phận. Xem trước: `art/animals_preview.png` |
 | `build_props.py` | `public/models/props/*.glb` | 8 prop < 500 tris, export từng cái bằng `use_selection=True` |
 
 Export mô hình lớn: `bpy.ops.export_scene.gltf(filepath=..., export_format='GLB', export_draco_mesh_compression_enable=True,
