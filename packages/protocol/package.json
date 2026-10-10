@@ -1,0 +1,26 @@
+{
+  "name": "@24h/protocol",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Hợp đồng client <-> server của phòng multiplayer: tên message, giới hạn, kiểu payload.",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@24h/domain": "^0.0.0"
+  }
+}

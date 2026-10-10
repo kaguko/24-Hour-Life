@@ -8,6 +8,7 @@ import {
   endDay,
   applyStatDeltas,
   encourage,
+  JOINT_ACTIONS,
   JOINT_ACTION_IDS,
   hoursLeftOf,
   offerPressure,
@@ -126,6 +127,25 @@ export class LifeEngine {
     const s = p.state;
     const plan = planAction(actionId, s.location, hoursLeftOf(s), { day: s.day, actionsTodayIds: s.actionsTodayIds, history: s.history });
     return plan.ok ? null : plan.reason;
+  }
+
+  /** Hành vi (chơi một mình và chung) nào đang không làm được lúc này và vì sao, theo luật lên kế hoạch của domain. */
+  locksFor(id: string): Record<string, string> {
+    const p = this.players.get(id);
+    const locks: Record<string, string> = {};
+    if (!p) return locks;
+    const ids = [...PLAYABLE_ACTIONS, ...JOINT_ACTIONS].map((a) => a.id);
+    if (p.state.finished) {
+      for (const a of ids) locks[a] = 'Ván của bạn đã kết thúc.';
+      return locks;
+    }
+    const s = p.state;
+    const ctx = { day: s.day, actionsTodayIds: s.actionsTodayIds, history: s.history };
+    for (const a of ids) {
+      const plan = planAction(a, s.location, hoursLeftOf(s), ctx);
+      if (!plan.ok) locks[a] = plan.reason;
+    }
+    return locks;
   }
 
   setReady(id: string, ready: boolean): void {

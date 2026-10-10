@@ -6,12 +6,14 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/domain/package.json packages/domain/
+COPY packages/protocol/package.json packages/protocol/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
-RUN npm ci -w @24h/domain -w @24h/server --include-workspace-root
+RUN npm ci -w @24h/domain -w @24h/protocol -w @24h/server --include-workspace-root
 COPY packages/domain packages/domain
+COPY packages/protocol packages/protocol
 COPY apps/server apps/server
-RUN npm run build -w @24h/domain && npm run build -w @24h/server
+RUN npm run build -w @24h/domain && npm run build -w @24h/protocol && npm run build -w @24h/server
 
 # ---- runtime: chỉ dependency production + dist ----
 FROM node:22-alpine AS runtime
@@ -19,10 +21,12 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/domain/package.json packages/domain/
+COPY packages/protocol/package.json packages/protocol/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
-RUN npm ci --omit=dev -w @24h/domain -w @24h/server
+RUN npm ci --omit=dev -w @24h/domain -w @24h/protocol -w @24h/server
 COPY --from=build /app/packages/domain/dist packages/domain/dist
+COPY --from=build /app/packages/protocol/dist packages/protocol/dist
 COPY --from=build /app/apps/server/dist apps/server/dist
 
 USER node

@@ -16,6 +16,7 @@ import {
   type JointResultMessage,
   type MorningReportMessage,
   type NudgeResultMessage,
+  type PrivateStateMessage,
   type Phase,
   type Timing,
 } from './protocol.js';
@@ -114,6 +115,7 @@ export class LifeRoom extends Room<{ state: LifeState }> {
 
       const reply: ActionResultMessage = { ok: true, actionId: id, notice: outcome.notice };
       client.send('action_result', reply);
+      this.pushPrivate(client.sessionId);
       this.checkAdvance();
     });
 
@@ -180,6 +182,7 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     player.lastActionId = '';
     syncPlayer(player, session, '');
     this.state.players.set(session.id, player);
+    this.pushPrivate(session.id);
 
     // Ngày 1 bắt đầu khi có người đầu tiên vào
     if (!this.started) {
@@ -210,6 +213,7 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     session.connected = true;
     this.syncSession(client.sessionId);
     // Vào lại giữa phase morning thì gửi lại báo cáo của mình
+    this.pushPrivate(client.sessionId);
     const report = this.reports.get(client.sessionId);
     if (this.state.phase === 'morning' && report) client.send('morning', report);
   }
@@ -363,12 +367,27 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       });
       const target = this.state.players.get(r.playerId);
       if (target && r.ok) target.lastActionId = res.offer.actionId;
+      if (r.ok) this.pushPrivate(r.playerId);
     }
     this.syncOffers();
     this.checkAdvance();
   }
 
   // ---- Vòng đời ngày ----
+
+  /** Gửi trạng thái riêng (hành vi đã làm, khóa, nợ ngủ) cho đúng người này nếu đang kết nối */
+  private pushPrivate(id: string): void {
+    const client = this.clients.getById(id);
+    const session = this.engine.players.get(id);
+    if (!client || !session) return;
+    const message: PrivateStateMessage = {
+      actionsToday: [...session.state.actionsTodayIds],
+      locks: this.engine.locksFor(id),
+      sleepDebt: session.state.sleepDebt,
+      dayGrades: [...session.state.dayGrades],
+    };
+    client.send('private_state', message);
+  }
 
   private syncSession(id: string): void {
     const session = this.engine.players.get(id);
@@ -452,6 +471,7 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       return;
     }
     this.state.day = Math.max(...active.map((s) => s.state.day));
+    for (const id of this.engine.players.keys()) this.pushPrivate(id);
     this.beginPlanning();
   }
 

@@ -132,3 +132,21 @@ test('hết giờ lên kế hoạch mà lời rủ chưa thành: hủy, không a
   assert.equal(pa.offerId, '');
   await a.leave();
 });
+
+test('private_state: hành vi đã làm và lý do khóa do server tính, gửi riêng cho từng người', { timeout: 20000 }, async () => {
+  const room = await colyseus.createRoom(ROOM_NAME);
+  const a = await colyseus.sdk.joinById(room.roomId, { name: 'An' });
+  const states: any[] = [];
+  a.onMessage('private_state', (m: any) => states.push(m));
+  await waitUntil(() => states.length >= 1, 3000, 'private_state đầu tiên');
+  const first = states[0];
+  assert.deepEqual(first.actionsToday, []);
+  assert.ok(typeof first.locks.eat_together === 'string' && first.locks.eat_together.length > 0, 'ăn cùng chưa mở cửa lúc 7h');
+  assert.equal(first.locks.sleep_nap, undefined, 'ngủ chợp làm được');
+  assert.equal(first.sleepDebt, 0);
+
+  a.send('action', { actionId: 'sleep_nap' });
+  await waitUntil(() => states.length >= 2, 3000, 'private_state sau hành động');
+  assert.deepEqual(states[states.length - 1].actionsToday, ['sleep_nap']);
+  await a.leave();
+});
