@@ -585,7 +585,7 @@ export class LifeRoom extends Room<{ state: LifeState }> {
   }
 }
 
-/** Tạo lớp phòng với thời gian tùy chỉnh (mặc định 90s lên kế hoạch, giữ chỗ 60s). Chỉ server quyết định, client không đổi được. */
+/** Tạo lớp phòng với thời gian tùy chỉnh (mặc định 240s lên kế hoạch, giữ chỗ 60s). Chỉ server quyết định, client không đổi được. */
 export function createLifeRoom(timing: Partial<Timing> = {}, limits: Partial<Limits> = {}): typeof LifeRoom {
   const mergedTiming: Timing = { ...DEFAULT_TIMING, ...timing };
   const mergedLimits: Limits = { ...DEFAULT_LIMITS, ...limits };

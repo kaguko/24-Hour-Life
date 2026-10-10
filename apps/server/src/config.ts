@@ -8,6 +8,8 @@ export interface ServerConfig {
   corsOrigins: string[];
   /** Giới hạn chống lạm dụng (env MAX_ROOMS, JOINS_PER_MINUTE) */
   limits: { maxRooms: number; joinsPerMinute: number };
+  /** Thời gian mỗi giai đoạn của ngày, ghi đè mặc định khi có env PLANNING_SECONDS, MORNING_SECONDS */
+  timing: { planningMs?: number; morningMs?: number };
 }
 
 export const DEFAULT_PORT = 2567;
@@ -34,9 +36,14 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     if (!Number.isInteger(n) || n < 1) throw new Error(`${name} không hợp lệ: "${v}"`);
     return n;
   };
+  const seconds = (name: string): number | undefined => {
+    const v = positive(name, 0);
+    return v > 0 ? v * 1000 : undefined;
+  };
   return {
     port,
     corsOrigins: corsOrigins.includes('*') ? [] : corsOrigins,
     limits: { maxRooms: positive('MAX_ROOMS', 200), joinsPerMinute: positive('JOINS_PER_MINUTE', 120) },
+    timing: { planningMs: seconds('PLANNING_SECONDS'), morningMs: seconds('MORNING_SECONDS') },
   };
 }

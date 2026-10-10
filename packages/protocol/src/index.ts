@@ -46,9 +46,9 @@ export interface Timing {
 }
 
 export const DEFAULT_TIMING: Timing = {
-  planningMs: 90_000,
+  planningMs: 240_000,
   nightMs: 2_000,
-  morningMs: 15_000,
+  morningMs: 20_000,
   reconnectMs: 60_000,
 };
 
