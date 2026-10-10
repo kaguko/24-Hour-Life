@@ -6,7 +6,11 @@ import {
   chooseStrategyAction,
   createPlayerState,
   endDay,
+  applyStatDeltas,
+  encourage,
+  JOINT_ACTION_IDS,
   hoursLeftOf,
+  offerPressure,
   planAction,
   type DomainStrategy,
   type NightResultPrimitive,
@@ -33,6 +37,9 @@ export interface PlayerSession {
   ready: boolean;
   /** Báo cáo sáng gần nhất (gửi lại khi người chơi vào lại giữa phase morning) */
   lastReport: NightResultPrimitive | null;
+  /** Đã gửi bao nhiêu lời động viên trong ngày `encouragedDay` */
+  encouragedDay: number;
+  encouragedCount: number;
 }
 
 export type ActionOutcome = { ok: false; reason: string } | { ok: true; notice: string | null };
@@ -72,6 +79,8 @@ export class LifeEngine {
       bot: false,
       ready: false,
       lastReport: null,
+      encouragedDay: 0,
+      encouragedCount: 0,
     };
     this.players.set(id, session);
     return session;
@@ -95,6 +104,7 @@ export class LifeEngine {
     if (!p) return { ok: false, reason: 'Bạn chưa tham gia phòng.' };
     if (p.state.finished) return { ok: false, reason: 'Ván của bạn đã kết thúc.' };
     if (p.ready) return { ok: false, reason: 'Bạn đã sẵn sàng. Hủy sẵn sàng để làm tiếp.' };
+    if (typeof actionId === 'string' && JOINT_ACTION_IDS.has(actionId)) return { ok: false, reason: 'Hành vi này cần rủ bạn bè (message joint).' };
     if (typeof actionId !== 'string' || !PLAYABLE_IDS.has(actionId)) return { ok: false, reason: 'Hành vi không hợp lệ.' };
 
     const s = p.state;
@@ -105,6 +115,17 @@ export class LifeEngine {
     if (!res.applied || !res.last) return { ok: false, reason: res.blocked ?? 'Không thực hiện được.' };
     p.state = res.state;
     return { ok: true, notice: res.blocked ?? res.last.notice };
+  }
+
+  /** Lý do người này chưa thể làm hành vi chung `actionId` lúc này (luật lên kế hoạch của domain), hoặc null nếu được. */
+  canPlanJoint(id: string, actionId: string): string | null {
+    const p = this.players.get(id);
+    if (!p) return 'Bạn chưa tham gia phòng.';
+    if (p.state.finished) return 'Ván của bạn đã kết thúc.';
+    if (p.ready) return 'Bạn đã sẵn sàng. Hủy sẵn sàng để làm tiếp.';
+    const s = p.state;
+    const plan = planAction(actionId, s.location, hoursLeftOf(s), { day: s.day, actionsTodayIds: s.actionsTodayIds, history: s.history });
+    return plan.ok ? null : plan.reason;
   }
 
   setReady(id: string, ready: boolean): void {
@@ -144,6 +165,38 @@ export class LifeEngine {
     const p = this.players.get(id);
     if (!p || p.state.finished) return;
     p.state = advanceDay(p.state).state;
+  }
+
+  /** Dòng ngẫu nhiên riêng cho một nhãn (vd một lời rủ), tất định theo roomSeed + nhãn + ngày. */
+  rngForLabel(label: string, day: number): Rng {
+    return rngFor(this.roomSeed, label, day);
+  }
+
+  /** Lời rủ cám dỗ kéo người ý chí thấp: trả mức ý chí đã mất (<= 0). */
+  applyOfferPressure(id: string, actionId: string): number {
+    const p = this.players.get(id);
+    if (!p || p.state.finished) return 0;
+    const delta = offerPressure(actionId, p.state.stats.willpower);
+    if (delta !== 0) p.state = { ...p.state, stats: applyStatDeltas(p.state.stats, { willpower: delta }) };
+    return delta;
+  }
+
+  /** Lời nhắc / động viên: người nhận hồi ý chí nhẹ, người gửi thêm Kết nối; giới hạn mỗi ngày. */
+  encourage(senderId: string, targetId: string): { ok: true } | { ok: false; reason: string } {
+    const from = this.players.get(senderId);
+    const to = this.players.get(targetId);
+    if (!from || !to) return { ok: false, reason: 'Không tìm thấy người chơi.' };
+    if (from.id === to.id) return { ok: false, reason: 'Không thể tự động viên mình.' };
+    if (from.encouragedDay !== from.state.day) {
+      from.encouragedDay = from.state.day;
+      from.encouragedCount = 0;
+    }
+    const res = encourage(from.state, to.state, from.encouragedCount);
+    if (!res.ok) return { ok: false, reason: res.reason ?? 'Không gửi được.' };
+    from.state = res.sender;
+    to.state = res.target;
+    from.encouragedCount++;
+    return { ok: true };
   }
 
   /** Kẹp đích vào thế giới và vào quãng đường tối đa theo thời gian trôi qua. Trả false nếu payload sai. */

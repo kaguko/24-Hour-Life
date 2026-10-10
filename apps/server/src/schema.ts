@@ -26,6 +26,8 @@ export const PlayerSchema = schema(
     money: t.float32(),
     willpower: t.float32(),
     lastActionId: t.string(),
+    /** Lời rủ đang tham gia ('' nếu không) */
+    offerId: t.string(),
   },
   'Player'
 );
@@ -42,6 +44,20 @@ export const ChatMessageSchema = schema(
 );
 export type ChatMessageSchema = SchemaType<typeof ChatMessageSchema>;
 
+/** Một lời rủ làm hành vi chung đang chờ người */
+export const OfferSchema = schema(
+  {
+    id: t.string(),
+    actionId: t.string(),
+    hostId: t.string(),
+    members: t.array('string'),
+    minPlayers: t.uint8(),
+    maxPlayers: t.uint8(),
+  },
+  'Offer'
+);
+export type OfferSchema = SchemaType<typeof OfferSchema>;
+
 export const LifeState = schema(
   {
     /** Mã phòng 4 ký tự (cũng là roomId) */
@@ -53,6 +69,7 @@ export const LifeState = schema(
     /** Mốc hết giờ của phase hiện tại (epoch ms); 0 = không đếm giờ */
     phaseEndsAt: t.number(),
     players: t.map(PlayerSchema),
+    offers: t.map(OfferSchema),
     chat: t.array(ChatMessageSchema),
   },
   'LifeState'

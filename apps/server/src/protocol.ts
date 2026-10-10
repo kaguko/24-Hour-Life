@@ -48,6 +48,10 @@ export interface ClientMessages {
   chat: { text: string };
   /** Sẵn sàng qua đêm (planning) / sẵn sàng sang ngày mới (morning). `ready: false` để hủy. Mặc định true. */
   ready: { ready?: boolean };
+  /** Hành vi chung: rủ (host), vào lời rủ, rời, bắt đầu (host). */
+  joint: { op: 'offer'; actionId: string } | { op: 'join'; offerId: string } | { op: 'leave' } | { op: 'start' };
+  /** Gửi lời nhắc / động viên cho người khác (hồi ý chí nhẹ cho họ) */
+  nudge: { targetId: string };
 }
 
 /** Server -> client (chỉ gửi riêng cho người gửi) */
@@ -69,7 +73,42 @@ export interface MorningReportMessage {
   finished: boolean;
 }
 
+/** Có người rủ làm hành vi chung */
+export interface InviteMessage {
+  offerId: string;
+  actionId: string;
+  hostId: string;
+  hostName: string;
+  /** Ý chí bạn bị kéo mất vì lời rủ cám dỗ (<= 0) */
+  pressure: number;
+}
+
+export interface JointResultMessage {
+  ok: boolean;
+  actionId: string;
+  offerId: string;
+  reason?: string;
+  notice?: string | null;
+  /** Tên những người cùng làm */
+  withNames?: string[];
+  fellForPressure?: boolean;
+}
+
+export interface NudgeResultMessage {
+  ok: boolean;
+  reason?: string;
+}
+
+export interface NudgedMessage {
+  fromId: string;
+  fromName: string;
+}
+
 export interface ServerMessages {
   action_result: ActionResultMessage;
   morning: MorningReportMessage;
+  invite: InviteMessage;
+  joint_result: JointResultMessage;
+  nudge_result: NudgeResultMessage;
+  nudged: NudgedMessage;
 }
