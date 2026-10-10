@@ -1,0 +1,17 @@
+# Dựng asset bằng Blender MCP
+
+Các script chạy qua công cụ `execute_blender_code` của blender MCP (Blender 4.2, sandbox chỉ cho `bpy`, `bmesh`, `math`, `random`, `mathutils`).
+
+| Script | Sinh ra | Ghi chú |
+|---|---|---|
+| `city_layout.json` | — | Nguồn duy nhất bố cục thành phố (toạ độ three.js) |
+| `build_city.py` | `public/models/city.glb` | Cần import `road-straight.glb`, `road-crossroad.glb` (Kenney City Kit Roads, giải nén vào `assets-raw/city-kit-roads`) và tạo bảng màu `pal_*` trước (xem `ARTBIBLE.md`) |
+| `gen_nav.py` | `public/models/city_nav.json` | `python art/blender/gen_nav.py`: lưới đi bộ 1 m + toạ độ cửa; kiểm tra mọi cửa tới được từ nhà |
+| `build_room_home.py` | `public/models/room_home.glb` | Từ Kenney Furniture Kit |
+| `build_props.py` | `public/models/props/*.glb` | 8 prop < 500 tris, export từng cái bằng `use_selection=True` |
+
+Export mô hình lớn: `bpy.ops.export_scene.gltf(filepath=..., export_format='GLB', export_draco_mesh_compression_enable=True,
+export_draco_mesh_compression_level=7, export_cameras=False, export_lights=False, export_yup=True)`.
+
+Nhân vật không dựng lại: dùng 12 GLB Kenney Mini Characters đã có sẵn rig và 32 clip (idle, walk, sprint, sit, die, interact-*, holding-*, emote-*…),
+ánh xạ tên hoạt hình của game sang clip trong client (`animMap`).

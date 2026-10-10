@@ -13,6 +13,16 @@
 - **Cube Pets** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
   The animated pet dog in the 3D room (`public/models/pets/`).
 
+- **City Kit Roads** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+  Road tiles (`road-straight`, `road-crossroad`) merged into the road mesh of `public/models/city.glb`.
+
+- **3D city and props (original work)**: the buildings, trees, lamps, park and signs in `public/models/city.glb`, `city_nav.json` and the 8 props in `public/models/props/*.glb`
+  were modelled for this project with Blender (scripts in `art/blender/`), using the project palette (`art/ARTBIBLE.md`). Only the road tiles come from Kenney.
+  `public/models/room_home.glb` is assembled in Blender from the Kenney Furniture Kit models above plus original walls/window.
+  Character models and animations in the city are the Kenney Mini Characters (no new character art was made).
+
+- **Draco decoder** (`public/draco/`): Google Draco, Apache License 2.0, copied from three.js (`examples/jsm/libs/draco`). Used to decode compressed GLB files.
+
 - **Reaction stickers** (`public/stickers/`): original blob-mascot illustrations generated with Canva AI, background removed and white outline added locally. 5 so far (cooked, lockedin, rizz, win, loss).
 
 ## Audio

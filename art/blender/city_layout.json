@@ -1,0 +1,143 @@
+{
+  "_doc": "Nguồn duy nhất cho bố cục thành phố (toạ độ không gian three.js: x, z; +z là 'nam'). build_city.py (Blender) và gen_nav.py đều đọc file này.",
+  "world": 60,
+  "road_tile_scale": 2,
+  "roads": {
+    "x": [
+      -9,
+      9
+    ],
+    "z": [
+      -9,
+      9
+    ]
+  },
+  "buildings": [
+    {
+      "id": "school",
+      "sign": "SCHOOL",
+      "cx": -20,
+      "cz": -20,
+      "w": 14,
+      "d": 11,
+      "h": 6.0,
+      "wall": "pal_09",
+      "roof": "pal_07",
+      "accent": "pal_04",
+      "door": "+z",
+      "roof_type": "flat",
+      "style": "tower"
+    },
+    {
+      "id": "office",
+      "sign": "OFFICE",
+      "cx": 0,
+      "cz": -20,
+      "w": 12,
+      "d": 10,
+      "h": 10.0,
+      "wall": "pal_02",
+      "roof": "pal_11",
+      "accent": "pal_12",
+      "door": "+z",
+      "roof_type": "flat",
+      "style": "office"
+    },
+    {
+      "id": "cafe",
+      "sign": "CAFE",
+      "cx": 20,
+      "cz": -20,
+      "w": 11,
+      "d": 9,
+      "h": 4.5,
+      "wall": "pal_07",
+      "roof": "pal_08",
+      "accent": "pal_05",
+      "door": "+z",
+      "roof_type": "flat",
+      "style": "cafe"
+    },
+    {
+      "id": "market",
+      "sign": "MARKET",
+      "cx": -20,
+      "cz": 0,
+      "w": 14,
+      "d": 10,
+      "h": 4.5,
+      "wall": "pal_06",
+      "roof": "pal_07",
+      "accent": "pal_04",
+      "door": "+x",
+      "roof_type": "gable",
+      "style": "market"
+    },
+    {
+      "id": "gym",
+      "sign": "GYM",
+      "cx": 20,
+      "cz": 0,
+      "w": 13,
+      "d": 10,
+      "h": 5.0,
+      "wall": "pal_10",
+      "roof": "pal_11",
+      "accent": "pal_01",
+      "door": "-x",
+      "roof_type": "flat",
+      "style": "gym"
+    },
+    {
+      "id": "home",
+      "sign": "HOME",
+      "cx": -20,
+      "cz": 20,
+      "w": 12,
+      "d": 10,
+      "h": 6.0,
+      "wall": "pal_07",
+      "roof": "pal_09",
+      "accent": "pal_10",
+      "door": "-z",
+      "roof_type": "gable",
+      "style": "home"
+    },
+    {
+      "id": "bar",
+      "sign": "BAR",
+      "cx": 0,
+      "cz": 20,
+      "w": 12,
+      "d": 10,
+      "h": 5.0,
+      "wall": "pal_08",
+      "roof": "pal_11",
+      "accent": "pal_05",
+      "door": "-z",
+      "roof_type": "flat",
+      "style": "bar"
+    },
+    {
+      "id": "arcade",
+      "sign": "ARCADE",
+      "cx": 20,
+      "cz": 20,
+      "w": 12,
+      "d": 10,
+      "h": 5.5,
+      "wall": "pal_03",
+      "roof": "pal_11",
+      "accent": "pal_04",
+      "door": "-z",
+      "roof_type": "flat",
+      "style": "arcade"
+    }
+  ],
+  "park": {
+    "cx": 0,
+    "cz": 0,
+    "size": 16,
+    "plaza_radius": 3.5
+  }
+}
