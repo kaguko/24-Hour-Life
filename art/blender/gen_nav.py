@@ -32,6 +32,9 @@ def tree_points():
         if not inside and abs(x) <= HALF - 1 and abs(z) <= HALF - 1: out.append((x, z))
     return out
 
+# vật cản của lớp chi tiết (build_city_details.py -> run_city_details.py --export)
+_det = ROOT / "art/blender/city_details_obstacles.json"
+details = json.loads(_det.read_text(encoding="utf-8"))["obstacles"] if _det.exists() else []
 blocked = [[False] * W for _ in range(W)]
 rects = [footprint(b) for b in L["buildings"]]
 trees = tree_points()
@@ -42,6 +45,7 @@ for j in range(W):
         if any(abs(x - cx) < ex / 2 + 0.5 and abs(z - cz) < ez / 2 + 0.5 for cx, cz, ex, ez in rects): blocked[j][i] = True
         elif any(math.hypot(x - tx, z - tz) < 0.7 for tx, tz in trees): blocked[j][i] = True
         elif math.hypot(x - L["park"]["cx"], z - L["park"]["cz"]) < 1.9: blocked[j][i] = True   # chòi nghỉ giữa công viên
+        elif any(math.hypot(x - ox, z - oz) < r + 0.1 for ox, oz, r in details): blocked[j][i] = True   # prop của lớp chi tiết
 
 # Điểm đứng trước cửa: cách mặt tiền 2.4 m (qua mái hiên/bậc thềm) để nhân vật không bị mái che.
 # (Empty door_<id> trong city.glb đánh dấu 1.3 m; client dùng toạ độ trong file nav này.)
@@ -78,4 +82,4 @@ nav = {
 out = ROOT / "apps/web/public/models/city_nav.json"
 out.write_text(json.dumps(nav, separators=(",", ":")), encoding="utf-8")
 walk = sum(row.count("1") for row in nav["walk"])
-print(f"city_nav.json: {out.stat().st_size} bytes, walkable {walk}/{W*W}, reachable {len(seen)}, doors {list(doors)}")
+print(f"city_nav.json: {out.stat().st_size} bytes, walkable {walk}/{W*W}, reachable {len(seen)}, detail obstacles {len(details)}, doors {list(doors)}")

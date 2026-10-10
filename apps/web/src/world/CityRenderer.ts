@@ -105,6 +105,9 @@ interface Actor {
   inside: string | null;
 }
 
+/** Chi tiết mái (building_<id>__roof trong city_details.glb) mờ và bấm chọn cùng toà nhà <id> */
+const ROOF_SUFFIX = '__roof';
+
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
@@ -189,12 +192,31 @@ export class CityRenderer {
 
   // ---------- tải cảnh ----------
   async init(): Promise<NavGrid> {
-    const [gltf, navData] = await Promise.all([
+    // lớp chi tiết (đồ đạc phố, mái, nền xa) là tuỳ chọn: thiếu file thì thành phố vẫn chạy
+    const optional = (url: string) => this.loader.loadAsync(url).catch(() => null);
+    const [gltf, details, backdrop, navData] = await Promise.all([
       this.loader.loadAsync('/models/city.glb'),
+      optional('/models/city_details.glb'),
+      optional('/models/city_backdrop.glb'),
       fetch('/models/city_nav.json').then((r) => r.json() as Promise<NavData>),
     ]);
     this.nav = new NavGrid(navData);
-    gltf.scene.traverse((o) => {
+    for (const g of [gltf, details, backdrop]) if (g) this.registerScene(g.scene);
+    this.scene.add(gltf.scene);
+    if (backdrop) this.scene.add(backdrop.scene);
+    if (details) this.scene.add(details.scene);
+    this.buildSigns(navData);
+    this.setClock(8);
+    this.camTarget.set(navData.spawn.x, 0, navData.spawn.z);
+    this.positionCamera(1);
+    this.clock.start();
+    this.loop();
+    return this.nav;
+  }
+
+  /** Gom toà nhà (để làm mờ / bấm chọn) và vật liệu phát sáng ban đêm của một cảnh glb */
+  private registerScene(root: THREE.Object3D): void {
+    root.traverse((o) => {
       if (o.name.startsWith('building_')) {
         this.buildingMeshes.push(o);
         const mats: THREE.Material[] = [];
@@ -217,14 +239,6 @@ export class CityRenderer {
         }
       }
     });
-    this.scene.add(gltf.scene);
-    this.buildSigns(navData);
-    this.setClock(8);
-    this.camTarget.set(navData.spawn.x, 0, navData.spawn.z);
-    this.positionCamera(1);
-    this.clock.start();
-    this.loop();
-    return this.nav;
   }
 
   private buildSigns(navData: NavData): void {
@@ -817,6 +831,7 @@ export class CityRenderer {
       if (o) hit.add(o.name);
     }
     this.raycaster.far = Infinity;
+    for (const n of [...hit]) hit.add(n.endsWith(ROOF_SUFFIX) ? n.slice(0, -ROOF_SUFFIX.length) : n + ROOF_SUFFIX);
     for (const [name, b] of this.buildingFade) {
       const target = hit.has(name) ? 0.18 : 1;
       b.opacity += (target - b.opacity) * Math.min(1, dt * 8);
@@ -880,7 +895,7 @@ export class CityRenderer {
       let o: THREE.Object3D | null = hit.object;
       while (o && !o.name.startsWith('building_')) o = o.parent;
       if (o) {
-        this.opts.onBuilding(o.name.slice('building_'.length));
+        this.opts.onBuilding(o.name.slice('building_'.length).replace(ROOF_SUFFIX, ''));
         return;
       }
     }
