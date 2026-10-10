@@ -32,7 +32,7 @@ Smoke prints PASS/FAIL lines + a JSON summary, exit 0 on success, and writes `sm
 Extend `driver.mjs` for deeper flows; useful selectors: buttons by accessible name `Bắt đầu ngày 1` (intro), `Danh sách hành vi`, `Chọn hành vi này` (one per action card), nav `Thành phố` / `Phòng` / `Mô phỏng 1000 lần`; modals are `role=dialog`.
 
 ## Direct domain invocation (no browser)
-Game rules are pure TS in `src/domain/` (no React/localStorage), so for balance/logic changes:
+Game rules are pure TS in `packages/domain/src/` (no React/localStorage), so for balance/logic changes:
 ```bash
 npx tsx .claude/skills/run-24-hour-life/sim.ts "" 200        # all 5 strategies, 200 runs each
 npx tsx .claude/skills/run-24-hour-life/sim.ts <strategyId> 500
@@ -40,7 +40,7 @@ npx tsx .claude/skills/run-24-hour-life/sim.ts <strategyId> 500
 Baseline seen: Balanced Realist 100% survive; Dopamine Chaser / Workaholic / Pure Sleeper ~0% (burnout); Party Animal ~94%.
 
 ## Test / check
-There is no test suite. Use: `npm run lint` (`tsc --noEmit`, clean) and `npm run build` (OK; chunk-size warning is expected).
+Monorepo (npm workspaces: `packages/domain`, `apps/web`, `apps/server`). Use `npm test` (domain determinism tests), `npm run lint` (tsc, all workspaces) and `npm run build` (OK; chunk-size warning is expected).
 
 ## Run (human path)
 `npm run dev` then open http://localhost:3000. Useless headless.

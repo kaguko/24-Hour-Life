@@ -4,7 +4,7 @@
 ---
 
 ## 📌 1. Nguyên Tắc Cốt Lõi: Clean Architecture Lite
-1. **Domain logic KHÔNG import UI, KHÔNG import React, KHÔNG import localStorage**: Mọi quy luật toán học, cân bằng chỉ số nằm trong `src/domain/`.
+1. **Domain logic KHÔNG import UI, KHÔNG import React, KHÔNG import localStorage**: Mọi quy luật toán học, cân bằng chỉ số nằm trong `packages/domain/src/`.
 2. **Domain chỉ nhận input primitive, trả về output primitive**: Các hàm nhận `string`, `number`, `boolean`, trả về plain DTOs hoặc primitives.
 3. **UI + Storage là "adapter" cắm vào domain**: Giao diện (`src/ui/`) và Bộ nhớ (`src/adapters/storageAdapter.ts`), Âm thanh (`src/adapters/audioAdapter.ts`) cắm vào Domain thông qua Controller Hook (`src/adapters/useGameAdapter.ts`).
 4. **Kiểm chứng "có vui không" trước, kiếm tiền sau.**
@@ -25,12 +25,12 @@
   - [x] 6 chỉ số: `dopamine`, `energy`, `mental`, `social`, `money`, và **`willpower`** (Ý chí).
   - [x] Bộ đánh giá trạng thái người chơi: *Cân bằng (thriving), Ổn định (stable), Căng thẳng (stressed), Kiệt quệ (burnout), Phá sản (bankrupt)*.
   - [x] Chi phí sinh hoạt cố định: Trừ tiền trọ 120k VNĐ/ngày.
-- [x] **`src/domain/actions.ts`**:
+- [x] **`packages/domain/src/actions.ts`**:
   - [x] Hệ thống hành vi phân loại theo **Hai con đường Dopamine**:
     - **⚡ Dopamine Nhanh (Fast/Cheap)**: Doomscrolling TikTok, Cày game gây nghiện, Đồ ăn siêu ngon miệng, Mua sắm bốc đồng, Nhậu đêm, Caffeine ép tỉnh.
     - **🌱 Dopamine Chậm (Slow/Healthy)**: Chạy bộ, Đi bộ 20p phơi nắng, Vuốt ve thú cưng, Học kỹ năng & nhạc cụ, Trò chuyện sâu, Thiền định, Nấu ăn giàu Tyrosine, Nghe album nhạc, Dọn dẹp nhà cửa.
   - [x] **Cơ chế cốt lõi - Bẫy suy giảm ý chí**: Khi `willpower < 35`, hành vi Dopamine Nhanh phóng đại khoái cảm ảo, hành vi Dopamine Chậm bị não bộ phản kháng gây sức ì ý chí.
-- [x] **`src/domain/consequence.ts`**:
+- [x] **`packages/domain/src/consequence.ts`**:
   - [x] Tính toán hậu quả trễ qua đêm: Nợ ngủ (`Sleep Debt`), Cơn sụp đổ Dopamine Nhanh (`Fast Dopamine Crash`), Tích lũy Dopamine Chậm (`Slow Dopamine Consolidation`), Cô lập xã hội, Áp lực nợ nần.
   - [x] Hé lộ các quy luật khoa học thần kinh ẩn sau ngày 2–5.
 - [x] **`src/core/events.ts`**:
@@ -58,7 +58,7 @@
 - [x] **`src/ui/MorningModal.tsx`**:
   - [x] Báo cáo hậu quả trễ qua đêm mỗi sáng (trừ tiền trọ, nợ ngủ, dopamine crash, quy luật ẩn).
   - [x] **Đúc kết triết lý vĩ nhân**: Tự động trích dẫn danh ngôn tương ứng với chủ đề hành vi nổi bật trong ngày (Seneca, Marcus Aurelius, Lão Tử, Socrates, Khổng Tử, Mark Twain, v.v.).
-- [x] **`src/domain/quotes.ts`**:
+- [x] **`packages/domain/src/quotes.ts`**:
   - [x] Kho tàng triết lý vĩ nhân phân loại theo 9 chủ đề tâm lý học hành vi.
 - [x] **`src/ui/EventModal.tsx`**:
   - [x] Pop-up xử lý biến cố bất ngờ trong ngày với phản hồi chi tiết.
@@ -177,7 +177,7 @@ Trước đây luật qua đêm coi `dopamine ≥ 75` từ **bất kỳ nguồn 
 ## 🧭 4. Chỉ Dẫn Dành Cho Agent Khi Làm Việc Tiếp Theo
 1. **Kiểm tra file này trước tiên**: Bất cứ khi nào nhận yêu cầu mới, agent đọc `ROADMAP.md` để biết tính năng nào đã có và tính năng nào là bước kế tiếp.
 2. **Tuân thủ Clean Architecture Lite**:
-   - Mọi nghiệp vụ phải nằm trong `src/domain/`, KHÔNG import React/UI/localStorage vào domain.
+   - Mọi nghiệp vụ phải nằm trong `packages/domain/src/`, KHÔNG import React/UI/localStorage vào domain.
    - Domain chỉ nhận tham số primitive (`string`, `number`, `boolean`) và trả về primitive/plain DTOs.
    - Giao diện và Storage chỉ là Adapter thông qua `src/adapters/`.
 3. **Không sửa số liệu bằng cảm giác**: Khi thay đổi chỉ số trong `domain/actions.ts` hoặc `domain/consequence.ts`, hãy chạy kiểm chứng qua tab **"Mô phỏng 1000 lần"** (`simulate.ts`) để bảo đảm tính cân bằng không bị vỡ.

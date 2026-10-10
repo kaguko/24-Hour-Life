@@ -79,7 +79,7 @@ Game tích hợp sẵn công cụ mô phỏng chiến thuật tự động ngay 
 ## 🏛️ Kiến Trúc "Clean Architecture Lite"
 
 Dự án áp dụng chặt chẽ 3 nguyên tắc cốt lõi:
-1. **Domain logic KHÔNG import UI, KHÔNG import React, KHÔNG import localStorage:** Mọi công thức tính toán, quy luật nhân quả và cân bằng số liệu được cô lập hoàn toàn tại `src/domain/`.
+1. **Domain logic KHÔNG import UI, KHÔNG import React, KHÔNG import localStorage:** Mọi công thức tính toán, quy luật nhân quả và cân bằng số liệu được cô lập hoàn toàn tại `packages/domain/src/`.
 2. **Domain chỉ nhận input primitive, trả về output primitive:** Mọi hàm nghiệp vụ giao tiếp bằng kiểu dữ liệu nguyên thủy (`string`, `number`, `boolean`, plain arrays) và trả về DTOs thuần túy.
 3. **UI + Storage là "adapter" cắm vào domain:** React UI, LocalStorage và Web Audio đóng vai trò là các plugin/adapter cắm vào Domain Facade thông qua Controller Hook `useGameAdapter`.
 
@@ -146,6 +146,18 @@ npm run lint
 # Build bản phát hành (Production)
 npm run build
 ```
+
+### Cấu Trúc Monorepo (npm workspaces)
+
+```
+packages/domain   @24h/domain  luật chơi thuần, build bằng tsc -> dist (chạy được cả trong Node)
+apps/web          @24h/web     Vite + React (import @24h/domain)
+apps/server       (trống, thêm sau)
+```
+
+- Ở root: `npm run dev | build | lint | test` chạy qua các workspace (domain trước, rồi web).
+- `apps/web` đọc thẳng `packages/domain/src` (điều kiện `source` trong `exports`) nên có HMR và không cần build domain trước; Node/server dùng `dist`.
+- **Vercel:** đặt *Root Directory* = `apps/web` (giữ bật "Include source files outside of the Root Directory"). `vercel.json` nằm trong `apps/web`.
 
 ---
 

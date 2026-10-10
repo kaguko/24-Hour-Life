@@ -1,6 +1,6 @@
 // Direct domain call: headless balance simulation, no browser/React.
 // Usage: npx tsx .claude/skills/run-24-hour-life/sim.ts [strategyId] [runs]
-import { DOMAIN_STRATEGIES, runDomainSimulation } from '../../../src/domain/simulate';
+import { DOMAIN_STRATEGIES, runDomainSimulation } from '../../../packages/domain/src/simulate';
 
 const [id, runs] = [process.argv[2], Number(process.argv[3] ?? 200)];
 const ids = id ? [id] : DOMAIN_STRATEGIES.map((s) => s.id);
