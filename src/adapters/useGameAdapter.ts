@@ -3,122 +3,102 @@
  * React Hook Adapter plugging UI views into the pure Domain Facade.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  PlayerStatsPrimitive,
-  INITIAL_STATS,
+  PlayerState,
+  IntrusionState,
   NightResultPrimitive,
   EventPrimitive,
   DOMAIN_ACTIONS,
-  executeActionById,
-  processOvernightCycle,
   evaluateLifeStatus,
-  rollDomainEvent,
-  resolveDomainChoice,
   evaluateEnding,
   buildJourney,
   DayGrade,
-  pickGoalIds,
   isGoalId,
   GOAL_COUNT_PER_RUN,
   LocationId,
   isLocationId,
   planAction,
   planTravel,
-  rollPlaceEvent,
-  IntrusionDef,
-  INTRUSIONS,
-  IntrusionKind,
-  MAX_INTRUSION_ROUNDS,
-  rollIntrusion,
-  resistCost,
-  applyStatDeltas,
-  clockFromHoursRemaining,
   BigEventState,
   BigEventOutcome,
-  BigEventTier,
-  pickBigEvent,
   isBigEventId,
   resolveBigEvent,
   BIG_EVENT_DAY,
   BIG_EVENT_AFTER_HOURS,
-  BIG_EVENT_ACTION_ID,
-  BIG_EVENT_HOURS,
-  bigEventDef,
-  TIER_LABEL,
   Rng,
+  createPlayerState,
+  applyAction,
+  rollDayEvents,
+  registerIntrusion,
+  endDay,
+  advanceDay,
+  applyEventChoice,
+  applyIntrusionAnswer,
+  applyBigEventOutcome,
+  hoursLeftOf,
 } from '../domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
 import { AvatarId, DEFAULT_AVATAR, isAvatarId } from '../lib/avatars';
 
-interface IntrusionState {
-  kind: IntrusionKind;
-  round: number;
-  chunks: number;
-  hoursSpent: number;
-  note: string | null;
-}
-
 /** Nguồn ngẫu nhiên của game thật; domain chỉ nhận qua tham số */
 const rng: Rng = Math.random;
 
+/**
+ * Hook chỉ giữ PlayerState (tiến trình ván) + trạng thái UI tạm thời và gọi các hàm thuần trong domain/gameState.
+ */
 export function useGameAdapter() {
-  const [day, setDay] = useState<number>(1);
-  const [hoursUsed, setHoursUsed] = useState<number>(0);
-  const [stats, setStats] = useState<PlayerStatsPrimitive>(INITIAL_STATS);
-  const [sleepDebt, setSleepDebt] = useState<number>(0);
-  const [actionsTodayIds, setActionsTodayIds] = useState<string[]>([]);
+  const [game, setGame] = useState<PlayerState>(() => createPlayerState(rng));
+  // Bản mới nhất của game: các timeout (qua đêm sau 400ms...) đọc ở đây thay vì closure cũ
+  const gameRef = useRef(game);
+  const commit = useCallback((next: PlayerState) => {
+    gameRef.current = next;
+    setGame(next);
+  }, []);
+  const { day, hoursUsed, stats, sleepDebt, actionsTodayIds, history, dayStartStats, dayGrades, goalIds, location, finished, bigEvent } = game;
+
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
-  const [history, setHistory] = useState<string[][]>([]);
   const [avatarId, setAvatarId] = useState<AvatarId>(DEFAULT_AVATAR);
   // Hành vi vừa chọn (cho cảnh 3D); n tăng dần để lặp lại cùng hành vi vẫn kích hoạt hiệu ứng
   const [lastAction, setLastAction] = useState<{ id: string; n: number } | null>(null);
-  const [finished, setFinished] = useState<boolean>(false);
-  // Chỉ số lúc đầu ngày (để tổng kết cả ngày) và hạng của các ngày đã qua
-  const [dayStartStats, setDayStartStats] = useState<PlayerStatsPrimitive>(INITIAL_STATS);
-  const [dayGrades, setDayGrades] = useState<DayGrade[]>([]);
-  // Mục tiêu của ván này (bốc ngẫu nhiên khi bắt đầu ván mới)
-  const [goalIds, setGoalIds] = useState<string[]>(() => pickGoalIds(rng));
-  // Nhân vật đang ở đâu trong thành phố (mỗi sáng thức dậy ở nhà)
-  const [location, setLocation] = useState<LocationId>('home');
   const [isIntroOpen, setIsIntroOpen] = useState<boolean>(() => !storageAdapter.hasSeenIntro());
 
-  // Transient UX states
+  // Transient UX states (hộp thoại đang chờ người chơi)
   const [notice, setNotice] = useState<string | null>(null);
   const [morningReport, setMorningReport] = useState<NightResultPrimitive | null>(null);
   const [activeEvent, setActiveEvent] = useState<EventPrimitive | null>(null);
-  // Cám dỗ đang xâm nhập (ý chí thấp): round tăng mỗi lần chiều theo, dừng lại càng khó
   const [intrusion, setIntrusion] = useState<IntrusionState | null>(null);
-  const [intrusionsToday, setIntrusionsToday] = useState<number>(0);
-  // Sự kiện lớn của tuần: độ khó thật được giấu khỏi người chơi
-  const [bigEvent, setBigEvent] = useState<BigEventState>(() => pickBigEvent(rng));
   const [pendingBigEvent, setPendingBigEvent] = useState<BigEventOutcome | null>(null);
 
   // Restore on mount via storageAdapter
   useEffect(() => {
     const saved = storageAdapter.load();
     if (saved) {
-      setDay(saved.day);
-      setHoursUsed(saved.hoursUsed);
-      setStats(saved.stats);
-      setSleepDebt(saved.sleepDebt);
-      setActionsTodayIds(saved.actionsTodayIds);
+      const next: PlayerState = {
+        ...gameRef.current,
+        day: saved.day,
+        hoursUsed: saved.hoursUsed,
+        stats: saved.stats,
+        sleepDebt: saved.sleepDebt,
+        actionsTodayIds: saved.actionsTodayIds,
+        history: saved.history ?? [],
+        finished: saved.finished ?? false,
+        dayStartStats: saved.dayStartStats ?? saved.stats,
+        dayGrades: (saved.dayGrades ?? []) as DayGrade[],
+      };
       setSoundEnabled(saved.soundEnabled);
-      setHistory(saved.history ?? []);
-      setFinished(saved.finished ?? false);
-      setDayStartStats(saved.dayStartStats ?? saved.stats);
-      setDayGrades((saved.dayGrades ?? []) as DayGrade[]);
       if (isAvatarId(saved.avatarId)) setAvatarId(saved.avatarId);
       const savedGoals = (saved.goalIds ?? []).filter(isGoalId);
-      if (savedGoals.length === GOAL_COUNT_PER_RUN) setGoalIds(savedGoals);
-      if (isLocationId(saved.location)) setLocation(saved.location);
+      if (savedGoals.length === GOAL_COUNT_PER_RUN) next.goalIds = savedGoals;
+      if (isLocationId(saved.location)) next.location = saved.location;
       if (saved.bigEvent && isBigEventId(saved.bigEvent.id) && typeof saved.bigEvent.difficulty === 'number') {
-        setBigEvent({ id: saved.bigEvent.id, difficulty: saved.bigEvent.difficulty, result: saved.bigEvent.result as BigEventState['result'] });
+        next.bigEvent = { id: saved.bigEvent.id, difficulty: saved.bigEvent.difficulty, result: saved.bigEvent.result as BigEventState['result'] };
       }
+      commit(next);
       audioAdapter.enabled = saved.soundEnabled;
     }
-  }, []);
+  }, [commit]);
 
   // Auto-save on changes
   useEffect(() => {
@@ -140,7 +120,7 @@ export function useGameAdapter() {
     });
   }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds, location, bigEvent]);
 
-  const hoursRemaining = Math.max(0, 24 - hoursUsed);
+  const hoursRemaining = hoursLeftOf(game);
 
   const lifeStatus = useMemo(() => evaluateLifeStatus(stats), [stats]);
 
@@ -179,95 +159,56 @@ export function useGameAdapter() {
     audioAdapter.setMusicNight(clock >= 19 || clock < 6);
   }, [hoursUsed]);
 
-  // Trigger day end transition
-  const endDay = useCallback(
-    (customEndStats = stats, customActionIds = actionsTodayIds) => {
+  // Qua đêm: tính hậu quả trên bản mới nhất của game; stats/ids có thể truyền vào (mốc ngay sau hành động cuối)
+  const finishDay = useCallback(
+    (endStats = gameRef.current.stats, endIds = gameRef.current.actionsTodayIds) => {
       audioAdapter.playCue('night');
-      const nightResult = processOvernightCycle(
-        customEndStats,
-        customActionIds,
-        sleepDebt,
-        day,
-        dayStartStats,
-        rng
-      );
-      const grade = nightResult.recap?.grade;
-      if (grade) setDayGrades((prev) => [...prev, grade]);
-
-      setHistory((prev) => [...prev, customActionIds]);
-      setStats(nightResult.newStats);
-      setSleepDebt(nightResult.newSleepDebt);
-      setMorningReport(nightResult);
+      const cur = gameRef.current;
+      const res = endDay({ ...cur, stats: endStats, actionsTodayIds: endIds }, rng);
+      commit(res.state);
+      setMorningReport(res.night);
     },
-    [stats, actionsTodayIds, sleepDebt, day, dayStartStats]
+    [commit]
   );
 
   // Chạy lần lượt các bước (đi đường rồi làm) và cập nhật trạng thái một lần
   const runSteps = useCallback(
     (steps: string[], realActionId: string | null, endLocation: LocationId) => {
-      let s = stats;
-      let ids = actionsTodayIds;
-      let left = Math.max(0, 24 - hoursUsed);
-      let last: ReturnType<typeof executeActionById> | null = null;
-      let traveled = false;
-      let blocked: string | null = null;
-
-      for (const stepId of steps) {
-        const r = executeActionById(stepId, s, left, ids, day, history, rng);
-        if (!r.success) {
-          blocked = r.notice;
-          break;
-        }
-        s = r.newStats;
-        ids = [...ids, stepId];
-        left -= r.hoursSpent;
-        last = r;
-        if (stepId !== realActionId) traveled = true;
-      }
-
-      if (!last) {
-        setNotice(blocked);
+      const res = applyAction(game, steps, realActionId, endLocation, rng);
+      if (!res.applied || !res.last) {
+        setNotice(res.blocked);
         audioAdapter.playCue('neutral');
         return;
       }
 
-      audioAdapter.playCue(last.soundCue);
-      const nextHoursUsed = 24 - left;
-      setStats(s);
-      setHoursUsed(nextHoursUsed);
-      setActionsTodayIds(ids);
-      setLocation(blocked ? location : endLocation);
+      audioAdapter.playCue(res.last.soundCue);
+      commit(res.state);
       if (realActionId) setLastAction((prev) => ({ id: realActionId, n: (prev?.n ?? 0) + 1 }));
-      setNotice(realActionId ? last.notice : null);
+      setNotice(realActionId ? res.last.notice : null);
 
-      // Sự kiện: trên đường đi, tại địa điểm, hoặc ngẫu nhiên chung (chỉ một sự kiện mỗi lần)
-      let rolled: EventPrimitive | null = null;
-      if (!activeEvent && !blocked) {
-        if (traveled && rng() < 0.3) rolled = rollPlaceEvent('road', day, rng);
-        if (!rolled && realActionId && endLocation !== 'home' && rng() < 0.2) rolled = rollPlaceEvent(endLocation, day, rng);
-        if (!rolled && nextHoursUsed >= 8 && nextHoursUsed <= 18 && rng() < 0.35) rolled = rollDomainEvent(day, rng);
+      // Sự kiện (tối đa một mỗi lần) rồi cám dỗ xâm nhập khi ý chí thấp
+      const rolled = rollDayEvents(
+        res.state,
+        {
+          traveled: res.traveled,
+          realActionId,
+          endLocation,
+          blocked: res.blocked,
+          hasActiveEvent: !!activeEvent,
+          hasIntrusion: !!intrusion,
+        },
+        rng
+      );
+      const def = rolled.intrusion;
+      if (def) {
+        setTimeout(() => {
+          audioAdapter.playCue('temptation');
+          setIntrusion({ kind: def.kind, round: 0, chunks: 0, hoursSpent: 0, note: null });
+          commit(registerIntrusion(gameRef.current));
+        }, 350);
       }
-      // Ý chí thấp: cám dỗ tự tìm đến (không chồng lên sự kiện đang hiện)
-      if (!rolled && !activeEvent && !intrusion && !blocked && nextHoursUsed < 24) {
-        const lastId = realActionId ?? ids[ids.length - 1];
-        const lastAction = DOMAIN_ACTIONS.find((a) => a.id === lastId);
-        const def: IntrusionDef | null = rollIntrusion(s, {
-          clock: clockFromHoursRemaining(left),
-          hoursLeft: left,
-          intrusionsToday,
-          lastActionId: lastId,
-          lastWasRest: lastAction?.category === 'rest',
-        }, rng);
-        if (def) {
-          setTimeout(() => {
-            audioAdapter.playCue('temptation');
-            setIntrusion({ kind: def.kind, round: 0, chunks: 0, hoursSpent: 0, note: null });
-            setIntrusionsToday((c) => c + 1);
-          }, 350);
-        }
-      }
-      if (rolled) {
-        const ev = rolled;
+      const ev = rolled.event;
+      if (ev) {
         setTimeout(() => {
           audioAdapter.playCue('event');
           setActiveEvent(ev);
@@ -275,17 +216,17 @@ export function useGameAdapter() {
       }
 
       // Hết 24h: qua đêm
-      if (nextHoursUsed >= 24) {
-        setTimeout(() => endDay(s, ids), 400);
+      if (res.state.hoursUsed >= 24) {
+        setTimeout(() => finishDay(res.state.stats, res.state.actionsTodayIds), 400);
       }
     },
-    [stats, actionsTodayIds, hoursUsed, day, history, location, activeEvent, intrusion, intrusionsToday, endDay]
+    [game, activeEvent, intrusion, commit, finishDay]
   );
 
   // Action dispatcher: tự đi đến nơi diễn ra hành vi nếu đang ở chỗ khác
   const takeAction = useCallback(
     (actionId: string) => {
-      const plan = planAction(actionId, location, Math.max(0, 24 - hoursUsed), { day, actionsTodayIds, history });
+      const plan = planAction(actionId, location, hoursLeftOf(game), { day, actionsTodayIds, history });
       if (!plan.ok) {
         setNotice(plan.reason);
         audioAdapter.playCue('neutral');
@@ -293,13 +234,13 @@ export function useGameAdapter() {
       }
       runSteps(plan.steps, actionId, plan.endLocation);
     },
-    [location, hoursUsed, day, actionsTodayIds, history, runSteps]
+    [location, game, day, actionsTodayIds, history, runSteps]
   );
 
   // Chỉ di chuyển đến một nơi (ví dụ về nhà)
   const travelTo = useCallback(
     (to: LocationId) => {
-      const plan = planTravel(location, to, Math.max(0, 24 - hoursUsed));
+      const plan = planTravel(location, to, hoursLeftOf(game));
       if (!plan.ok) {
         setNotice(plan.reason);
         audioAdapter.playCue('neutral');
@@ -307,59 +248,23 @@ export function useGameAdapter() {
       }
       runSteps(plan.steps, null, plan.endLocation);
     },
-    [location, hoursUsed, runSteps]
+    [location, game, runSteps]
   );
 
   // Trả lời cám dỗ: cưỡng lại (tốn ý chí, nếu đủ) hoặc chiều theo (mất giờ, có thể bị kéo vào vòng lặp)
   const answerIntrusion = useCallback(
     (choice: 'resist' | 'yield') => {
       if (!intrusion) return;
-      const def = INTRUSIONS[intrusion.kind];
-      const cost = resistCost(intrusion.round);
-
-      if (choice === 'resist' && stats.willpower >= cost) {
-        audioAdapter.playCue('healthy');
-        setStats(applyStatDeltas(stats, { willpower: -cost, mental: 2 }));
-        setNotice(
-          intrusion.chunks === 0
-            ? `Bạn cưỡng lại được "${def.title}" (-${cost} ý chí).`
-            : `Cuối cùng bạn cũng dừng lại được, sau ${intrusion.hoursSpent}h.`
-        );
-        setIntrusion(null);
-        return;
-      }
-
-      // Chiều theo, hoặc muốn dừng nhưng ý chí không đủ
-      const left = Math.max(0, 24 - hoursUsed);
-      const r = executeActionById(def.actionId, stats, left, actionsTodayIds, day, history, rng);
-      if (!r.success) {
-        setIntrusion(null);
-        return;
-      }
-      audioAdapter.playCue('temptation');
-      const ids = [...actionsTodayIds, def.actionId];
-      const nextLeft = left - r.hoursSpent;
-      const spent = intrusion.hoursSpent + r.hoursSpent;
-      setStats(r.newStats);
-      setHoursUsed(24 - nextLeft);
-      setActionsTodayIds(ids);
-      setLastAction((prev) => ({ id: def.actionId, n: (prev?.n ?? 0) + 1 }));
-
-      if (def.loop && nextLeft >= 0.5 && intrusion.round < MAX_INTRUSION_ROUNDS) {
-        setIntrusion({
-          ...intrusion,
-          round: intrusion.round + 1,
-          chunks: intrusion.chunks + 1,
-          hoursSpent: spent,
-          note: choice === 'resist' ? 'Bạn cố dừng nhưng ý chí không còn đủ. Video kế tiếp đã chạy.' : null,
-        });
-      } else {
-        setIntrusion(null);
-        setNotice(`Bạn đã mất ${spent}h cho "${def.title}".`);
-      }
-      if (nextLeft <= 0) setTimeout(() => endDay(r.newStats, ids), 400);
+      const r = applyIntrusionAnswer(game, intrusion, choice, rng);
+      if (r.cue) audioAdapter.playCue(r.cue);
+      commit(r.state);
+      const actionId = r.actionId;
+      if (actionId) setLastAction((prev) => ({ id: actionId, n: (prev?.n ?? 0) + 1 }));
+      setIntrusion(r.intrusion);
+      if (r.notice !== undefined) setNotice(r.notice);
+      if (r.endsDay) setTimeout(() => finishDay(r.state.stats, r.state.actionsTodayIds), 400);
     },
-    [intrusion, stats, hoursUsed, actionsTodayIds, day, history, endDay]
+    [intrusion, game, commit, finishDay]
   );
 
   // Đến giờ sự kiện lớn (Thứ Bảy 14:00): tính kết quả khi không còn hộp thoại nào đang mở
@@ -373,40 +278,22 @@ export function useGameAdapter() {
 
   const confirmBigEvent = useCallback(() => {
     if (!pendingBigEvent) return;
-    const o = pendingBigEvent;
-    const newStats = applyStatDeltas(stats, o.deltas);
-    const left = Math.max(0, 24 - hoursUsed);
-    const spend = Math.min(BIG_EVENT_HOURS, left);
-    const ids = [...actionsTodayIds, BIG_EVENT_ACTION_ID];
-    audioAdapter.playCue(o.tier === 'great' || o.tier === 'pass' ? 'victory' : 'defeat');
-    setStats(newStats);
-    setHoursUsed(hoursUsed + spend);
-    setActionsTodayIds(ids);
-    setBigEvent({ ...bigEvent, result: { tier: o.tier as BigEventTier, score: o.score } });
+    const r = applyBigEventOutcome(game, pendingBigEvent);
+    audioAdapter.playCue(r.cue);
+    commit(r.state);
     setPendingBigEvent(null);
-    setNotice(`${bigEventDef(bigEvent.id).title}: ${TIER_LABEL[o.tier]} (${o.score}/100).`);
-    if (hoursUsed + spend >= 24) setTimeout(() => endDay(newStats, ids), 400);
-  }, [pendingBigEvent, stats, hoursUsed, actionsTodayIds, bigEvent, endDay]);
+    setNotice(r.notice);
+    if (r.endsDay) setTimeout(() => finishDay(r.state.stats, r.state.actionsTodayIds), 400);
+  }, [pendingBigEvent, game, commit, finishDay]);
 
   const advanceToNextDay = useCallback(() => {
     setMorningReport(null);
     setNotice(null);
-    setActionsTodayIds([]);
-    setHoursUsed(0);
-    setLocation('home');
     setIntrusion(null);
-    setIntrusionsToday(0);
-    setDayStartStats(stats); // chỉ số buổi sáng = mốc so sánh cho ngày mới
-
-    // Kết thúc ván khi sụp đổ giữa chừng hoặc đã đủ 7 ngày
-    const collapsed = evaluateLifeStatus(stats).isGameOver;
-    if (collapsed || day >= 7) {
-      setFinished(true);
-      audioAdapter.playCue(collapsed ? 'defeat' : 'victory');
-    } else {
-      setDay((prev) => prev + 1);
-    }
-  }, [day, stats]);
+    const res = advanceDay(game);
+    commit(res.state);
+    if (res.state.finished) audioAdapter.playCue(res.collapsed ? 'defeat' : 'victory');
+  }, [game, commit]);
 
   const selectAvatar = useCallback((id: AvatarId) => {
     audioAdapter.prime();
@@ -422,35 +309,21 @@ export function useGameAdapter() {
     (choiceId: string) => {
       if (!activeEvent) return;
       audioAdapter.playCue('neutral');
-      const res = resolveDomainChoice(activeEvent.id, choiceId, stats);
-      setStats(res.newStats);
-      setHoursUsed((prev) => Math.min(24, prev + res.timeHours));
+      commit(applyEventChoice(game, activeEvent.id, choiceId));
       setActiveEvent(null);
     },
-    [activeEvent, stats]
+    [activeEvent, game, commit]
   );
 
   const resetGame = useCallback(() => {
     storageAdapter.clear();
-    setDay(1);
-    setHoursUsed(0);
-    setStats(INITIAL_STATS);
-    setSleepDebt(0);
-    setActionsTodayIds([]);
+    commit(createPlayerState(rng));
     setNotice(null);
     setMorningReport(null);
     setActiveEvent(null);
-    setHistory([]);
-    setDayStartStats(INITIAL_STATS);
-    setDayGrades([]);
-    setGoalIds(pickGoalIds(rng));
-    setLocation('home');
     setIntrusion(null);
-    setIntrusionsToday(0);
-    setBigEvent(pickBigEvent(rng));
     setPendingBigEvent(null);
-    setFinished(false);
-  }, []);
+  }, [commit]);
 
   // Hướng dẫn trong phòng 3D: tắt sau hành vi đầu tiên
   const [showCoach, setShowCoach] = useState(() => !storageAdapter.hasSeenCoach());
@@ -482,7 +355,7 @@ export function useGameAdapter() {
     isIntroOpen,
     soundEnabled,
     takeAction,
-    endDayEarly: () => endDay(stats, actionsTodayIds),
+    endDayEarly: () => finishDay(stats, actionsTodayIds),
     advanceToNextDay,
     resolveEvent,
     resetGame,

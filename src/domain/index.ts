@@ -27,3 +27,4 @@ export * from './circadian';
 export * from './dayRecap';
 export * from './meme';
 export * from './rng';
+export * from './gameState';

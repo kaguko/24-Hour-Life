@@ -1,12 +1,12 @@
 import { PlayerStatsPrimitive, SimulationResultPrimitive } from './types';
-import { INITIAL_STATS, evaluateLifeStatus } from './stats';
+import { evaluateLifeStatus } from './stats';
 import type { Rng } from './rng';
-import { DOMAIN_ACTIONS, PLAYABLE_ACTIONS, executeActionById } from './actions';
+import { PLAYABLE_ACTIONS } from './actions';
 import { LocationId } from './map';
 import { planAction } from './planner';
-import { actionLockReason, clockFromHoursRemaining } from './availability';
-import { computeSkillXp, skillLevels } from './progression';
-import { processOvernightCycle } from './consequence';
+import { clockFromHoursRemaining } from './availability';
+import { BIG_EVENT_IDS } from './bigEvents';
+import { applyAction, endDay, hoursLeftOf, newPlayerState, startNextDay } from './gameState';
 import { rollDomainEvent, resolveDomainChoice } from './events';
 
 export interface DomainStrategy {
@@ -118,28 +118,26 @@ export interface RunTracePrimitive {
 
 /** Chơi 1 ván headless và ghi lại chỉ số cuối mỗi ngày (sau khi qua đêm). */
 export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rng): RunTracePrimitive {
-  let currentStats = { ...INITIAL_STATS };
-  let sleepDebt = 0;
+  // Mô phỏng không xét mục tiêu / sự kiện lớn nên dùng giá trị cố định (không tiêu thụ rng)
+  let state = newPlayerState([], { id: BIG_EVENT_IDS[0], difficulty: 1 });
   let survivedDays = 0;
   let collapseDay: number | null = null;
   let collapseReason: RunTracePrimitive['collapseReason'] = null;
   const timeline: DayTimelineEntry[] = [];
-  const history: string[][] = [];
 
   for (let day = 1; day <= daysPerRun; day++) {
-    let hoursLeft = 24;
-    const actionsToday: string[] = [];
     let location: LocationId = 'home';
     let stuck = false;
 
-    while (hoursLeft > 0 && !stuck) {
-      const chosenId = strategy.decideActionId(currentStats, hoursLeft, actionsToday);
-      let plan = planAction(chosenId, location, hoursLeft, { day, actionsTodayIds: actionsToday, history });
+    while (hoursLeftOf(state) > 0 && !stuck) {
+      const hoursLeft = hoursLeftOf(state);
+      const chosenId = strategy.decideActionId(state.stats, hoursLeft, state.actionsTodayIds);
+      const ctx = { day, actionsTodayIds: state.actionsTodayIds, history: state.history };
+      let plan = planAction(chosenId, location, hoursLeft, ctx);
 
       if (!plan.ok) {
         // Không đi được (hết giờ, đóng cửa, đang bị khóa): về nhà chợp mắt, nếu không thì hành vi dài nhất còn làm được
         // (không chọn giấc ngủ dài: nó là quyết định của chiến lược, không phải đường lui)
-        const ctx = { day, actionsTodayIds: actionsToday, history };
         let best: ReturnType<typeof planAction> | null = planAction('sleep_nap', location, hoursLeft, ctx);
         if (!best.ok) {
           best = null;
@@ -157,16 +155,9 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rn
         plan = best;
       }
 
-      for (const stepId of plan.steps) {
-        const res = executeActionById(stepId, currentStats, hoursLeft, actionsToday, day, history, rng);
-        if (!res.success) {
-          stuck = true;
-          break;
-        }
-        currentStats = res.newStats;
-        actionsToday.push(stepId);
-        hoursLeft -= res.hoursSpent;
-      }
+      const res = applyAction(state, plan.steps, null, plan.endLocation, rng);
+      state = res.state;
+      if (res.blocked) stuck = true;
       location = plan.endLocation;
     }
 
@@ -175,15 +166,13 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rn
       const ev = rollDomainEvent(day, () => rng() * 0.45);
       if (ev) {
         const choice = ev.choices[Math.floor(rng() * ev.choices.length)];
-        currentStats = resolveDomainChoice(ev.id, choice.id, currentStats).newStats;
+        state = { ...state, stats: resolveDomainChoice(ev.id, choice.id, state.stats).newStats };
       }
     }
 
-    const nightRes = processOvernightCycle(currentStats, actionsToday, sleepDebt, day, undefined, rng);
-    currentStats = nightRes.newStats;
-    sleepDebt = nightRes.newSleepDebt;
+    state = endDay(state, rng).state;
+    const currentStats = state.stats;
     survivedDays = day;
-    history.push(actionsToday);
     timeline.push({ day, stats: currentStats });
 
     const lifeStatus = evaluateLifeStatus(currentStats);
@@ -197,6 +186,7 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rn
       collapseReason = currentStats.energy <= 10 ? 'burnout_energy' : 'burnout_mental';
       break;
     }
+    state = startNextDay(state);
   }
 
   return {
@@ -204,9 +194,9 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rn
     endedEarly: collapseDay !== null,
     collapseDay,
     collapseReason,
-    finalStats: currentStats,
+    finalStats: state.stats,
     timeline,
-    history,
+    history: state.history,
   };
 }
 
