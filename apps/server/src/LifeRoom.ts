@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { CloseCode, Room, matchMaker, type Client, type Delayed } from '@colyseus/core';
 import { LAST_DAY, evaluateLifeStatus, jointActionDef } from '@24h/domain';
+import { AVATAR_IDS, animForAction, isAvatarId } from '@24h/protocol';
 import { generateRoomCode } from './code.js';
 import { sanitizeText } from './chat.js';
 import { LifeEngine, type PlayerSession } from './engine.js';
@@ -111,7 +112,10 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       if (!this.engine.hasTimeLeft(client.sessionId)) this.engine.setReady(client.sessionId, true);
       this.syncSession(client.sessionId);
       const target = this.state.players.get(client.sessionId);
-      if (target) target.lastActionId = id;
+      if (target) {
+        target.lastActionId = id;
+        target.anim = animForAction(id);
+      }
 
       const reply: ActionResultMessage = { ok: true, actionId: id, notice: outcome.notice };
       client.send('action_result', reply);
@@ -152,6 +156,8 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       const m = message as { x?: unknown; z?: unknown } | null;
       if (!this.engine.handleMove(client.sessionId, m?.x, m?.z, Date.now())) return;
       this.syncSession(client.sessionId);
+      const moved = this.state.players.get(client.sessionId);
+      if (moved && moved.anim !== 'idle') moved.anim = 'idle';
     });
 
     this.onMessage('chat', (client, message: unknown) => {
@@ -172,14 +178,17 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     });
   }
 
-  onJoin(client: Client, options?: { name?: unknown }): void {
+  onJoin(client: Client, options?: { name?: unknown; avatar?: unknown }): void {
     const name = sanitizeText(options?.name, 24) ?? `Người chơi ${this.state.players.size + 1}`;
     const session = this.engine.addPlayer(client.sessionId, name, Date.now());
 
     const player = new PlayerSchema();
     player.id = session.id;
     player.name = session.name;
+    // avatar do client chọn nhưng chỉ nhận id hợp lệ; không có thì chia theo thứ tự vào phòng
+    player.avatar = isAvatarId(options?.avatar) ? options.avatar : AVATAR_IDS[this.state.players.size % AVATAR_IDS.length];
     player.lastActionId = '';
+    player.anim = 'idle';
     syncPlayer(player, session, '');
     this.state.players.set(session.id, player);
     this.pushPrivate(session.id);
@@ -366,7 +375,10 @@ export class LifeRoom extends Room<{ state: LifeState }> {
         fellForPressure: r.fellForPressure,
       });
       const target = this.state.players.get(r.playerId);
-      if (target && r.ok) target.lastActionId = res.offer.actionId;
+      if (target && r.ok) {
+        target.lastActionId = res.offer.actionId;
+        target.anim = animForAction(res.offer.actionId);
+      }
       if (r.ok) this.pushPrivate(r.playerId);
     }
     this.syncOffers();

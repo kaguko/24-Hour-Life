@@ -43,10 +43,13 @@ for j in range(W):
         elif any(math.hypot(x - tx, z - tz) < 0.7 for tx, tz in trees): blocked[j][i] = True
         elif math.hypot(x - L["park"]["cx"], z - L["park"]["cz"]) < 1.9: blocked[j][i] = True   # chòi nghỉ giữa công viên
 
+# Điểm đứng trước cửa: cách mặt tiền 2.4 m (qua mái hiên/bậc thềm) để nhân vật không bị mái che.
+# (Empty door_<id> trong city.glb đánh dấu 1.3 m; client dùng toạ độ trong file nav này.)
+DOOR_OFFSET = 2.4
 doors = {}
 for b in L["buildings"]:
     dx, dz = DIR3[b["door"]]
-    doors[b["id"]] = {"x": b["cx"] + dx * (b["d"] / 2 + 1.3), "z": b["cz"] + dz * (b["d"] / 2 + 1.3), "facing": b["door"]}
+    doors[b["id"]] = {"x": b["cx"] + dx * (b["d"] / 2 + DOOR_OFFSET), "z": b["cz"] + dz * (b["d"] / 2 + DOOR_OFFSET), "facing": b["door"]}
 doors["park"] = {"x": 0.0, "z": 4.5, "facing": "-z"}
 
 def cell(x, z): return int(math.floor(z + HALF)), int(math.floor(x + HALF))

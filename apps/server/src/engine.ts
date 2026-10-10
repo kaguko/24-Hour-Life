@@ -18,7 +18,7 @@ import {
   type PlayerState,
   type Rng,
 } from '@24h/domain';
-import { MAX_MOVE_SPEED, WORLD_HALF_SIZE } from './protocol.js';
+import { MAX_MOVE_SPEED, SPAWN_POINT, WORLD_HALF_SIZE } from './protocol.js';
 import { rngFor } from './seed.js';
 
 /** Mọi thứ server biết về một người chơi. Client không bao giờ ghi trực tiếp vào đây. */
@@ -71,8 +71,8 @@ export class LifeEngine {
       id,
       name,
       state: createPlayerState(rng),
-      x: 0,
-      z: 0,
+      x: SPAWN_POINT.x,
+      z: SPAWN_POINT.z,
       lastMoveAt: now,
       rng,
       rngDay: 1,

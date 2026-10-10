@@ -8,6 +8,7 @@ export const PlayerSchema = schema(
   {
     id: t.string(),
     name: t.string(),
+    avatar: t.string(),
     connected: t.boolean(),
     /** Đang do bot Balanced điều khiển (sau khi hết hạn giữ chỗ) */
     bot: t.boolean(),
@@ -28,6 +29,8 @@ export const PlayerSchema = schema(
     lastActionId: t.string(),
     /** Lời rủ đang tham gia ('' nếu không) */
     offerId: t.string(),
+    /** Hoạt hình hiện tại (idle, sleep, study...): đặt khi làm hành vi, về idle khi di chuyển */
+    anim: t.string(),
   },
   'Player'
 );

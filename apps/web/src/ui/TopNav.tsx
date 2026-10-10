@@ -1,11 +1,11 @@
 import React from 'react';
 import { getWeekdayLabel } from '@24h/domain';
 import { AvatarId, avatarUrl } from '../lib/avatars';
-import { Volume2, VolumeX, RotateCcw, Activity, Play, HelpCircle } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Activity, Play, HelpCircle, Users } from 'lucide-react';
 
 interface TopNavProps {
-  currentTab: 'game' | 'simulate' | 'guide';
-  onTabChange: (tab: 'game' | 'simulate' | 'guide') => void;
+  currentTab: 'game' | 'multi' | 'simulate' | 'guide';
+  onTabChange: (tab: 'game' | 'multi' | 'simulate' | 'guide') => void;
   day: number;
   avatarId: AvatarId;
   soundEnabled: boolean;
@@ -50,6 +50,19 @@ export const TopNav: React.FC<TopNavProps> = ({
             <Play className="w-3.5 h-3.5 text-stone-700" />
             <span className="sm:hidden">Chơi</span>
             <span className="hidden sm:inline">Chơi thực tế</span>
+          </button>
+          <button
+            onClick={() => onTabChange('multi')}
+            data-testid="tab-multi"
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              currentTab === 'multi'
+                ? 'bg-white text-stone-900 shadow-xs font-semibold'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="sm:hidden">Nhóm</span>
+            <span className="hidden sm:inline">Chơi cùng bạn</span>
           </button>
           <button
             onClick={() => onTabChange('simulate')}

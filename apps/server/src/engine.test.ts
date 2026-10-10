@@ -124,9 +124,10 @@ test('move: kẹp vào thế giới và vào tốc độ tối đa; payload sai 
   engine.addPlayer('p1', 'A', 0);
   const p = engine.players.get('p1')!;
 
-  assert.equal(engine.handleMove('p1', 1000, 0, 1000), true);
-  assert.ok(Math.hypot(p.x, p.z) <= MAX_MOVE_SPEED * 1 + 1e-9, 'không dịch chuyển tức thời');
-  assert.ok(p.x > 0 && p.x <= MAX_MOVE_SPEED + 1e-9);
+  const [x0, z0] = [p.x, p.z];
+  assert.equal(engine.handleMove('p1', 1000, z0, 1000), true);
+  assert.ok(Math.hypot(p.x - x0, p.z - z0) <= MAX_MOVE_SPEED * 1 + 1e-9, 'không dịch chuyển tức thời');
+  assert.ok(p.x > x0 && p.x - x0 <= MAX_MOVE_SPEED + 1e-9);
 
   // đủ thời gian để đi tới biên, nhưng không vượt biên
   for (let t = 2000; t < 20000; t += 1000) engine.handleMove('p1', 1e9, -1e9, t);

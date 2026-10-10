@@ -8,7 +8,18 @@ export const ROOM_CODE_LENGTH = 4;
 /** Bỏ các ký tự dễ nhầm (I, O, 0, 1) */
 export const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-export const WORLD_HALF_SIZE = 50;
+/** 12 nhân vật (Kenney Mini Characters, khớp ảnh trong public/avatars và GLB trong public/models/characters) */
+export const AVATAR_IDS = [
+  'male-a', 'female-a', 'male-b', 'female-b', 'male-c', 'female-c',
+  'male-d', 'female-d', 'male-e', 'female-e', 'male-f', 'female-f',
+] as const;
+export type AvatarId = (typeof AVATAR_IDS)[number];
+export const isAvatarId = (v: unknown): v is AvatarId => typeof v === 'string' && (AVATAR_IDS as readonly string[]).includes(v);
+
+/** Thành phố: x, z trong [-30, 30] (xem city_nav.json). Server kẹp vị trí vào hình vuông này. */
+export const WORLD_HALF_SIZE = 30;
+/** Điểm xuất hiện: trước cửa nhà (khớp doors.home trong city_nav.json) */
+export const SPAWN_POINT = { x: -20, z: 12.6 } as const;
 /** Tốc độ tối đa (đơn vị/giây): server kẹp vị trí theo giới hạn này, client không thể dịch chuyển tức thời */
 export const MAX_MOVE_SPEED = 8;
 export const MAX_CHAT_LENGTH = 200;
@@ -40,6 +51,27 @@ export const DEFAULT_TIMING: Timing = {
   morningMs: 15_000,
   reconnectMs: 60_000,
 };
+
+/** Hoạt hình của nhân vật; client ánh xạ sang clip của mô hình (xem apps/web/src/world/animMap.ts) */
+export type Anim = 'idle' | 'walk' | 'run' | 'sit' | 'sleep' | 'eat' | 'study' | 'phone' | 'dance' | 'collapse' | 'wave';
+
+/** Hành vi (theo id domain) -> hoạt hình. Không có trong bảng = idle. Dùng chung cho server (ghi vào schema) và client (người chơi cục bộ). */
+export function animForAction(actionId: string): Anim {
+  if (/^sleep_|^hot_bath$/.test(actionId)) return 'sleep';
+  if (/exercise|marathon|gym_session|run_together|morning_stretch|short_walk|sunset_walk/.test(actionId)) return 'run';
+  if (/^(eat_together|fast_food|cook_|late_night_snack|caffeine_spike)/.test(actionId)) return 'eat';
+  if (/study|learn|read_book|deep_research|online_course|work_|freelance|side_project|journal|hobby_craft|public_speaking/.test(actionId)) return 'study';
+  if (/scroll_social|drama_news|binge_gaming|binge_series|call_family|text_old_friend|impulse_shopping|lottery_ticket/.test(actionId)) return 'phone';
+  if (/beer_party|drinking_group|listen_music|date_night|movie_night|board_game_night|cafe_friends/.test(actionId)) return 'dance';
+  if (/meditate|heart_to_heart|deep_talk|pet_bonding|tease_dog/.test(actionId)) return 'sit';
+  return 'idle';
+}
+
+/** Tuỳ chọn khi tạo / vào phòng */
+export interface JoinOptions {
+  name?: string;
+  avatar?: string;
+}
 
 /** Client -> server */
 export interface ClientMessages {

@@ -37,9 +37,11 @@ import { AlertOctagon, RotateCcw } from 'lucide-react';
 
 // Cảnh 3D tải lười: three.js không làm chậm lần mở trang đầu
 const RoomScene = lazy(() => import('./ui/RoomScene'));
+// Chơi nhiều người (colyseus + thành phố 3D) cũng tải lười
+const MultiplayerView = lazy(() => import('./ui/multi/MultiplayerView'));
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'game' | 'simulate' | 'guide'>('game');
+  const [currentTab, setCurrentTab] = useState<'game' | 'multi' | 'simulate' | 'guide'>('game');
   // Danh sách thẻ chữ: thu gọn mặc định, chọn hành vi chính bằng cách bấm trong phòng 3D
   const [showCards, setShowCards] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -359,6 +361,12 @@ export default function App() {
                 )}
             </div>
           </>
+        )}
+
+        {currentTab === 'multi' && (
+          <Suspense fallback={<div className="h-64 rounded-2xl bg-white/60 animate-pulse" />}>
+            <MultiplayerView />
+          </Suspense>
         )}
 
         {currentTab === 'simulate' && <SimulationBench />}

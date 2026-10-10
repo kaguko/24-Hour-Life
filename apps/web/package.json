@@ -8,9 +8,13 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
+    "@24h/domain": "*",
+    "@24h/protocol": "^0.0.0",
+    "@colyseus/sdk": "^0.18.5",
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@fontsource-variable/space-grotesk": "^5.3.0",
     "@fontsource/be-vietnam-pro": "^5.3.0",
@@ -22,8 +26,7 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "three": "^0.186.1",
-    "vite": "^8.3.0",
-    "@24h/domain": "*"
+    "vite": "^8.3.0"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
