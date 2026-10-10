@@ -1,0 +1,1 @@
+{"name":"run-24-hour-life-driver","private":true,"type":"module","dependencies":{"playwright-core":"^1.50.0","react-example":"file:../../.."}}
