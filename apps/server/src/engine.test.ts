@@ -47,27 +47,67 @@ test('từ chối hành vi không hợp lệ: không tồn tại, không phải 
   assert.equal(JSON.stringify(engine.players.get('p1')!.state), before, 'state không đổi');
 });
 
-test('hết 24h thì qua đêm: ghi lịch sử, đặt lại ngày; sụp đổ thì kết thúc ván và từ chối hành vi tiếp', () => {
+test('qua đêm tách khỏi hành động: hết giờ thì chờ runNight; runNight ghi lịch sử, startNextDay sang ngày mới', () => {
   const engine = new LifeEngine('seed');
   const p = engine.addPlayer('p1', 'A', 0);
-  let nights = 0;
-  for (let i = 0; i < 500 && nights === 0; i++) {
-    const hoursBefore = p.state.hoursUsed;
-    for (const a of PLAYABLE_ACTIONS) {
-      const r = engine.handleAction('p1', a.id);
-      if (!r.ok) continue;
-      if (r.night) nights++;
-      else assert.ok(p.state.hoursUsed > hoursBefore, 'hành vi hợp lệ tốn giờ');
-      break;
-    }
+  for (let i = 0; i < 500 && engine.hasTimeLeft('p1'); i++) {
+    for (const a of PLAYABLE_ACTIONS) if (engine.handleAction('p1', a.id).ok) break;
   }
-  assert.equal(nights, 1);
+  assert.ok(!engine.hasTimeLeft('p1'), 'đã dùng hết giờ');
+  assert.equal(p.state.day, 1, 'hết giờ không tự qua đêm');
+  assert.equal(p.state.history.length, 0);
+
+  const night = engine.runNight('p1');
+  assert.ok(night);
+  assert.equal(night.dayCompleted, 1);
+  assert.equal(p.state.history.length, 1);
+  assert.equal(p.lastReport, night);
+
+  engine.startNextDay('p1');
   assert.equal(p.state.hoursUsed, 0);
   assert.equal(p.state.actionsTodayIds.length, 0);
-  assert.equal(p.state.history.length, 1);
-  assert.ok(p.state.day === 2 || p.state.finished, 'sang ngày 2, hoặc kết thúc ván nếu đã sụp đổ');
+  const dayNow: number = p.state.day;
+  assert.ok(dayNow === 2 || p.state.finished, 'sang ngày 2, hoặc kết thúc ván nếu đã sụp đổ');
 
-  if (p.state.finished) assert.equal(engine.handleAction('p1', 'sleep_nap').ok, false);
+  if (p.state.finished) {
+    assert.equal(engine.handleAction('p1', 'sleep_nap').ok, false);
+    assert.equal(engine.runNight('p1'), null);
+  }
+});
+
+test('ready khóa hành động; hủy ready thì làm tiếp được', () => {
+  const engine = new LifeEngine('seed');
+  engine.addPlayer('p1', 'A', 0);
+  engine.setReady('p1', true);
+  assert.equal(engine.handleAction('p1', 'sleep_nap').ok, false);
+  engine.setReady('p1', false);
+  assert.equal(engine.handleAction('p1', 'sleep_nap').ok, true);
+});
+
+test('bot Balanced: chơi hết ngày qua đường validate, sẵn sàng, và tất định theo seed', () => {
+  const run = (seed: string) => {
+    const engine = new LifeEngine(seed);
+    const p = engine.addPlayer('p1', 'A', 0);
+    engine.runBot('p1');
+    return p;
+  };
+  const a = run('room-1');
+  assert.ok(a.ready);
+  assert.ok(a.state.actionsTodayIds.length > 0);
+  assert.ok(a.state.hoursUsed >= 20, `bot dùng gần hết ngày (đã dùng ${a.state.hoursUsed}h)`);
+  assert.deepEqual(a.state, run('room-1').state);
+  for (const id of a.state.actionsTodayIds) assert.ok(!id.startsWith('intrusion'), 'bot không dùng hành vi cưỡng bức');
+
+  // nhiều ngày liên tiếp không kẹt và không vượt giới hạn 7 ngày
+  const engine = new LifeEngine('room-2');
+  const p = engine.addPlayer('p1', 'A', 0);
+  for (let day = 1; day <= 8 && !p.state.finished; day++) {
+    engine.runBot('p1');
+    engine.runNight('p1');
+    engine.startNextDay('p1');
+  }
+  assert.ok(p.state.finished);
+  assert.ok(p.state.day <= 7);
 });
 
 test('chỉ số thay đổi do domain tính, không có đường nào cho client đặt trực tiếp', () => {

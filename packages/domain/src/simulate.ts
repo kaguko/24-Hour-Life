@@ -2,11 +2,10 @@ import { PlayerStatsPrimitive, SimulationResultPrimitive } from './types.js';
 import { evaluateLifeStatus } from './stats.js';
 import type { Rng } from './rng.js';
 import { PLAYABLE_ACTIONS } from './actions.js';
-import { LocationId } from './map.js';
-import { planAction } from './planner.js';
+import { planAction, type PlanResult } from './planner.js';
 import { clockFromHoursRemaining } from './availability.js';
 import { BIG_EVENT_IDS } from './bigEvents.js';
-import { applyAction, endDay, hoursLeftOf, newPlayerState, startNextDay } from './gameState.js';
+import { applyAction, endDay, hoursLeftOf, newPlayerState, startNextDay, type PlayerState } from './gameState.js';
 import { rollDomainEvent, resolveDomainChoice } from './events.js';
 
 export interface DomainStrategy {
@@ -116,6 +115,39 @@ export interface RunTracePrimitive {
   history: string[][];
 }
 
+type OkPlan = Extract<PlanResult, { ok: true }>;
+
+/**
+ * Hành vi kế tiếp theo chiến lược cho trạng thái hiện tại, kèm kế hoạch đã kiểm tra khả thi.
+ * Không đi được (hết giờ, đóng cửa, đang bị khóa): về nhà chợp mắt, nếu không thì hành vi dài nhất còn làm được
+ * (không chọn giấc ngủ dài: nó là quyết định của chiến lược, không phải đường lui). Hết đường thì trả null.
+ * Dùng chung cho mô phỏng và bot trên server.
+ */
+export function chooseStrategyAction(strategy: DomainStrategy, state: PlayerState): { actionId: string; plan: OkPlan } | null {
+  const hoursLeft = hoursLeftOf(state);
+  const location = state.location;
+  const ctx = { day: state.day, actionsTodayIds: state.actionsTodayIds, history: state.history };
+
+  const chosenId = strategy.decideActionId(state.stats, hoursLeft, state.actionsTodayIds);
+  const chosen = planAction(chosenId, location, hoursLeft, ctx);
+  if (chosen.ok) return { actionId: chosenId, plan: chosen };
+
+  const nap = planAction('sleep_nap', location, hoursLeft, ctx);
+  if (nap.ok) return { actionId: 'sleep_nap', plan: nap };
+
+  let best: { actionId: string; plan: OkPlan } | null = null;
+  let bestHours = -1;
+  for (const a of PLAYABLE_ACTIONS) {
+    if (a.category === 'rest') continue;
+    const p = planAction(a.id, location, hoursLeft, ctx);
+    if (p.ok && a.hours > bestHours) {
+      best = { actionId: a.id, plan: p };
+      bestHours = a.hours;
+    }
+  }
+  return best;
+}
+
 /** Chơi 1 ván headless và ghi lại chỉ số cuối mỗi ngày (sau khi qua đêm). */
 export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rng): RunTracePrimitive {
   // Mô phỏng không xét mục tiêu / sự kiện lớn nên dùng giá trị cố định (không tiêu thụ rng)
@@ -126,39 +158,16 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rn
   const timeline: DayTimelineEntry[] = [];
 
   for (let day = 1; day <= daysPerRun; day++) {
-    let location: LocationId = 'home';
     let stuck = false;
 
     while (hoursLeftOf(state) > 0 && !stuck) {
-      const hoursLeft = hoursLeftOf(state);
-      const chosenId = strategy.decideActionId(state.stats, hoursLeft, state.actionsTodayIds);
-      const ctx = { day, actionsTodayIds: state.actionsTodayIds, history: state.history };
-      let plan = planAction(chosenId, location, hoursLeft, ctx);
-
-      if (!plan.ok) {
-        // Không đi được (hết giờ, đóng cửa, đang bị khóa): về nhà chợp mắt, nếu không thì hành vi dài nhất còn làm được
-        // (không chọn giấc ngủ dài: nó là quyết định của chiến lược, không phải đường lui)
-        let best: ReturnType<typeof planAction> | null = planAction('sleep_nap', location, hoursLeft, ctx);
-        if (!best.ok) {
-          best = null;
-          let bestHours = -1;
-          for (const a of PLAYABLE_ACTIONS) {
-            if (a.category === 'rest') continue;
-            const p = planAction(a.id, location, hoursLeft, ctx);
-            if (p.ok && a.hours > bestHours) {
-              best = p;
-              bestHours = a.hours;
-            }
-          }
-        }
-        if (!best || !best.ok) break;
-        plan = best;
-      }
+      const pick = chooseStrategyAction(strategy, state);
+      if (!pick) break;
+      const { plan } = pick;
 
       const res = applyAction(state, plan.steps, null, plan.endLocation, rng);
       state = res.state;
       if (res.blocked) stuck = true;
-      location = plan.endLocation;
     }
 
     // Biến cố ngẫu nhiên: người chơi giả lập chọn ngẫu nhiên một lựa chọn (chỉ tính tác động chỉ số)

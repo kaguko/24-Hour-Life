@@ -9,6 +9,10 @@ export const PlayerSchema = schema(
     id: t.string(),
     name: t.string(),
     connected: t.boolean(),
+    /** Đang do bot Balanced điều khiển (sau khi hết hạn giữ chỗ) */
+    bot: t.boolean(),
+    /** Planning: sẵn sàng qua đêm. Morning: sẵn sàng sang ngày mới. */
+    ready: t.boolean(),
     x: t.float32(),
     z: t.float32(),
     day: t.uint8(),
@@ -42,6 +46,12 @@ export const LifeState = schema(
   {
     /** Mã phòng 4 ký tự (cũng là roomId) */
     code: t.string(),
+    /** planning | night | morning | ended */
+    phase: t.string(),
+    /** Ngày hiện tại của phòng (1..7) */
+    day: t.uint8(),
+    /** Mốc hết giờ của phase hiện tại (epoch ms); 0 = không đếm giờ */
+    phaseEndsAt: t.number(),
     players: t.map(PlayerSchema),
     chat: t.array(ChatMessageSchema),
   },

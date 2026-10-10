@@ -160,6 +160,8 @@ apps/server       @24h/server  Colyseus 0.18: LifeRoom (nhiều người chơi, 
 - **Server:** `npm run dev -w @24h/server` (watch) hoặc `npm run build && npm start -w @24h/server`. Biến môi trường `PORT` (mặc định 2567); `GET /health` trả `{status:"ok"}`.
   - Tạo phòng: `client.create("life")` -> mã 4 ký tự là `room.roomId`; vào phòng: `client.joinById(code, {name})`. Tối đa 8 người, phòng không liệt kê công khai.
   - Client chỉ gửi `action {actionId}`, `move {x,z}`, `chat {text}`; server validate và áp dụng bằng `@24h/domain`. Message lạ bị ngắt kết nối.
+  - Vòng đời ngày: `planning` (90s; hành động + `ready`) → `night` (server chạy `processOvernightCycle` cho từng người) → `morning` (mỗi client nhận `morning` = báo cáo riêng của mình; 15s hoặc mọi người `ready`) → ngày kế. Sau ngày 7 hoặc khi mọi người sụp đổ: `ended`. Phòng khóa sau đêm đầu tiên.
+  - Ngắt kết nối: giữ chỗ 60s (vào lại bằng `reconnect(token)` và nhận lại báo cáo sáng nếu đang morning), sau đó bot **Balanced** chơi thay (`player.bot = true`). Người ngắt kết nối và bot không chặn việc sang phase kế.
   - Rng của mỗi người chơi seed theo `roomSeed + playerId + day` (roomSeed do server sinh, không gửi cho client).
 - **Vercel:** đặt *Root Directory* = `apps/web` (giữ bật "Include source files outside of the Root Directory"). `vercel.json` nằm trong `apps/web`.
 

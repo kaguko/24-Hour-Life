@@ -1,12 +1,14 @@
 import {
-  DAY_HOURS,
+  DOMAIN_STRATEGIES,
   PLAYABLE_ACTIONS,
   advanceDay,
   applyAction,
+  chooseStrategyAction,
   createPlayerState,
   endDay,
   hoursLeftOf,
   planAction,
+  type DomainStrategy,
   type NightResultPrimitive,
   type PlayerState,
   type Rng,
@@ -25,14 +27,26 @@ export interface PlayerSession {
   /** Dòng ngẫu nhiên của (roomSeed, playerId, rngDay); sang ngày mới thì dựng lại */
   rng: Rng;
   rngDay: number;
+  connected: boolean;
+  /** Bot Balanced điều khiển thay người đã ngắt kết nối quá hạn */
+  bot: boolean;
+  ready: boolean;
+  /** Báo cáo sáng gần nhất (gửi lại khi người chơi vào lại giữa phase morning) */
+  lastReport: NightResultPrimitive | null;
 }
 
-export type ActionOutcome =
-  | { ok: false; reason: string }
-  | { ok: true; notice: string | null; night: NightResultPrimitive | null };
+export type ActionOutcome = { ok: false; reason: string } | { ok: true; notice: string | null };
 
 const PLAYABLE_IDS: ReadonlySet<string> = new Set(PLAYABLE_ACTIONS.map((a) => a.id));
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+const BOT_STRATEGY: DomainStrategy = (() => {
+  const s = DOMAIN_STRATEGIES.find((x) => x.id === 'balanced');
+  if (!s) throw new Error('Thiếu chiến lược "balanced" trong @24h/domain.');
+  return s;
+})();
+/** Chặn vòng lặp vô hạn nếu chiến lược trả hành vi không tốn giờ */
+const BOT_MAX_STEPS_PER_DAY = 64;
 
 /**
  * Luật chơi nhiều người, tách khỏi Colyseus để test được: chỉ gọi hàm thuần của @24h/domain.
@@ -54,6 +68,10 @@ export class LifeEngine {
       lastMoveAt: now,
       rng,
       rngDay: 1,
+      connected: true,
+      bot: false,
+      ready: false,
+      lastReport: null,
     };
     this.players.set(id, session);
     return session;
@@ -76,25 +94,56 @@ export class LifeEngine {
     const p = this.players.get(id);
     if (!p) return { ok: false, reason: 'Bạn chưa tham gia phòng.' };
     if (p.state.finished) return { ok: false, reason: 'Ván của bạn đã kết thúc.' };
+    if (p.ready) return { ok: false, reason: 'Bạn đã sẵn sàng. Hủy sẵn sàng để làm tiếp.' };
     if (typeof actionId !== 'string' || !PLAYABLE_IDS.has(actionId)) return { ok: false, reason: 'Hành vi không hợp lệ.' };
 
     const s = p.state;
     const plan = planAction(actionId, s.location, hoursLeftOf(s), { day: s.day, actionsTodayIds: s.actionsTodayIds, history: s.history });
     if (!plan.ok) return { ok: false, reason: plan.reason };
 
-    const rng = this.rngOf(p);
-    const res = applyAction(s, plan.steps, actionId, plan.endLocation, rng);
+    const res = applyAction(s, plan.steps, actionId, plan.endLocation, this.rngOf(p));
     if (!res.applied || !res.last) return { ok: false, reason: res.blocked ?? 'Không thực hiện được.' };
     p.state = res.state;
+    return { ok: true, notice: res.blocked ?? res.last.notice };
+  }
 
-    // Hết 24h: qua đêm rồi sang ngày mới (hoặc kết thúc ván)
-    let night: NightResultPrimitive | null = null;
-    if (p.state.hoursUsed >= DAY_HOURS) {
-      const ended = endDay(p.state, rng);
-      night = ended.night;
-      p.state = advanceDay(ended.state).state;
+  setReady(id: string, ready: boolean): void {
+    const p = this.players.get(id);
+    if (p) p.ready = ready;
+  }
+
+  hasTimeLeft(id: string): boolean {
+    const p = this.players.get(id);
+    return !!p && !p.state.finished && hoursLeftOf(p.state) > 0;
+  }
+
+  /** Bot Balanced chơi hết phần giờ còn lại của ngày (qua đúng đường validate như người chơi) rồi sẵn sàng. */
+  runBot(id: string): void {
+    const p = this.players.get(id);
+    if (!p) return;
+    p.ready = false;
+    for (let i = 0; i < BOT_MAX_STEPS_PER_DAY && !p.state.finished; i++) {
+      const pick = chooseStrategyAction(BOT_STRATEGY, p.state);
+      if (!pick || !this.handleAction(id, pick.actionId).ok) break;
     }
-    return { ok: true, notice: res.blocked ?? res.last.notice, night };
+    p.ready = true;
+  }
+
+  /** Qua đêm cho một người (bỏ qua người đã xong ván). Chưa sang ngày mới: xem startNextDay. */
+  runNight(id: string): NightResultPrimitive | null {
+    const p = this.players.get(id);
+    if (!p || p.state.finished) return null;
+    const ended = endDay(p.state, this.rngOf(p));
+    p.state = ended.state;
+    p.lastReport = ended.night;
+    return ended.night;
+  }
+
+  /** Sáng hôm sau: sang ngày mới, hoặc kết thúc ván nếu sụp đổ / đủ 7 ngày. */
+  startNextDay(id: string): void {
+    const p = this.players.get(id);
+    if (!p || p.state.finished) return;
+    p.state = advanceDay(p.state).state;
   }
 
   /** Kẹp đích vào thế giới và vào quãng đường tối đa theo thời gian trôi qua. Trả false nếu payload sai. */
