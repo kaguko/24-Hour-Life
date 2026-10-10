@@ -5,7 +5,15 @@
 import { Client, type Room } from '@colyseus/sdk';
 import type {
   ActionResultMessage,
+  AnimalEventMessage,
+  AnimalKind,
+  AnimalMood,
+  AnimalOp,
+  AnimalResultMessage,
   Anim,
+  EmoteKind,
+  EmoteMessage,
+  EmoteResultMessage,
   ClientMessages,
   InviteMessage,
   JointResultMessage,
@@ -62,6 +70,15 @@ export interface ChatView {
   at: number;
 }
 
+export interface AnimalView {
+  id: string;
+  kind: AnimalKind;
+  name: string;
+  x: number;
+  z: number;
+  mood: AnimalMood;
+}
+
 export interface RoomSnapshot {
   code: string;
   phase: Phase;
@@ -70,6 +87,7 @@ export interface RoomSnapshot {
   players: PlayerView[];
   offers: OfferView[];
   chat: ChatView[];
+  animals: AnimalView[];
   sessionId: string;
   me: PlayerView | null;
 }
@@ -85,6 +103,10 @@ export interface ServerEvents {
   joint_result: JointResultMessage;
   nudge_result: NudgeResultMessage;
   nudged: NudgedMessage;
+  animal_event: AnimalEventMessage;
+  animal_result: AnimalResultMessage;
+  emote: EmoteMessage;
+  emote_result: EmoteResultMessage;
 }
 
 type Listener = () => void;
@@ -127,6 +149,10 @@ export function buildSnapshot(state: any, sessionId: string): RoomSnapshot {
   });
   const chat: ChatView[] = [];
   state.chat?.forEach((c: any) => chat.push({ playerId: c.playerId, name: c.name, text: c.text, at: c.at }));
+  const animals: AnimalView[] = [];
+  state.animals?.forEach((a: any, id: string) =>
+    animals.push({ id, kind: a.kind as AnimalKind, name: a.name ?? '', x: a.x ?? 0, z: a.z ?? 0, mood: (a.mood ?? 'calm') as AnimalMood })
+  );
   return {
     code: state.code ?? '',
     phase: (state.phase ?? 'planning') as Phase,
@@ -135,6 +161,7 @@ export function buildSnapshot(state: any, sessionId: string): RoomSnapshot {
     players,
     offers,
     chat,
+    animals,
     sessionId,
     me: players.find((p) => p.id === sessionId) ?? null,
   };
@@ -164,7 +191,7 @@ export class RoomConnection {
       this.setStatus('closed');
       clearSavedToken();
     });
-    for (const type of ['private_state', 'action_result', 'morning', 'invite', 'joint_result', 'nudge_result', 'nudged'] as const) {
+    for (const type of ['private_state', 'action_result', 'morning', 'invite', 'joint_result', 'nudge_result', 'nudged', 'animal_event', 'animal_result', 'emote', 'emote_result'] as const) {
       room.onMessage(type, (payload: any) => {
         if (type === 'private_state') {
           this.priv = payload;
@@ -254,6 +281,8 @@ export class RoomConnection {
   leaveOffer = () => this.send('joint', { op: 'leave' });
   startOffer = () => this.send('joint', { op: 'start' });
   nudge = (targetId: string) => this.send('nudge', { targetId });
+  interactAnimal = (animalId: string, op: AnimalOp) => this.send('animal', { animalId, op });
+  emote = (kind: EmoteKind, targetId?: string) => this.send('emote', { kind, targetId });
 
   async leave(): Promise<void> {
     clearSavedToken();

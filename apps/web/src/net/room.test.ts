@@ -17,6 +17,7 @@ test('buildSnapshot: state schema -> snapshot thuần, tìm được "me" và gi
     ]),
     offers: fakeMap([['o1', { actionId: 'run_together', hostId: 's1', members: ['s1', 's2'], minPlayers: 2, maxPlayers: 4 }]]),
     chat: [{ playerId: 's1', name: 'An', text: 'hi', at: 99 }],
+    animals: fakeMap([['cat', { kind: 'cat', name: 'Mèo Cáu', x: 6, z: 5, mood: 'angry' }]]),
   };
   const snap = buildSnapshot(state, 's1');
   assert.equal(snap.code, 'ABCD');
@@ -32,6 +33,7 @@ test('buildSnapshot: state schema -> snapshot thuần, tìm được "me" và gi
   assert.equal(binh.stats.money, 0);
   assert.deepEqual(snap.offers[0].members, ['s1', 's2']);
   assert.equal(snap.chat[0].text, 'hi');
+  assert.deepEqual(snap.animals, [{ id: 'cat', kind: 'cat', name: 'Mèo Cáu', x: 6, z: 5, mood: 'angry' }]);
 });
 
 test('buildSnapshot: state rỗng không ném lỗi', () => {
