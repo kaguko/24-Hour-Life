@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Zap, Sprout, Moon, ShieldAlert, Target } from 'lucide-react';
+import { Sticker } from './Sticker';
 import { AVATAR_IDS, AvatarId, avatarUrl } from '../lib/avatars';
 
 interface IntroModalProps {
@@ -8,61 +8,11 @@ interface IntroModalProps {
   onStart: () => void;
 }
 
-const POINTS: Array<{ icon: React.ElementType; tone: string; body: React.ReactNode }> = [
-  {
-    icon: Clock,
-    tone: 'text-sky-300',
-    body: (
-      <>
-        <b>Chọn cách dùng 24 giờ.</b> Mỗi việc tốn thời gian. Ra ngoài còn mất thêm giờ đi đường, và nơi nào cũng có giờ mở cửa.
-      </>
-    ),
-  },
-  {
-    icon: Zap,
-    tone: 'text-pink-300',
-    body: (
-      <>
-        <b>Dopamine nhanh</b> (lướt mạng, game, nhậu) sướng ngay, nhưng trả giá vào <b>sáng hôm sau</b>.
-      </>
-    ),
-  },
-  {
-    icon: Sprout,
-    tone: 'text-emerald-300',
-    body: (
-      <>
-        <b>Dopamine chậm</b> (chạy bộ, học, trò chuyện) tốn công hơn, nhưng nuôi lớn ý chí và kỹ năng của bạn.
-      </>
-    ),
-  },
-  {
-    icon: ShieldAlert,
-    tone: 'text-rose-300',
-    body: (
-      <>
-        <b>Ý chí cạn thì cám dỗ tự tìm đến bạn</b>, và càng chiều theo thì càng khó dừng.
-      </>
-    ),
-  },
-  {
-    icon: Target,
-    tone: 'text-amber-300',
-    body: (
-      <>
-        Mỗi ván có <b>2 nhiệm vụ</b> và một <b>sự kiện lớn vào Thứ Bảy 14:00</b>. Độ khó thật bị giấu, hãy chuẩn bị từ sớm.
-      </>
-    ),
-  },
-  {
-    icon: Moon,
-    tone: 'text-indigo-300',
-    body: (
-      <>
-        Cuối ván bạn nhận một <b>kết cục</b> riêng. Bạn là kiểu người nào?
-      </>
-    ),
-  },
+const POINTS: Array<{ emoji: string; body: React.ReactNode }> = [
+  { emoji: '⏰', body: <><b>7 ngày × 24h.</b> Việc nào cũng tốn giờ.</> },
+  { emoji: '📱', body: <><b>Lướt mạng = sướng liền</b>, mai trả giá. Cooked 💀</> },
+  { emoji: '🌱', body: <><b>Chạy bộ, học, tâm sự</b> = chậm mà lên level.</> },
+  { emoji: '🛡️', body: <><b>Hết ý chí</b> là cám dỗ tự tới tìm. Brainrot warning.</> },
 ];
 
 export const IntroModal: React.FC<IntroModalProps> = ({ avatarId, onSelectAvatar, onStart }) => (
@@ -77,24 +27,22 @@ export const IntroModal: React.FC<IntroModalProps> = ({ avatarId, onSelectAvatar
       style={{ boxShadow: '0 0 40px -6px rgba(245,158,11,0.28), 0 24px 60px -12px rgba(0,0,0,0.7)' }}
     >
       <div className="text-center space-y-1">
-        <div className="text-5xl" aria-hidden>
-          ⏳
-        </div>
+        <Sticker kind="lockedin" size={120} caption={false} />
         <h2 className="font-display text-2xl font-extrabold tracking-tight">Cuộc Sống 24 Giờ</h2>
-        <p className="text-sm text-[#d8c3ad]">Bạn có 7 ngày. Mỗi ngày đúng 24 giờ. Hãy sống sót.</p>
+        <p className="text-sm text-[#d8c3ad]">7 ngày. Sống sót đi, đừng cooked.</p>
       </div>
 
-      <ul className="space-y-2.5 text-[13px] leading-snug">
-        {POINTS.map(({ icon: Icon, tone, body }, i) => (
-          <li key={i} className="flex gap-3">
-            <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${tone}`} aria-hidden />
+      <ul className="space-y-2 text-sm leading-snug">
+        {POINTS.map(({ emoji, body }, i) => (
+          <li key={i} className="flex gap-3 items-center bg-[#211c33] rounded-xl px-3 py-2">
+            <span className="text-xl shrink-0" aria-hidden>{emoji}</span>
             <span className="text-[#e6defd]/90">{body}</span>
           </li>
         ))}
       </ul>
 
       <div>
-        <p className="font-label text-[11px] font-semibold tracking-wider uppercase text-[#d8c3ad] mb-2 text-center">Chọn nhân vật của bạn</p>
+        <p className="font-label text-[11px] font-semibold tracking-wider uppercase text-[#d8c3ad] mb-2 text-center">Chọn nhân vật</p>
         <div className="grid grid-cols-6 gap-1.5" role="radiogroup" aria-label="Chọn nhân vật">
           {AVATAR_IDS.map((id) => (
             <button
@@ -120,7 +68,7 @@ export const IntroModal: React.FC<IntroModalProps> = ({ avatarId, onSelectAvatar
       >
         Bắt đầu ngày 1
       </button>
-      <p className="text-center text-[11px] text-[#d8c3ad]/80">Không quảng cáo · Không đăng nhập · Lưu ngay trên máy bạn</p>
+      <p className="text-center text-[11px] text-[#d8c3ad]/80">Không quảng cáo · Không đăng nhập</p>
     </div>
   </div>
 );

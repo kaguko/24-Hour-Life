@@ -38,7 +38,6 @@ export const IntrusionModal: React.FC<IntrusionModalProps> = ({ def, round, chun
           {def.emoji}
         </div>
         <h3 className="font-display text-xl font-extrabold text-[#e6defd]">{round === 0 ? def.title : `${def.title} · lần ${chunks + 1}`}</h3>
-        <p className="text-sm text-[#d8c3ad] leading-relaxed mt-1.5">{round === 0 ? def.prompt : def.againPrompt}</p>
 
         {/* Thanh ý chí và mức cần để cưỡng lại */}
         <div className="mt-4 text-left">
