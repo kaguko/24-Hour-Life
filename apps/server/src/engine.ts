@@ -48,10 +48,16 @@ export interface PlayerSession {
   playCount: number;
   /** Cặp (biểu cảm, người nhận) đã nhận thưởng trong ngày `playDay` */
   playPairs: Set<string>;
+  /** Số lượt thưởng từ cư dân thành phố trong ngày `playDay` */
+  residentCount: number;
 }
 
 /** Chơi với con vật / bạn bè chỉ nhích chỉ số nhẹ, tối đa chừng này lần mỗi ngày */
 export const MAX_PLAY_REWARDS_PER_DAY = 8;
+/** Thưởng từ cư dân thành phố: đếm riêng, tối đa chừng này lượt mỗi ngày */
+export const MAX_RESIDENT_REWARDS_PER_DAY = 12;
+/** Mời quà cư dân chỉ được khi sau đó ví còn ít nhất chừng này (nghìn VNĐ), tránh tự đẩy mình vào nợ */
+export const RESIDENT_MONEY_FLOOR = 500;
 
 export type ActionOutcome = { ok: false; reason: string } | { ok: true; notice: string | null };
 
@@ -96,6 +102,7 @@ export class LifeEngine {
       playDay: 0,
       playCount: 0,
       playPairs: new Set(),
+      residentCount: 0,
     };
     this.players.set(id, session);
     return session;
@@ -246,6 +253,7 @@ export class LifeEngine {
       p.playDay = p.state.day;
       p.playCount = 0;
       p.playPairs = new Set();
+      p.residentCount = 0;
     }
     const entries = Object.entries(deltas).filter(([, v]) => v);
     if (entries.length === 0) return null;
@@ -258,6 +266,36 @@ export class LifeEngine {
     p.state = { ...p.state, stats: applyStatDeltas(p.state.stats, deltas) };
     const names: Record<string, string> = { mental: 'Tinh thần', social: 'Kết nối', willpower: 'Ý chí' };
     return entries.map(([k, v]) => `${names[k]} ${v! > 0 ? '+' : ''}${v}`).join(', ');
+  }
+
+  /**
+   * Thưởng từ cư dân thành phố (có thể kèm chi tiền khi mời quà). Đếm riêng với con vật / bạn bè.
+   * Hết lượt thưởng trong ngày thì trả ok với `gained = null` và KHÔNG trừ tiền. Thiếu tiền thì từ chối.
+   */
+  grantResident(
+    id: string,
+    deltas: Partial<{ mental: number; social: number; willpower: number; money: number }>,
+    pairKey: string
+  ): { ok: true; gained: string | null } | { ok: false; reason: string } {
+    const p = this.players.get(id);
+    if (!p || p.state.finished) return { ok: true, gained: null };
+    if (p.playDay !== p.state.day) {
+      p.playDay = p.state.day;
+      p.playCount = 0;
+      p.playPairs = new Set();
+      p.residentCount = 0;
+    }
+    const entries = Object.entries(deltas).filter(([, v]) => v);
+    if (entries.length === 0) return { ok: true, gained: null };
+    const cost = -(deltas.money ?? 0);
+    if (cost > 0 && p.state.stats.money - cost < RESIDENT_MONEY_FLOOR) return { ok: false, reason: 'Ví của bạn không còn dư để mời quà lúc này.' };
+    if (p.residentCount >= MAX_RESIDENT_REWARDS_PER_DAY || p.playPairs.has(pairKey)) return { ok: true, gained: null };
+    p.playPairs.add(pairKey);
+    p.residentCount++;
+    p.state = { ...p.state, stats: applyStatDeltas(p.state.stats, deltas) };
+    const names: Record<string, string> = { mental: 'Tinh thần', social: 'Kết nối', willpower: 'Ý chí', money: 'Tiền' };
+    const part = ([k, v]: [string, number | undefined]) => `${names[k]} ${v! > 0 ? '+' : ''}${v}${k === 'money' ? 'k' : ''}`;
+    return { ok: true, gained: entries.map(part).join(', ') };
   }
 
   /** Hôm nay `supporterId` đã động viên `victimId` chưa (tính là "ở bên cạnh" khi bạn gặp chuyện) */

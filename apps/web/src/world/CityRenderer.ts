@@ -4,7 +4,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { locationDef } from '@24h/domain';
-import type { Anim, AnimalKind, AnimalMood, EmoteKind } from '@24h/protocol';
+import { RESIDENTS, type Anim, type AnimalKind, type AnimalMood, type EmoteKind, type ResidentState } from '@24h/protocol';
 import { ACTION_ANIM_SECONDS, CLIP_FOR, CLIP_FOR_EMOTE, EMOTE_EMOJI, type ClipSpec } from './animMap';
 import { NavGrid, type NavData, type Vec2 } from './nav';
 
@@ -26,6 +26,8 @@ export interface CityRendererOptions {
   onGround: (x: number, z: number) => void;
   /** Bấm vào một con vật */
   onAnimal?: (animalId: string) => void;
+  /** Bấm vào một cư dân thành phố */
+  onResident?: (residentId: string) => void;
   /** Bấm vào một người chơi khác */
   onPlayer?: (playerId: string) => void;
   /** Bấm vào toà nhà: khoá cửa trong nav (vd 'cafe') */
@@ -68,6 +70,45 @@ interface AnimalActor {
   info: WorldAnimalInfo;
   phase: number;
 }
+
+/** Thông tin một cư dân để dựng (tĩnh từ RESIDENTS + vị trí / trạng thái từ server) */
+export interface WorldResidentInfo {
+  id: string;
+  name: string;
+  avatar: string;
+  emoji: string;
+  x: number;
+  z: number;
+  state: ResidentState;
+}
+
+interface ResidentActor {
+  id: string;
+  group: THREE.Group;
+  model: THREE.Group | null;
+  mixer: THREE.AnimationMixer | null;
+  clips: Map<string, THREE.AnimationClip>;
+  current: string | null;
+  action: THREE.AnimationAction | null;
+  label: CSS2DObject;
+  nameEl: HTMLDivElement;
+  bubbleEl: HTMLDivElement;
+  bubbleTimer: number | null;
+  shadow: THREE.Mesh;
+  pos: Vec2;
+  target: Vec2;
+  yaw: number;
+  info: WorldResidentInfo;
+  /** Nhìn về phía `face` cho tới `faceUntil` (khi đang nói chuyện) */
+  face: Vec2 | null;
+  faceUntil: number;
+  /** Clip diễn thêm khi tương tác (giúp đỡ, nhận quà...) */
+  burst: { clip: string; until: number } | null;
+}
+
+/** Dáng đứng riêng của vài cư dân khi không đi (Kenney Mini Characters có sẵn các clip này) */
+const RESIDENT_IDLE_CLIP: Record<string, string> = { phong: 'holding-both', minh: 'holding-right', nam: 'emote-yes' };
+const RESIDENT_SPEED_BY_ID = new Map(RESIDENTS.map((r) => [r.id, r.speed]));
 
 const CHAR_HEIGHT = 1.6;
 const LOCAL_SPEED = 5;
@@ -127,6 +168,7 @@ export class CityRenderer {
   private readonly actors = new Map<string, Actor>();
   private readonly animals = new Map<string, AnimalActor>();
   private readonly animalCache = new Map<string, Promise<THREE.Group>>();
+  private readonly residents = new Map<string, ResidentActor>();
   private selectedId: string | null = null;
   private readonly clock = new THREE.Clock();
   private readonly buildingMeshes: THREE.Object3D[] = [];
@@ -513,11 +555,11 @@ export class CityRenderer {
   }
 
   /** Người chơi (khác mình) hoặc con vật gần điểm bấm nhất trên màn hình, trong PICK_RADIUS_PX */
-  private pickActor(clientX: number, clientY: number): { type: 'animal' | 'player'; id: string } | null {
+  private pickActor(clientX: number, clientY: number): { type: 'animal' | 'player' | 'resident'; id: string } | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
-    const found: Array<{ type: 'animal' | 'player'; id: string; d: number }> = [];
+    const found: Array<{ type: 'animal' | 'player' | 'resident'; id: string; d: number }> = [];
     const v = new THREE.Vector3();
-    const test = (type: 'animal' | 'player', id: string, x: number, y: number, z: number) => {
+    const test = (type: 'animal' | 'player' | 'resident', id: string, x: number, y: number, z: number) => {
       v.set(x, y, z).project(this.camera);
       const sx = rect.left + ((v.x + 1) / 2) * rect.width;
       const sy = rect.top + ((1 - v.y) / 2) * rect.height;
@@ -525,6 +567,7 @@ export class CityRenderer {
       if (d <= PICK_RADIUS_PX) found.push({ type, id, d });
     };
     for (const a of this.animals.values()) test('animal', a.id, a.pos.x, 0.5 * ANIMAL_SCALE, a.pos.z);
+    for (const a of this.residents.values()) test('resident', a.id, a.pos.x, 0.8, a.pos.z);
     for (const a of this.actors.values()) if (a.id !== this.localId && !a.inside) test('player', a.id, a.pos.x, 0.8, a.pos.z);
     found.sort((x, y) => x.d - y.d);
     return found[0] ? { type: found[0].type, id: found[0].id } : null;
@@ -671,6 +714,143 @@ export class CityRenderer {
     }
   }
 
+  // ---------- cư dân thành phố (NPC) ----------
+  /** Đồng bộ cư dân từ snapshot của server: vị trí đích và trạng thái. Cư dân mới thì dựng nhân vật. */
+  syncResidents(list: WorldResidentInfo[]): void {
+    for (const info of list) {
+      let a = this.residents.get(info.id);
+      if (!a) {
+        a = this.makeResident(info);
+        this.residents.set(info.id, a);
+      }
+      a.info = info;
+      a.target = { x: info.x, z: info.z };
+    }
+  }
+
+  private makeResident(info: WorldResidentInfo): ResidentActor {
+    const group = new THREE.Group();
+    group.position.set(info.x, 0, info.z);
+    const nameEl = document.createElement('div');
+    nameEl.className = 'px-2 py-0.5 rounded-full bg-emerald-100/95 text-[11px] font-bold text-emerald-900 shadow whitespace-nowrap border border-emerald-200';
+    nameEl.textContent = `${info.emoji} ${info.name}`;
+    const bubbleEl = document.createElement('div');
+    bubbleEl.className = 'hidden max-w-[13rem] px-2.5 py-1 mb-1 rounded-xl bg-white text-[11px] text-stone-800 shadow-md border border-emerald-200 leading-snug';
+    const wrap = document.createElement('div');
+    wrap.className = 'flex flex-col items-center';
+    wrap.append(bubbleEl, nameEl);
+    const label = new CSS2DObject(wrap);
+    label.position.set(0, CHAR_HEIGHT + 0.35, 0);
+    group.add(label);
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.42, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.y = 0.03;
+    group.add(shadow);
+    this.scene.add(group);
+    const actor: ResidentActor = {
+      id: info.id,
+      group,
+      model: null,
+      mixer: null,
+      clips: new Map(),
+      current: null,
+      action: null,
+      label,
+      nameEl,
+      bubbleEl,
+      bubbleTimer: null,
+      shadow,
+      pos: { x: info.x, z: info.z },
+      target: { x: info.x, z: info.z },
+      yaw: Math.PI,
+      info,
+      face: null,
+      faceUntil: 0,
+      burst: null,
+    };
+    void this.loadChar(info.avatar).then((src) => {
+      if (this.disposed || !this.residents.has(actor.id)) return;
+      const obj = cloneSkinned(src.scene) as THREE.Group;
+      const box = new THREE.Box3().setFromObject(obj);
+      const s = CHAR_HEIGHT / (box.max.y - box.min.y || 1);
+      obj.scale.setScalar(s);
+      obj.position.y = -box.min.y * s;
+      group.add(obj);
+      actor.model = obj;
+      actor.mixer = new THREE.AnimationMixer(obj);
+      actor.clips = new Map(src.animations.map((c) => [c.name, c]));
+    });
+    return actor;
+  }
+
+  private playResidentClip(a: ResidentActor, name: string, timeScale = 1): void {
+    if (!a.mixer || a.current === name) return;
+    const clip = a.clips.get(name) ?? a.clips.get('idle');
+    if (!clip) return;
+    const next = a.mixer.clipAction(clip);
+    next.reset();
+    next.setLoop(THREE.LoopRepeat, Infinity);
+    next.timeScale = timeScale;
+    if (a.action) next.crossFadeFrom(a.action, 0.2, false);
+    next.play();
+    a.action = next;
+    a.current = name;
+  }
+
+  /** Cư dân quay về phía người tương tác, diễn một clip ngắn (giúp đỡ / nhận quà) và hiện lời thoại */
+  residentReact(residentId: string, op: 'talk' | 'help' | 'treat', line: string, towardsPlayerId?: string): void {
+    const a = this.residents.get(residentId);
+    if (!a) return;
+    const who = towardsPlayerId ? this.actors.get(towardsPlayerId) : undefined;
+    if (who) {
+      a.face = { ...who.pos };
+      a.faceUntil = performance.now() + 7000;
+    }
+    const clip = op === 'help' ? 'interact-right' : op === 'treat' ? 'holding-both' : 'emote-yes';
+    a.burst = { clip, until: performance.now() + (op === 'talk' ? 1600 : 2400) };
+    a.bubbleEl.textContent = line;
+    a.bubbleEl.classList.remove('hidden');
+    if (a.bubbleTimer) window.clearTimeout(a.bubbleTimer);
+    a.bubbleTimer = window.setTimeout(() => a.bubbleEl.classList.add('hidden'), Math.min(9000, 3500 + line.length * 45));
+  }
+
+  /** Vị trí hiện tại của cư dân (để người chơi đi tới) */
+  residentPosition(residentId: string): Vec2 | null {
+    const a = this.residents.get(residentId);
+    return a ? { ...a.pos } : null;
+  }
+
+  private updateResidents(dt: number, now: number): void {
+    for (const a of this.residents.values()) {
+      const dx = a.target.x - a.pos.x;
+      const dz = a.target.z - a.pos.z;
+      const d = Math.hypot(dx, dz);
+      const speed = (RESIDENT_SPEED_BY_ID.get(a.id) ?? 1.2) * 1.2;
+      let moving = false;
+      if (d > 6) {
+        a.pos = { ...a.target }; // lệch quá xa (vào phòng giữa chừng): đặt thẳng tới nơi
+      } else if (d > 0.04) {
+        const step = Math.min(d, speed * dt);
+        a.pos = { x: a.pos.x + (dx / d) * step, z: a.pos.z + (dz / d) * step };
+        a.yaw = Math.atan2(dx, dz);
+        moving = true;
+      }
+      if (!moving && a.face && now < a.faceUntil) a.yaw = Math.atan2(a.face.x - a.pos.x, a.face.z - a.pos.z);
+      a.group.position.set(a.pos.x, 0, a.pos.z);
+      if (a.model) {
+        const cur = a.model.rotation.y;
+        const diff = Math.atan2(Math.sin(a.yaw - cur), Math.cos(a.yaw - cur));
+        a.model.rotation.y = cur + diff * Math.min(1, dt * 10);
+      }
+      if (a.burst && now > a.burst.until) a.burst = null;
+      const runner = (RESIDENT_SPEED_BY_ID.get(a.id) ?? 0) > 2.5;
+      if (moving) this.playResidentClip(a, runner ? 'sprint' : 'walk', runner ? 1.1 : 1.3);
+      else if (a.burst) this.playResidentClip(a, a.burst.clip, 1.2);
+      else this.playResidentClip(a, RESIDENT_IDLE_CLIP[a.id] ?? 'idle');
+      a.mixer?.update(dt);
+    }
+  }
+
   // ---------- điều khiển người chơi cục bộ ----------
   localPosition(): Vec2 | null {
     const a = this.actors.get(this.localId);
@@ -796,6 +976,7 @@ export class CityRenderer {
     }
 
     this.updateAnimals(dt, now);
+    this.updateResidents(dt, now);
 
     // camera bám người chơi cục bộ
     const me = this.actors.get(this.localId);
@@ -882,6 +1063,10 @@ export class CityRenderer {
     this.raycaster.setFromCamera(ndc, this.camera);
 
     const picked = this.pickActor(e.clientX, e.clientY);
+    if (picked?.type === 'resident' && this.opts.onResident) {
+      this.opts.onResident(picked.id);
+      return;
+    }
     if (picked?.type === 'animal' && this.opts.onAnimal) {
       this.opts.onAnimal(picked.id);
       return;
@@ -928,6 +1113,15 @@ export class CityRenderer {
       this.scene.remove(a.group);
     }
     this.animals.clear();
+    for (const a of this.residents.values()) {
+      if (a.bubbleTimer) window.clearTimeout(a.bubbleTimer);
+      a.label.element.remove();
+      a.mixer?.stopAllAction();
+      a.shadow.geometry.dispose();
+      (a.shadow.material as THREE.Material).dispose();
+      this.scene.remove(a.group);
+    }
+    this.residents.clear();
     for (const s of this.signs.values()) {
       this.scene.remove(s.label);
       s.el.remove();

@@ -88,6 +88,8 @@ export interface ClientMessages {
   animal: { animalId: string; op: AnimalOp };
   /** Biểu cảm với bạn bè; hug và highfive cần `targetId` đứng gần */
   emote: { kind: EmoteKind; targetId?: string };
+  /** Trò chuyện / giúp đỡ / mời quà một cư dân trong thành phố (phải đứng gần) */
+  resident: { residentId: string; op: ResidentOp };
 }
 
 /** Server -> client (chỉ gửi riêng cho người gửi) */
@@ -197,6 +199,72 @@ export const TARGETED_EMOTES: readonly EmoteKind[] = ['highfive', 'hug'];
 export const EMOTE_REACH = 5;
 export const EMOTE_MIN_INTERVAL_MS = 1_200;
 
+/** Cư dân thành phố: NPC do server điều khiển, đi tuần theo lộ trình, nhớ mức thân quen với từng người chơi */
+export const RESIDENT_OPS = ['talk', 'help', 'treat'] as const;
+export type ResidentOp = (typeof RESIDENT_OPS)[number];
+export const isResidentOp = (v: unknown): v is ResidentOp => typeof v === 'string' && (RESIDENT_OPS as readonly string[]).includes(v);
+/** idle: đứng; walk: đang đi; talk: đang nói chuyện với ai đó (đứng yên) */
+export type ResidentState = 'idle' | 'walk' | 'talk';
+
+export interface ResidentDef {
+  id: string;
+  name: string;
+  /** Mô hình nhân vật Kenney Mini Characters (public/models/characters/<avatar>.glb) */
+  avatar: string;
+  emoji: string;
+  role: string;
+  /** Lộ trình tuần hoàn; điểm đầu là chỗ đứng thường ngày. Mọi đoạn thẳng đều đi được trên city_nav.json (có test). */
+  route: ReadonlyArray<{ x: number; z: number }>;
+  /** Tốc độ đi (m/giây) */
+  speed: number;
+  /** Nghỉ ở mỗi điểm dừng trong khoảng này (ms) */
+  pauseMs: readonly [number, number];
+  /** Nhãn nút "giúp đỡ" (việc cụ thể của cư dân này) */
+  helpLabel: string;
+  /** Nhãn nút "mời" và giá (nghìn VNĐ); bỏ qua nếu cư dân không nhận quà */
+  treatLabel?: string;
+  treatCost?: number;
+}
+
+export const RESIDENTS: readonly ResidentDef[] = [
+  { id: 'ba-tu', name: 'Bà Tư', avatar: 'female-e', emoji: '👵', role: 'Hay ngồi ghế đá công viên', route: [{ x: -6.5, z: 0.6 }, { x: -4.4, z: 0.6 }], speed: 1.1, pauseMs: [9000, 16000], helpLabel: 'Xách giỏ đồ giúp bà', treatLabel: 'Mời bà ly trà đá', treatCost: 15 },
+  { id: 'hung', name: 'Anh Hùng', avatar: 'male-b', emoji: '🏃', role: 'Chạy vòng quanh công viên mỗi ngày', route: [{ x: 9.5, z: -9.5 }, { x: 9.5, z: 9.5 }, { x: -9.5, z: 9.5 }, { x: -9.5, z: -9.5 }], speed: 3.2, pauseMs: [200, 600], helpLabel: 'Chạy cùng anh một đoạn' },
+  { id: 'lan', name: 'Cô Lan', avatar: 'female-a', emoji: '☕', role: 'Barista quán cà phê', route: [{ x: 18.2, z: -12.3 }, { x: 21.8, z: -12.3 }], speed: 1.2, pauseMs: [6000, 12000], helpLabel: 'Phụ cô bưng ly', treatLabel: 'Mua một ly cà phê', treatCost: 30 },
+  { id: 'tam', name: 'Chú Tám', avatar: 'male-d', emoji: '🥖', role: 'Bán bánh mì trước chợ', route: [{ x: -12.0, z: -1.4 }, { x: -12.0, z: 1.4 }], speed: 1.0, pauseMs: [7000, 14000], helpLabel: 'Phụ chú dọn hàng', treatLabel: 'Mua ổ bánh mì', treatCost: 20 },
+  { id: 'minh', name: 'Minh', avatar: 'male-a', emoji: '📚', role: 'Học sinh ôm sách trước trường', route: [{ x: -22.8, z: -12.2 }, { x: -21.0, z: -12.2 }], speed: 1.3, pauseMs: [8000, 15000], helpLabel: 'Ôn bài cùng bạn ấy' },
+  { id: 'phong', name: 'Phong', avatar: 'male-f', emoji: '📱', role: 'Thiếu niên dán mắt vào điện thoại', route: [{ x: 22.6, z: 12.0 }, { x: 22.6, z: 11.5 }], speed: 0.5, pauseMs: [10000, 20000], helpLabel: 'Rủ bạn ấy đi dạo 5 phút' },
+  { id: 'binh', name: 'Thầy Bình', avatar: 'male-c', emoji: '💪', role: 'Huấn luyện viên phòng gym', route: [{ x: 12.3, z: -1.6 }, { x: 12.3, z: 1.8 }], speed: 1.4, pauseMs: [6000, 11000], helpLabel: 'Đỡ tạ giúp thầy' },
+  { id: 'nam', name: 'Cậu Nam', avatar: 'male-e', emoji: '🎸', role: 'Hát rong trong công viên', route: [{ x: 0, z: -5.8 }, { x: 0, z: -4.6 }], speed: 0.6, pauseMs: [12000, 22000], helpLabel: 'Vỗ tay và hát theo', treatLabel: 'Bỏ tiền vào hộp đàn', treatCost: 10 },
+];
+/** Phải đứng trong bán kính này mới nói chuyện được với cư dân */
+export const RESIDENT_REACH = 4.5;
+/** Cư dân đứng lại chừng này ms sau khi có người tương tác (không bỏ đi giữa câu chuyện) */
+export const RESIDENT_BUSY_MS = 8_000;
+/** Mỗi người chơi chỉ tương tác với cư dân tối đa mỗi chừng này ms một lần */
+export const RESIDENT_MIN_INTERVAL_MS = 600;
+/** Mức thân quen: 0 lạ, 1 quen mặt, 2 bạn bè. Điểm thân quen tăng theo lượt có thưởng (trò chuyện +1, giúp / mời +2); mỗi ngày tối đa ~8 điểm với một cư dân, nên làm bạn mất vài ngày. */
+export const RESIDENT_LEVEL_AT = [0, 4, 12] as const;
+
+/** Cư dân phản ứng với một người (gửi cho cả phòng) */
+export interface ResidentEventMessage {
+  residentId: string;
+  residentName: string;
+  byId: string;
+  byName: string;
+  op: ResidentOp;
+  line: string;
+  /** Mức thân quen của người này với cư dân sau lần này */
+  level: number;
+}
+
+export interface ResidentResultMessage {
+  ok: boolean;
+  residentId: string;
+  reason?: string;
+  gained?: string | null;
+  level?: number;
+}
+
 /** Con vật phản ứng với một người (gửi cho cả phòng để mọi người cùng thấy) */
 export interface AnimalEventMessage {
   animalId: string;
@@ -232,6 +300,8 @@ export interface EmoteResultMessage {
 }
 
 export interface ServerMessages {
+  resident_event: ResidentEventMessage;
+  resident_result: ResidentResultMessage;
   animal_event: AnimalEventMessage;
   animal_result: AnimalResultMessage;
   emote: EmoteMessage;

@@ -8,6 +8,7 @@ import { DEFAULT_LIMITS, RateLimiter, sanitizeName, scrubLinks, type Limits } fr
 import { LifeEngine, type PlayerSession } from './engine.js';
 import { JointBoard, type Offer } from './joint.js';
 import { AnimalBoard } from './playground.js';
+import { ResidentBoard } from './residents.js';
 import {
   CHAT_HISTORY,
   CHAT_MIN_INTERVAL_MS,
@@ -18,10 +19,14 @@ import {
   MAX_PLAYERS,
   TARGETED_EMOTES,
   isAnimalOp,
+  isResidentOp,
+  RESIDENT_MIN_INTERVAL_MS,
   isEmoteKind,
   type ActionResultMessage,
   type AnimalEventMessage,
   type AnimalResultMessage,
+  type ResidentEventMessage,
+  type ResidentResultMessage,
   type EmoteMessage,
   type EmoteResultMessage,
   type InviteMessage,
@@ -32,7 +37,7 @@ import {
   type Phase,
   type Timing,
 } from './protocol.js';
-import { AnimalSchema, ChatMessageSchema, LifeState, OfferSchema, PlayerSchema } from './schema.js';
+import { AnimalSchema, ChatMessageSchema, LifeState, OfferSchema, PlayerSchema, ResidentSchema } from './schema.js';
 
 /** Sinh mã 4 ký tự chưa có phòng nào dùng */
 async function uniqueRoomCode(): Promise<string> {
@@ -89,6 +94,9 @@ export class LifeRoom extends Room<{ state: LifeState }> {
   private board!: JointBoard;
   private animals!: AnimalBoard;
   private lastEmoteAt = new Map<string, number>();
+  private residents!: ResidentBoard;
+  private lastResidentAt = new Map<string, number>();
+  private lastResidentTick = 0;
   private lastChatAt = new Map<string, number>();
   private started = false;
   private phaseTimer?: Delayed;
@@ -118,6 +126,7 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     this.engine = new LifeEngine(randomBytes(16).toString('hex'));
     this.board = new JointBoard(this.engine);
     this.animals = new AnimalBoard(this.engine.rngForLabel('animals', 0));
+    this.residents = new ResidentBoard(this.engine.rngForLabel('residents', 0), Date.now());
     const state = new LifeState();
     state.code = this.roomId;
     state.phase = 'planning';
@@ -132,8 +141,20 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       this.state.animals.set(s.id, s);
     }
     this.syncAnimals();
+    for (const r of this.residents.residents.values()) {
+      const s = new ResidentSchema();
+      s.id = r.def.id;
+      s.name = r.def.name;
+      this.state.residents.set(s.id, s);
+    }
+    this.syncResidents();
+    this.lastResidentTick = Date.now();
     this.clock.setInterval(() => {
       if (this.animals.tick(Date.now()).length > 0) this.syncAnimals();
+      const now = Date.now();
+      const dt = Math.min(2000, now - this.lastResidentTick);
+      this.lastResidentTick = now;
+      if (this.residents.tick(now, dt).length > 0) this.syncResidents();
     }, 500);
 
     this.onMessage('action', (client, message: unknown) => {
@@ -213,6 +234,32 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       const def = this.animals.animals.get(animalId)!.def;
       const event: AnimalEventMessage = { animalId, animalName: def.name, byId: session.id, byName: session.name, op: m.op, mood: res.mood, line: res.line };
       this.broadcast('animal_event', event);
+    });
+
+    this.onMessage('resident', (client, message: unknown) => {
+      const m = message as { residentId?: unknown; op?: unknown } | null;
+      const residentId = typeof m?.residentId === 'string' ? m.residentId : '';
+      const reply = (r: ResidentResultMessage) => client.send('resident_result', r);
+      const session = this.engine.players.get(client.sessionId);
+      if (!session) return;
+      if ((this.state.phase !== 'planning' && this.state.phase !== 'morning') || !isResidentOp(m?.op)) {
+        return reply({ ok: false, residentId, reason: 'Lúc này chưa trò chuyện được.' });
+      }
+      const now = Date.now();
+      if (now - (this.lastResidentAt.get(client.sessionId) ?? 0) < RESIDENT_MIN_INTERVAL_MS) return reply({ ok: false, residentId, reason: 'Từ từ thôi, đừng dồn dập.' });
+      const res = this.residents.interact(residentId, m.op, client.sessionId, session.state.day, session.x, session.z, now);
+      if (!res.ok) return reply({ ok: false, residentId, reason: res.reason });
+      const granted = this.engine.grantResident(client.sessionId, res.deltas, res.pairKey);
+      if (!granted.ok) return reply({ ok: false, residentId, reason: granted.reason });
+      this.lastResidentAt.set(client.sessionId, now);
+      res.commit(granted.gained !== null);
+      this.syncSession(client.sessionId);
+      this.syncResidents();
+      this.pushPrivate(client.sessionId);
+      reply({ ok: true, residentId, gained: granted.gained, level: res.level });
+      const def = this.residents.residents.get(residentId)!.def;
+      const event: ResidentEventMessage = { residentId, residentName: def.name, byId: session.id, byName: session.name, op: m.op, line: res.line, level: res.level };
+      this.broadcast('resident_event', event);
     });
 
     this.onMessage('emote', (client, message: unknown) => {
@@ -539,6 +586,17 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       s.x = a.x;
       s.z = a.z;
       s.mood = a.mood;
+    }
+  }
+
+  /** Ghi vị trí và trạng thái cư dân vào state công khai */
+  private syncResidents(): void {
+    for (const r of this.residents.residents.values()) {
+      const s = this.state.residents.get(r.def.id);
+      if (!s) continue;
+      s.x = r.x;
+      s.z = r.z;
+      s.state = r.state;
     }
   }
 

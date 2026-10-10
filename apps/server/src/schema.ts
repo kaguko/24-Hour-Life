@@ -76,6 +76,20 @@ export const AnimalSchema = schema(
 );
 export type AnimalSchema = SchemaType<typeof AnimalSchema>;
 
+/** Cư dân thành phố (NPC). Vị trí và trạng thái do server quyết định; thông tin tĩnh (tên, mô hình, lời thoại) nằm trong RESIDENTS. */
+export const ResidentSchema = schema(
+  {
+    id: t.string(),
+    name: t.string(),
+    x: t.float32(),
+    z: t.float32(),
+    /** idle | walk | talk */
+    state: t.string(),
+  },
+  'Resident'
+);
+export type ResidentSchema = SchemaType<typeof ResidentSchema>;
+
 export const LifeState = schema(
   {
     /** Mã phòng 4 ký tự (cũng là roomId) */
@@ -90,6 +104,7 @@ export const LifeState = schema(
     offers: t.map(OfferSchema),
     chat: t.array(ChatMessageSchema),
     animals: t.map(AnimalSchema),
+    residents: t.map(ResidentSchema),
   },
   'LifeState'
 );

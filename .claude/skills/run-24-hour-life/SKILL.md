@@ -37,7 +37,7 @@ npm run dev:all > "$TEMP/devall.log" 2>&1 &        # web :3000 + server :2567
 node .claude/skills/run-24-hour-life/multi.mjs "$TEMP/multi"
 ```
 Tạo phòng, vào bằng mã (và mã sai), chat, rủ chạy bộ cùng, hành vi một mình, qua đêm, báo cáo sáng + "Bạn bè hôm qua"; 13 PASS/FAIL, ảnh `multi-*.png`.
-Con vật + biểu cảm: `node .claude/skills/run-24-hour-life/playground.mjs "$TEMP/play"` (ôm nhau, chọc mèo; 7 PASS/FAIL, ảnh `play-*.png`).
+Cư dân thành phố (NPC đi tuần, trò chuyện / giúp đỡ / mời quà, mức thân quen): `node .claude/skills/run-24-hour-life/residents.mjs "$TEMP/res"` (13 PASS/FAIL, ảnh `res-*.png`; cần `dev:all` đang chạy). Con vật + biểu cảm: `node .claude/skills/run-24-hour-life/playground.mjs "$TEMP/play"` (ôm nhau, chọc mèo; 7 PASS/FAIL, ảnh `play-*.png`).
 Khi dev, `window.__city.debugActors()` cho biết nhân vật 3D đã tải mô hình/clip chưa. Dừng server: kill tiến trình đang nghe cổng 3000 và 2567.
 
 ## Direct domain invocation (no browser)

@@ -23,6 +23,10 @@ import type {
   NudgeResultMessage,
   Phase,
   PrivateStateMessage,
+  ResidentEventMessage,
+  ResidentOp,
+  ResidentResultMessage,
+  ResidentState,
 } from '@24h/protocol';
 import { ROOM_NAME } from '@24h/protocol';
 
@@ -79,6 +83,14 @@ export interface AnimalView {
   mood: AnimalMood;
 }
 
+export interface ResidentView {
+  id: string;
+  name: string;
+  x: number;
+  z: number;
+  state: ResidentState;
+}
+
 export interface RoomSnapshot {
   code: string;
   phase: Phase;
@@ -88,6 +100,7 @@ export interface RoomSnapshot {
   offers: OfferView[];
   chat: ChatView[];
   animals: AnimalView[];
+  residents: ResidentView[];
   sessionId: string;
   me: PlayerView | null;
 }
@@ -105,6 +118,8 @@ export interface ServerEvents {
   nudged: NudgedMessage;
   animal_event: AnimalEventMessage;
   animal_result: AnimalResultMessage;
+  resident_event: ResidentEventMessage;
+  resident_result: ResidentResultMessage;
   emote: EmoteMessage;
   emote_result: EmoteResultMessage;
 }
@@ -153,6 +168,8 @@ export function buildSnapshot(state: any, sessionId: string): RoomSnapshot {
   state.animals?.forEach((a: any, id: string) =>
     animals.push({ id, kind: a.kind as AnimalKind, name: a.name ?? '', x: a.x ?? 0, z: a.z ?? 0, mood: (a.mood ?? 'calm') as AnimalMood })
   );
+  const residents: ResidentView[] = [];
+  state.residents?.forEach((r: any, id: string) => residents.push({ id, name: r.name ?? '', x: r.x ?? 0, z: r.z ?? 0, state: (r.state ?? 'idle') as ResidentState }));
   return {
     code: state.code ?? '',
     phase: (state.phase ?? 'planning') as Phase,
@@ -162,6 +179,7 @@ export function buildSnapshot(state: any, sessionId: string): RoomSnapshot {
     offers,
     chat,
     animals,
+    residents,
     sessionId,
     me: players.find((p) => p.id === sessionId) ?? null,
   };
@@ -191,7 +209,7 @@ export class RoomConnection {
       this.setStatus('closed');
       clearSavedToken();
     });
-    for (const type of ['private_state', 'action_result', 'morning', 'invite', 'joint_result', 'nudge_result', 'nudged', 'animal_event', 'animal_result', 'emote', 'emote_result'] as const) {
+    for (const type of ['private_state', 'action_result', 'morning', 'invite', 'joint_result', 'nudge_result', 'nudged', 'animal_event', 'animal_result', 'resident_event', 'resident_result', 'emote', 'emote_result'] as const) {
       room.onMessage(type, (payload: any) => {
         if (type === 'private_state') {
           this.priv = payload;
@@ -282,6 +300,7 @@ export class RoomConnection {
   startOffer = () => this.send('joint', { op: 'start' });
   nudge = (targetId: string) => this.send('nudge', { targetId });
   interactAnimal = (animalId: string, op: AnimalOp) => this.send('animal', { animalId, op });
+  interactResident = (residentId: string, op: ResidentOp) => this.send('resident', { residentId, op });
   emote = (kind: EmoteKind, targetId?: string) => this.send('emote', { kind, targetId });
 
   async leave(): Promise<void> {

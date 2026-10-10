@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { locationOf } from '@24h/domain';
-import { ANIMAL_REACH, EMOTE_REACH, TARGETED_EMOTES, animForAction, type AnimalOp, type EmoteKind } from '@24h/protocol';
+import { ANIMAL_REACH, EMOTE_REACH, RESIDENTS, RESIDENT_REACH, TARGETED_EMOTES, animForAction, type AnimalOp, type EmoteKind, type ResidentOp } from '@24h/protocol';
 import type { RoomConnection, RoomSnapshot } from '../../net/room';
 import { audioAdapter } from '../../adapters/audioAdapter';
 import { CityRenderer } from '../../world/CityRenderer';
@@ -9,6 +9,8 @@ import { EMOTE_EMOJI } from '../../world/animMap';
 const EMOTE_LABEL: Record<EmoteKind, string> = { wave: 'Vẫy', highfive: 'Đập tay', hug: 'Ôm', dance: 'Nhảy', cheer: 'Hò reo' };
 const EMOTE_VERB: Record<EmoteKind, string> = { wave: 'vẫy tay chào', highfive: 'đập tay với', hug: 'ôm', dance: 'nhảy cùng', cheer: 'hò reo cùng' };
 const ANIMAL_EMOJI: Record<string, string> = { cat: '🐱', capybara: '🦫', duck: '🦆', shiba: '🐕', frog: '🐸' };
+const LEVEL_NAME = ['Người lạ', 'Quen mặt', 'Bạn bè'] as const;
+const RESIDENT_VERB: Record<ResidentOp, string> = { talk: 'trò chuyện với', help: 'giúp đỡ', treat: 'mời quà' };
 
 interface FeedItem {
   id: number;
@@ -34,6 +36,9 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
   visitRef.current = onVisitLocation;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeAnimalId, setActiveAnimalId] = useState<string | null>(null);
+  const [activeResidentId, setActiveResidentId] = useState<string | null>(null);
+  /** Mức thân quen của mình với từng cư dân (server trả về sau mỗi lần tương tác) */
+  const [levels, setLevels] = useState<Record<string, number>>({});
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const feedId = useRef(0);
   const snapRef = useRef(snapshot);
@@ -56,8 +61,27 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
       renderer = new CityRenderer(container, {
         quality,
         onGround: (x, z) => {
-          setActiveAnimalId(null); // đi chỗ khác thì đóng bảng con vật
+          setActiveAnimalId(null); // đi chỗ khác thì đóng bảng con vật / cư dân
+          setActiveResidentId(null);
           renderer?.walkLocalTo(x, z);
+        },
+        onResident: (residentId) => {
+          const r = renderer;
+          const pos = r?.residentPosition(residentId);
+          const me = r?.localPosition();
+          if (!r || !pos || !me) return;
+          setSelectedId(null);
+          selectedRef.current = null;
+          r.setSelectedPlayer(null);
+          setActiveAnimalId(null);
+          const d = Math.hypot(pos.x - me.x, pos.z - me.z);
+          if (d <= RESIDENT_REACH - 1) {
+            setActiveResidentId(residentId);
+            return;
+          }
+          // Đi tới gần (cách ~1.6m về phía mình) rồi mới hiện nút trò chuyện
+          const k = 1.6 / d;
+          r.walkLocalTo(pos.x + (me.x - pos.x) * k, pos.z + (me.z - pos.z) * k, () => setActiveResidentId(residentId));
         },
         onAnimal: (animalId) => {
           const r = renderer;
@@ -67,6 +91,7 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
           setSelectedId(null);
           selectedRef.current = null;
           r.setSelectedPlayer(null);
+          setActiveResidentId(null);
           const d = Math.hypot(pos.x - me.x, pos.z - me.z);
           if (d <= ANIMAL_REACH - 0.5) {
             setActiveAnimalId(animalId);
@@ -84,6 +109,7 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
         },
         onBuilding: (doorKey) => {
           setActiveAnimalId(null);
+          setActiveResidentId(null);
           const nav = renderer?.getNav();
           const loc = nav ? Object.entries(nav.data.locations).find(([, key]) => key === doorKey)?.[0] : undefined;
           renderer?.walkLocalToDoor(doorKey, () => {
@@ -147,8 +173,25 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
       else if (m.gained) pushFeed(`✨ ${m.gained}`);
     });
 
+    const offResident = conn.on('resident_event', (m) => {
+      rendererRef.current?.residentReact(m.residentId, m.op, m.line, m.byId);
+      if (m.byId === conn.sessionId && m.op !== 'treat') rendererRef.current?.playLocalAnim(m.op === 'help' ? 'wave' : 'idle', 2);
+      const def = RESIDENTS.find((r) => r.id === m.residentId);
+      pushFeed(`${def?.emoji ?? '🧑'} ${m.byName} ${RESIDENT_VERB[m.op]} ${m.residentName}`);
+    });
+    const offResidentResult = conn.on('resident_result', (m) => {
+      if (!m.ok && m.reason) pushFeed(`⚠️ ${m.reason}`);
+      else if (m.gained) pushFeed(`✨ ${m.gained}`);
+      if (m.ok && typeof m.level === 'number') {
+        const lv = m.level;
+        setLevels((l) => ({ ...l, [m.residentId]: lv }));
+      }
+    });
+
     return () => {
       cancelled = true;
+      offResident();
+      offResidentResult();
       offEmote();
       offEmoteResult();
       offAnimal();
@@ -175,6 +218,12 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
       r.teleportLocal(snapshot.me.x, snapshot.me.z);
     }
     r.syncAnimals(snapshot.animals);
+    r.syncResidents(
+      snapshot.residents.flatMap((rv) => {
+        const def = RESIDENTS.find((d) => d.id === rv.id);
+        return def ? [{ id: rv.id, name: rv.name || def.name, avatar: def.avatar, emoji: def.emoji, x: rv.x, z: rv.z, state: rv.state }] : [];
+      })
+    );
     // Giờ trong ngày: 07:00 + số giờ đã dùng của chính mình
     if (snapshot.me) r.setClock(7 + snapshot.me.hoursUsed);
     // Bong bóng chat cho tin mới
@@ -206,6 +255,11 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
   };
   const selected = snapshot.players.find((p) => p.id === selectedId);
   const activeAnimal = snapshot.animals.find((a) => a.id === activeAnimalId);
+  const doResident = (op: ResidentOp) => {
+    if (activeResidentId) conn.interactResident(activeResidentId, op);
+  };
+  const activeResidentDef = RESIDENTS.find((r) => r.id === activeResidentId);
+  const activeLevel = activeResidentId ? levels[activeResidentId] ?? 0 : 0;
 
   return (
     <div className="relative w-full h-[22rem] sm:h-[28rem] lg:h-[34rem] rounded-2xl overflow-hidden bg-sky-100 border border-stone-200" data-testid="city-stage">
@@ -239,6 +293,36 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
           </button>
         </div>
       )}
+      {activeResidentDef && (
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-12 w-[min(94%,27rem)] px-3 py-2 rounded-2xl bg-white/95 shadow-lg border border-emerald-200" data-testid="resident-panel">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-stone-800 truncate">
+                {activeResidentDef.emoji} {activeResidentDef.name}
+              </div>
+              <div className="text-[11px] text-stone-500 truncate">
+                {activeResidentDef.role} · <span className="font-semibold text-emerald-700">{'❤'.repeat(activeLevel + 1)} {LEVEL_NAME[activeLevel] ?? LEVEL_NAME[0]}</span>
+              </div>
+            </div>
+            <button type="button" onClick={() => setActiveResidentId(null)} aria-label="Đóng" className="px-1.5 text-stone-500 hover:text-stone-800">
+              ✕
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <button type="button" onClick={() => doResident('talk')} className="px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-xs font-semibold text-sky-900 hover:bg-sky-100">
+              💬 Trò chuyện
+            </button>
+            <button type="button" onClick={() => doResident('help')} className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-900 hover:bg-emerald-100">
+              🤝 {activeResidentDef.helpLabel}
+            </button>
+            {activeResidentDef.treatLabel && (
+              <button type="button" onClick={() => doResident('treat')} className="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900 hover:bg-amber-100">
+                🎁 {activeResidentDef.treatLabel} (−{activeResidentDef.treatCost}k)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       <div className="absolute right-2 bottom-2 flex flex-wrap justify-end items-center gap-1 max-w-[75%]" data-testid="emote-bar">
         {selected && <span className="px-2 py-1 rounded-lg bg-amber-100 text-[11px] font-semibold text-amber-900">→ {selected.name}</span>}
         {(['wave', 'highfive', 'hug', 'dance', 'cheer'] as const).map((k) => (
@@ -254,7 +338,7 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
         ))}
       </div>
       <div className="absolute left-2 bottom-2 px-2 py-1 rounded-lg bg-white/80 text-[11px] text-stone-600 pointer-events-none max-w-[40%]">
-        Bấm đường để đi · toà nhà để tới cửa · bạn bè để chọn · con vật để vuốt ve hoặc chọc · kéo để xoay
+        Bấm đường để đi · toà nhà để tới cửa · bạn bè để chọn · cư dân để trò chuyện · con vật để vuốt ve hoặc chọc · kéo để xoay
       </div>
     </div>
   );
