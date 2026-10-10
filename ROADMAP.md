@@ -204,3 +204,14 @@ nên chưa làm. Mục tiêu "Balanced không còn 100%" chưa đạt, ghi lại
 Chẩn đoán sau playtest "chán": có một cách chơi tối ưu (Balanced sống 100%) và game chỉ *nói* về mất kiểm soát chứ không để người chơi *trải nghiệm* nó. Hai thay đổi:
 - **Cám dỗ xâm nhập** (`domain/intrusion.ts`, `ui/IntrusionModal.tsx`): ý chí < 45 thì sau mỗi hành vi có xác suất (tới ~55%, cao hơn lúc khuya, tối đa 2 lần/ngày) bị điện thoại / game / đồ ăn / flash sale tìm đến. Cưỡng lại tốn ý chí (8, 12, 16... mỗi vòng một khó hơn); chiều theo thì mất giờ thật, video và game kéo thành vòng lặp "thêm một cái nữa" mà càng về sau càng khó dừng. Mỗi lần chiều là một hành vi trong lịch sử nên ảnh hưởng sụp dopamine nhanh, "nhờn", mục tiêu, kết cục. *Mô phỏng 1000 ván chưa tính cơ chế này.*
 - **Sự kiện lớn của tuần** (`domain/bigEvents.ts`, `ui/BigEventPanel.tsx`, `ui/BigEventModal.tsx`): mỗi ván bốc 1/4 (kỳ thi, phỏng vấn, chốt dự án, đám cưới bạn thân) diễn ra Thứ Bảy 14:00. Độ khó thật là thông tin ẩn (chỉ có tin đồn từ ngày 3 và thanh chuẩn bị không lộ số). Kết quả phụ thuộc mức chuẩn bị cả tuần và thể trạng lúc đó (4 mức: xuất sắc / đạt / suýt soát / hỏng), có thưởng phạt và hiện ở màn kết cục. *Chưa cân bằng bằng người chơi thật.*
+
+---
+
+### ✅ VUI HƠN KHI CHƠI CÙNG BẠN (đợt này)
+Chẩn đoán: chơi nhóm chỉ là bấm danh sách hành vi, thiếu thứ để *nghịch* cùng nhau.
+- **5 con vật meme dựng bằng Blender** (`art/blender/build_animals.py` -> `public/models/animals/`): Mèo Cáu (45% cho vuốt ve, còn lại cào rồi chạy), Capybara Chill (luôn bình thản, quả quýt trên đầu), Vịt Quạc (bị chọc thì rượt), Cheems (shiba, hay ngại), Ếch Phèo (hay nhảy mất). Server quyết định phản ứng và vị trí (`apps/server/src/playground.ts`), mọi người cùng thấy.
+- **Tương tác**: bấm con vật -> nhân vật đi tới -> Vuốt ve / Chọc. Bấm bạn bè để chọn rồi dùng biểu cảm: vẫy, đập tay, ôm, nhảy, hò reo (đập tay/ôm cần đứng gần, hai người cùng diễn).
+- **Ảnh hưởng chỉ số rất nhẹ và có trần**: tối đa 8 lần có thưởng mỗi ngày mỗi người (Tinh thần / Kết nối / Ý chí vài điểm), ôm/đập tay cùng một người chỉ thưởng một lần mỗi ngày. Mô phỏng chưa tính cơ chế này; nếu playtest thấy bị "cày" thì hạ `MAX_PLAY_REWARDS_PER_DAY` trong `engine.ts`.
+- Kiểm thử: `.claude/skills/run-24-hour-life/playground.mjs` (2 trình duyệt: ôm nhau, chọc mèo, mèo chạy ở cả hai máy).
+- Tòa nhà: nhân vật biến mất khi làm hành vi tại cửa, bảng hiệu trên cửa liệt kê ai đang ở trong (chưa có nội thất bên trong).
+

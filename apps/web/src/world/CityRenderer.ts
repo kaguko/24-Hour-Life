@@ -37,7 +37,7 @@ export interface CityRendererOptions {
 }
 
 /** Con vật sinh ra nhỏ hơn người nhiều; phóng to để thấy rõ từ camera thành phố */
-const ANIMAL_SCALE = 1.5;
+const ANIMAL_SCALE = 1.9;
 const ANIMAL_PARTS = ['body', 'head', 'ear_l', 'ear_r', 'tail', 'wing_l', 'wing_r', 'leg_l', 'leg_r', 'yuzu'];
 const PICK_RADIUS_PX = 46;
 const MOOD_EMOJI: Record<AnimalMood, string> = { calm: '', happy: '💖', angry: '💢', flee: '💨' };
