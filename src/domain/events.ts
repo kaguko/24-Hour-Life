@@ -1,5 +1,6 @@
 import { EventPrimitive, PlayerStatsPrimitive } from './types';
 import { applyStatDeltas } from './stats';
+import type { Rng } from './rng';
 import { PLACE_EVENTS } from './placeEvents';
 
 const CORE_EVENTS: EventPrimitive[] = [
@@ -270,7 +271,8 @@ export function isWeekend(day: number): boolean {
   return day % 7 === 6 || day % 7 === 0;
 }
 
-export function rollDomainEvent(day: number, rollSeed = Math.random()): EventPrimitive | null {
+export function rollDomainEvent(day: number, rng: Rng): EventPrimitive | null {
+  const rollSeed = rng();
   if (rollSeed > 0.45) return null;
   const eligible = DOMAIN_EVENTS.filter(
     (e) => !e.places && day >= e.minDay && (!e.onlyDays || e.onlyDays.includes(day))
@@ -280,11 +282,11 @@ export function rollDomainEvent(day: number, rollSeed = Math.random()): EventPri
   return eligible[idx];
 }
 
-/** Sự kiện gắn với địa điểm ('road' = trên đường đi). `rand` trả số trong [0,1). */
-export function rollPlaceEvent(place: string, day: number, rand: () => number = Math.random): EventPrimitive | null {
+/** Sự kiện gắn với địa điểm ('road' = trên đường đi). `rng` trả số trong [0,1). */
+export function rollPlaceEvent(place: string, day: number, rng: Rng): EventPrimitive | null {
   const eligible = DOMAIN_EVENTS.filter((e) => e.places?.includes(place) && day >= e.minDay);
   if (eligible.length === 0) return null;
-  return eligible[Math.floor(rand() * eligible.length) % eligible.length];
+  return eligible[Math.floor(rng() * eligible.length) % eligible.length];
 }
 
 export function resolveDomainChoice(

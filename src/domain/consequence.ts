@@ -1,5 +1,6 @@
 import { PlayerStatsPrimitive, NightResultPrimitive } from './types';
 import { DAILY_RENT_COST, MIN_SLEEP_HOURS, applyStatDeltas } from './stats';
+import type { Rng } from './rng';
 import { DOMAIN_ACTIONS } from './actions';
 import { PhilosophicalQuote, getContextualQuote } from './quotes';
 import { summarizeFastDopamine } from './dopamine';
@@ -25,7 +26,8 @@ export function processOvernightCycle(
   previousSleepDebt: number,
   dayNumber: number,
   /** Chỉ số lúc bắt đầu ngày (để tổng kết thay đổi cả ngày); không có thì dùng chỉ số cuối ngày */
-  dayStartStats?: PlayerStatsPrimitive
+  dayStartStats: PlayerStatsPrimitive | undefined,
+  rng: Rng
 ): NightResultPrimitive {
   const notes: string[] = [];
   const revealedMechanics: string[] = [];
@@ -216,7 +218,7 @@ export function processOvernightCycle(
     drivers.push({ theme: 'folly_recklessness', weight: -40 });
   }
   const { theme: quoteTheme, context: quoteContext } = pickQuoteTheme(drivers);
-  const selectedQuote = getContextualQuote(quoteTheme);
+  const selectedQuote = getContextualQuote(quoteTheme, rng);
   const recap = buildDayRecap(actionIdsToday, drivers, dayStartStats ?? currentStats, newStats, restedHours, quoteTheme);
 
   return {

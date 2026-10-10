@@ -5,6 +5,7 @@
  * Mỗi lần chiều theo là một hành vi thật (nằm trong lịch sử ngày) nên ảnh hưởng dopamine nhanh, cân bằng, kết cục.
  */
 import { ActionPrimitive, PlayerStatsPrimitive } from './types';
+import type { Rng } from './rng';
 
 export type IntrusionKind = 'phone' | 'game' | 'snack' | 'sale';
 
@@ -167,17 +168,17 @@ export function intrusionChance(stats: PlayerStatsPrimitive, ctx: IntrusionConte
   return Math.min(0.7, p);
 }
 
-/** Bốc một cám dỗ xâm nhập, hoặc null nếu hôm nay bạn "thoát". `rand` trả số trong [0,1). */
+/** Bốc một cám dỗ xâm nhập, hoặc null nếu hôm nay bạn "thoát". `rng` trả số trong [0,1). */
 export function rollIntrusion(
   stats: PlayerStatsPrimitive,
   ctx: IntrusionContext,
-  rand: () => number = Math.random
+  rng: Rng
 ): IntrusionDef | null {
-  if (rand() >= intrusionChance(stats, ctx)) return null;
+  if (rng() >= intrusionChance(stats, ctx)) return null;
   // Flash Sale chỉ nhắm vào người còn tiền để tiêu
   const pool = Object.values(INTRUSIONS).filter((d) => d.kind !== 'sale' || stats.money >= 300);
   const total = pool.reduce((s, d) => s + d.weight, 0);
-  let r = rand() * total;
+  let r = rng() * total;
   for (const d of pool) {
     r -= d.weight;
     if (r <= 0) return d;

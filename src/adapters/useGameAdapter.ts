@@ -46,6 +46,7 @@ import {
   BIG_EVENT_HOURS,
   bigEventDef,
   TIER_LABEL,
+  Rng,
 } from '../domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
@@ -58,6 +59,9 @@ interface IntrusionState {
   hoursSpent: number;
   note: string | null;
 }
+
+/** Nguồn ngẫu nhiên của game thật; domain chỉ nhận qua tham số */
+const rng: Rng = Math.random;
 
 export function useGameAdapter() {
   const [day, setDay] = useState<number>(1);
@@ -75,7 +79,7 @@ export function useGameAdapter() {
   const [dayStartStats, setDayStartStats] = useState<PlayerStatsPrimitive>(INITIAL_STATS);
   const [dayGrades, setDayGrades] = useState<DayGrade[]>([]);
   // Mục tiêu của ván này (bốc ngẫu nhiên khi bắt đầu ván mới)
-  const [goalIds, setGoalIds] = useState<string[]>(() => pickGoalIds());
+  const [goalIds, setGoalIds] = useState<string[]>(() => pickGoalIds(rng));
   // Nhân vật đang ở đâu trong thành phố (mỗi sáng thức dậy ở nhà)
   const [location, setLocation] = useState<LocationId>('home');
   const [isIntroOpen, setIsIntroOpen] = useState<boolean>(() => !storageAdapter.hasSeenIntro());
@@ -88,7 +92,7 @@ export function useGameAdapter() {
   const [intrusion, setIntrusion] = useState<IntrusionState | null>(null);
   const [intrusionsToday, setIntrusionsToday] = useState<number>(0);
   // Sự kiện lớn của tuần: độ khó thật được giấu khỏi người chơi
-  const [bigEvent, setBigEvent] = useState<BigEventState>(() => pickBigEvent());
+  const [bigEvent, setBigEvent] = useState<BigEventState>(() => pickBigEvent(rng));
   const [pendingBigEvent, setPendingBigEvent] = useState<BigEventOutcome | null>(null);
 
   // Restore on mount via storageAdapter
@@ -184,7 +188,8 @@ export function useGameAdapter() {
         customActionIds,
         sleepDebt,
         day,
-        dayStartStats
+        dayStartStats,
+        rng
       );
       const grade = nightResult.recap?.grade;
       if (grade) setDayGrades((prev) => [...prev, grade]);
@@ -208,7 +213,7 @@ export function useGameAdapter() {
       let blocked: string | null = null;
 
       for (const stepId of steps) {
-        const r = executeActionById(stepId, s, left, ids, day, history);
+        const r = executeActionById(stepId, s, left, ids, day, history, rng);
         if (!r.success) {
           blocked = r.notice;
           break;
@@ -238,9 +243,9 @@ export function useGameAdapter() {
       // Sự kiện: trên đường đi, tại địa điểm, hoặc ngẫu nhiên chung (chỉ một sự kiện mỗi lần)
       let rolled: EventPrimitive | null = null;
       if (!activeEvent && !blocked) {
-        if (traveled && Math.random() < 0.3) rolled = rollPlaceEvent('road', day);
-        if (!rolled && realActionId && endLocation !== 'home' && Math.random() < 0.2) rolled = rollPlaceEvent(endLocation, day);
-        if (!rolled && nextHoursUsed >= 8 && nextHoursUsed <= 18 && Math.random() < 0.35) rolled = rollDomainEvent(day);
+        if (traveled && rng() < 0.3) rolled = rollPlaceEvent('road', day, rng);
+        if (!rolled && realActionId && endLocation !== 'home' && rng() < 0.2) rolled = rollPlaceEvent(endLocation, day, rng);
+        if (!rolled && nextHoursUsed >= 8 && nextHoursUsed <= 18 && rng() < 0.35) rolled = rollDomainEvent(day, rng);
       }
       // Ý chí thấp: cám dỗ tự tìm đến (không chồng lên sự kiện đang hiện)
       if (!rolled && !activeEvent && !intrusion && !blocked && nextHoursUsed < 24) {
@@ -252,7 +257,7 @@ export function useGameAdapter() {
           intrusionsToday,
           lastActionId: lastId,
           lastWasRest: lastAction?.category === 'rest',
-        });
+        }, rng);
         if (def) {
           setTimeout(() => {
             audioAdapter.playCue('temptation');
@@ -326,7 +331,7 @@ export function useGameAdapter() {
 
       // Chiều theo, hoặc muốn dừng nhưng ý chí không đủ
       const left = Math.max(0, 24 - hoursUsed);
-      const r = executeActionById(def.actionId, stats, left, actionsTodayIds, day, history);
+      const r = executeActionById(def.actionId, stats, left, actionsTodayIds, day, history, rng);
       if (!r.success) {
         setIntrusion(null);
         return;
@@ -438,11 +443,11 @@ export function useGameAdapter() {
     setHistory([]);
     setDayStartStats(INITIAL_STATS);
     setDayGrades([]);
-    setGoalIds(pickGoalIds());
+    setGoalIds(pickGoalIds(rng));
     setLocation('home');
     setIntrusion(null);
     setIntrusionsToday(0);
-    setBigEvent(pickBigEvent());
+    setBigEvent(pickBigEvent(rng));
     setPendingBigEvent(null);
     setFinished(false);
   }, []);

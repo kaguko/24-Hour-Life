@@ -5,6 +5,7 @@
  * Kết quả phụ thuộc cả mức chuẩn bị lẫn trạng thái cơ thể lúc đó.
  */
 import { PlayerStatsPrimitive } from './types';
+import type { Rng } from './rng';
 import { DOMAIN_ACTIONS } from './actions';
 import { computeSkillXp } from './progression';
 
@@ -125,10 +126,10 @@ export const isBigEventId = (v: unknown): v is BigEventId => typeof v === 'strin
 
 export const bigEventDef = (id: BigEventId): BigEventDef => BIG_EVENTS.find((e) => e.id === id) ?? BIG_EVENTS[0];
 
-/** Bốc sự kiện lớn + độ khó ẩn cho ván mới. `rand` trả số trong [0,1). */
-export function pickBigEvent(rand: () => number = Math.random): BigEventState {
-  const id = BIG_EVENTS[Math.floor(rand() * BIG_EVENTS.length) % BIG_EVENTS.length].id;
-  const difficulty = Math.round((0.8 + rand() * 0.45) * 100) / 100;
+/** Bốc sự kiện lớn + độ khó ẩn cho ván mới. `rng` trả số trong [0,1). */
+export function pickBigEvent(rng: Rng): BigEventState {
+  const id = BIG_EVENTS[Math.floor(rng() * BIG_EVENTS.length) % BIG_EVENTS.length].id;
+  const difficulty = Math.round((0.8 + rng() * 0.45) * 100) / 100;
   return { id, difficulty };
 }
 

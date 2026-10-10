@@ -1,5 +1,6 @@
 import { PlayerStatsPrimitive, SimulationResultPrimitive } from './types';
 import { INITIAL_STATS, evaluateLifeStatus } from './stats';
+import type { Rng } from './rng';
 import { DOMAIN_ACTIONS, PLAYABLE_ACTIONS, executeActionById } from './actions';
 import { LocationId } from './map';
 import { planAction } from './planner';
@@ -116,7 +117,7 @@ export interface RunTracePrimitive {
 }
 
 /** Chơi 1 ván headless và ghi lại chỉ số cuối mỗi ngày (sau khi qua đêm). */
-export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePrimitive {
+export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rng): RunTracePrimitive {
   let currentStats = { ...INITIAL_STATS };
   let sleepDebt = 0;
   let survivedDays = 0;
@@ -157,7 +158,7 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePr
       }
 
       for (const stepId of plan.steps) {
-        const res = executeActionById(stepId, currentStats, hoursLeft, actionsToday, day, history);
+        const res = executeActionById(stepId, currentStats, hoursLeft, actionsToday, day, history, rng);
         if (!res.success) {
           stuck = true;
           break;
@@ -170,15 +171,15 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePr
     }
 
     // Biến cố ngẫu nhiên: người chơi giả lập chọn ngẫu nhiên một lựa chọn (chỉ tính tác động chỉ số)
-    if (Math.random() < 0.35) {
-      const ev = rollDomainEvent(day, Math.random() * 0.45);
+    if (rng() < 0.35) {
+      const ev = rollDomainEvent(day, () => rng() * 0.45);
       if (ev) {
-        const choice = ev.choices[Math.floor(Math.random() * ev.choices.length)];
+        const choice = ev.choices[Math.floor(rng() * ev.choices.length)];
         currentStats = resolveDomainChoice(ev.id, choice.id, currentStats).newStats;
       }
     }
 
-    const nightRes = processOvernightCycle(currentStats, actionsToday, sleepDebt, day);
+    const nightRes = processOvernightCycle(currentStats, actionsToday, sleepDebt, day, undefined, rng);
     currentStats = nightRes.newStats;
     sleepDebt = nightRes.newSleepDebt;
     survivedDays = day;
@@ -212,7 +213,8 @@ export function playOneRun(strategy: DomainStrategy, daysPerRun = 7): RunTracePr
 export function runDomainSimulation(
   strategyId: string,
   totalRuns = 500,
-  daysPerRun = 7
+  daysPerRun: number,
+  rng: Rng
 ): SimulationResultPrimitive {
   const strategy = DOMAIN_STRATEGIES.find((s) => s.id === strategyId) || DOMAIN_STRATEGIES[4];
 
@@ -229,7 +231,7 @@ export function runDomainSimulation(
   let sumSurvivalDays = 0;
 
   for (let run = 0; run < totalRuns; run++) {
-    const trace = playOneRun(strategy, daysPerRun);
+    const trace = playOneRun(strategy, daysPerRun, rng);
     if (!trace.endedEarly) survivals++;
     else if (trace.collapseReason === 'bankrupt') bankruptcies++;
     else burnouts++;

@@ -4,6 +4,8 @@
  * Rule 2: Pure primitive shapes.
  */
 
+import type { Rng } from './rng';
+
 export interface PhilosophicalQuote {
   id: string;
   quote: string;
@@ -214,10 +216,10 @@ export const PHILOSOPHICAL_QUOTES: PhilosophicalQuote[] = [
  */
 export function getContextualQuote(
   theme: PhilosophicalQuote['theme'],
-  seed = Math.random()
+  rng: Rng
 ): PhilosophicalQuote {
   const matching = PHILOSOPHICAL_QUOTES.filter((q) => q.theme === theme);
   const candidates = matching.length > 0 ? matching : PHILOSOPHICAL_QUOTES;
-  const index = Math.floor(seed * candidates.length) % candidates.length;
+  const index = Math.floor(rng() * candidates.length) % candidates.length;
   return candidates[index];
 }

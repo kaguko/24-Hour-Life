@@ -4,6 +4,7 @@
  * gì ngoài danh sách id đã bốc.
  */
 import { PlayerStatsPrimitive } from './types';
+import type { Rng } from './rng';
 import { DOMAIN_ACTIONS } from './actions';
 import { computeSkillXp } from './progression';
 
@@ -137,11 +138,11 @@ export const GOAL_COUNT_PER_RUN = 2;
 
 export const isGoalId = (id: unknown): id is string => typeof id === 'string' && GOALS.some((g) => g.id === id);
 
-/** Bốc ngẫu nhiên các mục tiêu cho một ván mới. `rand` trả số trong [0,1). */
-export function pickGoalIds(rand: () => number = Math.random): string[] {
+/** Bốc ngẫu nhiên các mục tiêu cho một ván mới. `rng` trả số trong [0,1). */
+export function pickGoalIds(rng: Rng): string[] {
   const pool = GOALS.map((g) => g.id);
   for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
   return pool.slice(0, GOAL_COUNT_PER_RUN);

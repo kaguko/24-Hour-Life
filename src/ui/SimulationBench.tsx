@@ -18,11 +18,11 @@ export const SimulationBench: React.FC = () => {
     setTimeout(() => {
       if (selectedStrategyId === 'all') {
         const batchResults = DOMAIN_STRATEGIES.map((strat) =>
-          runDomainSimulation(strat.id, runsCount, daysCount)
+          runDomainSimulation(strat.id, runsCount, daysCount, Math.random)
         );
         setResults(batchResults);
       } else {
-        setResults([runDomainSimulation(selectedStrategyId, runsCount, daysCount)]);
+        setResults([runDomainSimulation(selectedStrategyId, runsCount, daysCount, Math.random)]);
       }
       setIsRunning(false);
     }, 100);

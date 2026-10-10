@@ -4,6 +4,8 @@
  * Chỉ là bảng tra chữ/emoji ngắn gọn thay cho mô tả dài. KHÔNG ảnh hưởng luật chơi.
  */
 
+import { mulberry32 } from './rng';
+
 export interface MemeLine {
   /** Emoji lớn đại diện */
   e: string;
@@ -140,18 +142,6 @@ export function memeEvent(id: string, fallbackTitle: string): MemeLine {
   return MEME_EVENTS[id] ?? { e: '⚡', line: fallbackTitle };
 }
 
-/** Bộ sinh số giả ngẫu nhiên có seed (mulberry32) để bài trong feed ổn định giữa các lần dựng */
-function seeded(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 interface FeedActionLike {
   id: string;
   category: string;
@@ -169,7 +159,7 @@ export function pickFeedChoices(
   stats: { energy: number; money: number; social: number; mental: number },
   seed: number
 ): string[] {
-  const rand = seeded(seed);
+  const rand = mulberry32(seed);
   const pool = actions.filter((a) => a.category !== 'travel' && a.id !== 'big_event' && isOk(a.id));
   const picked: string[] = [];
   const take = (list: FeedActionLike[]) => {

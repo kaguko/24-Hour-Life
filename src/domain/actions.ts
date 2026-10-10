@@ -1,5 +1,6 @@
 import { ActionPrimitive, PlayerStatsPrimitive, ActionResultPrimitive, SoundCue } from './types';
 import { applyStatDeltas } from './stats';
+import type { Rng } from './rng';
 import { EXTRA_ACTIONS } from './actionsExtra';
 import { TRAVEL_ACTIONS } from './map';
 import { INTRUSION_ACTIONS } from './intrusion';
@@ -378,7 +379,8 @@ export function executeActionById(
   hoursRemaining: number,
   actionsTodayIds: string[] = [],
   day = 1,
-  history: string[][] = []
+  history: string[][] = [],
+  rng: Rng
 ): ActionResultPrimitive {
   const action = DOMAIN_ACTIONS.find((a) => a.id === actionId);
   if (!action) {
@@ -456,7 +458,7 @@ export function executeActionById(
   }
   // 4. Cơ chế đặc thù cho "Chọc chó" (Rủi ro ngẫu nhiên: tăng dopamine/tinh thần hoặc bị cắn tốn sức khỏe)
   if (action.id === 'tease_dog') {
-    const roll = Math.random();
+    const roll = rng();
     if (roll < 0.45) {
       // 45%: Thành công / Thoát hiểm ngoạn mục -> Tăng dopamine và tinh thần
       deltas.dopamine = 45;
@@ -488,7 +490,7 @@ export function executeActionById(
 
   // 4b. Vé số / cá cược: gần như luôn thua, thỉnh thoảng trúng để giữ người chơi quay lại
   if (action.id === 'lottery_ticket') {
-    const roll = Math.random();
+    const roll = rng();
     if (roll < 0.03) {
       deltas.money = 900;
       deltas.dopamine = 45;
