@@ -66,6 +66,13 @@ export const ACTION_LOCATION: Record<string, LocationId> = {
   fast_food: 'market',
   // Quán nhậu
   beer_party: 'bar',
+  // Hành vi chung (xem jointActions.ts)
+  eat_together: 'market',
+  run_together: 'park',
+  study_group: 'school',
+  heart_to_heart: 'cafe',
+  drinking_group: 'bar',
+  // movie_night: ở nhà một người bạn, không có trong bảng = 'home'
 };
 
 export const locationOf = (actionId: string): LocationId => ACTION_LOCATION[actionId] ?? 'home';

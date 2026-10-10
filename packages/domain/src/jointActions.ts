@@ -1,0 +1,127 @@
+/**
+ * PURE DOMAIN: HÀNH VI CHUNG (cần đi cùng bạn bè)
+ * Sáu hành vi chỉ làm được khi đủ người (xem social.ts). Không nằm trong PLAYABLE_ACTIONS nên giao diện một người
+ * không thấy chúng; nhưng nằm trong DOMAIN_ACTIONS để qua đêm, tóm tắt ngày, kỹ năng... tra cứu theo id như mọi hành vi khác.
+ *
+ * Nguyên tắc cân bằng (kiểm bằng social.test.ts và simulateGroup.ts):
+ *  - Hành vi lành mạnh: Kết nối/giờ cao hơn mọi hành vi Kết nối làm một mình, và càng đông càng nhiều.
+ *  - Hành vi cám dỗ nhóm: mỗi người tới thêm làm cả nhóm tốn hơn, cộng áp lực đồng trang lứa -> sụp đổ nhanh hơn làm một mình.
+ */
+import type { ActionPrimitive } from './types.js';
+
+export const JOINT_ACTIONS: ActionPrimitive[] = [
+  {
+    id: 'eat_together',
+    title: 'Ăn cùng bạn (1.5 giờ)',
+    category: 'social',
+    dopaminePathway: 'slow',
+    hours: 1.5,
+    description: 'Một bữa cơm tử tế với bạn bè: no bụng, vui miệng, và câu chuyện nối tiếp câu chuyện.',
+    isTemptation: false,
+    willpowerCost: 4,
+    window: [10.5, 21],
+    baseDopamine: 10,
+    baseEnergy: 12,
+    baseMental: 10,
+    baseSocial: 14,
+    baseMoney: -100,
+    baseWillpower: 4,
+    joint: { minPlayers: 2, maxPlayers: 4, socialPerPartner: 8 },
+  },
+  {
+    id: 'run_together',
+    title: 'Chạy bộ cùng nhau (1.5 giờ)',
+    category: 'wellness',
+    dopaminePathway: 'slow',
+    hours: 1.5,
+    description: 'Có người chờ ở công viên nên khó bỏ cuộc: ý chí tốn ít hơn tự chạy một mình.',
+    isTemptation: false,
+    willpowerCost: 14,
+    window: [5, 19],
+    baseDopamine: 14,
+    baseEnergy: -10,
+    baseMental: 26,
+    baseSocial: 4,
+    baseWillpower: 22,
+    joint: { minPlayers: 2, maxPlayers: 4, socialPerPartner: 14 },
+  },
+  {
+    id: 'study_group',
+    title: 'Học nhóm (2.5 giờ)',
+    category: 'work',
+    dopaminePathway: 'slow',
+    hours: 2.5,
+    description: 'Cùng nhau giải bài, giảng lại cho nhau: nhớ lâu hơn và đỡ cô đơn hơn tự học.',
+    isTemptation: false,
+    willpowerCost: 18,
+    window: [8, 21],
+    baseDopamine: 12,
+    baseEnergy: -16,
+    baseMental: 14,
+    baseSocial: 6,
+    baseWillpower: 12,
+    joint: { minPlayers: 2, maxPlayers: 4, socialPerPartner: 10 },
+  },
+  {
+    id: 'heart_to_heart',
+    title: 'Tâm sự sâu cùng nhau (2 giờ)',
+    category: 'social',
+    dopaminePathway: 'slow',
+    hours: 2,
+    description: 'Kể cho nhau nghe điều khó nói nhất. Nặng nề lúc đầu, nhẹ nhõm về sau.',
+    isTemptation: false,
+    willpowerCost: 6,
+    window: [8, 23],
+    baseDopamine: 12,
+    baseMental: 24,
+    baseSocial: 30,
+    baseMoney: -60,
+    baseWillpower: 8,
+    joint: { minPlayers: 2, maxPlayers: 3, socialPerPartner: 14 },
+  },
+  {
+    id: 'movie_night',
+    title: 'Xem phim cùng nhau (2.5 giờ)',
+    category: 'social',
+    dopaminePathway: 'none',
+    hours: 2.5,
+    description: 'Tối ở nhà một người bạn, bỏ điện thoại xuống và cùng xem hết một bộ phim.',
+    isTemptation: false,
+    willpowerCost: 0,
+    window: [18, 2],
+    baseDopamine: 16,
+    baseEnergy: -4,
+    baseMental: 6,
+    baseSocial: 18,
+    baseWillpower: -4,
+    joint: { minPlayers: 2, maxPlayers: 4, socialPerPartner: 10 },
+  },
+  {
+    id: 'drinking_group',
+    title: 'Rủ nhau đi nhậu (3.5 giờ)',
+    category: 'temptation',
+    dopaminePathway: 'fast',
+    hours: 3.5,
+    description: 'Một ly rồi thêm một ly. Càng đông càng khó là người đứng dậy đầu tiên.',
+    isTemptation: true,
+    willpowerCost: 0,
+    window: [17, 3],
+    baseDopamine: 32,
+    baseEnergy: -32,
+    baseMental: -8,
+    baseSocial: 20,
+    baseMoney: -460,
+    baseWillpower: -20,
+    joint: {
+      minPlayers: 3,
+      maxPlayers: 6,
+      socialPerPartner: 3,
+      costPerPartner: { energy: -4, mental: -2, money: -100, willpower: -5 },
+      peerPressure: true,
+    },
+  },
+];
+
+export const JOINT_ACTION_IDS: ReadonlySet<string> = new Set(JOINT_ACTIONS.map((a) => a.id));
+
+export const jointActionDef = (id: string): ActionPrimitive | undefined => JOINT_ACTIONS.find((a) => a.id === id);

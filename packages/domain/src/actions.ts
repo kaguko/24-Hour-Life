@@ -5,6 +5,7 @@ import { EXTRA_ACTIONS } from './actionsExtra.js';
 import { TRAVEL_ACTIONS } from './map.js';
 import { INTRUSION_ACTIONS } from './intrusion.js';
 import { BIG_EVENT_ACTION } from './bigEventAction.js';
+import { JOINT_ACTIONS } from './jointActions.js';
 import { actionLockReason, clockFromHoursRemaining } from './availability.js';
 import { applyProgression, computeSkillXp, skillLevels } from './progression.js';
 
@@ -363,7 +364,7 @@ const CORE_ACTIONS: ActionPrimitive[] = [
 export const PLAYABLE_ACTIONS: ActionPrimitive[] = [...CORE_ACTIONS, ...EXTRA_ACTIONS];
 
 /** Mọi hành vi có thể xuất hiện trong lịch sử ngày, kể cả di chuyển và cám dỗ xâm nhập */
-export const DOMAIN_ACTIONS: ActionPrimitive[] = [...PLAYABLE_ACTIONS, ...TRAVEL_ACTIONS, ...INTRUSION_ACTIONS, BIG_EVENT_ACTION];
+export const DOMAIN_ACTIONS: ActionPrimitive[] = [...PLAYABLE_ACTIONS, ...JOINT_ACTIONS, ...TRAVEL_ACTIONS, ...INTRUSION_ACTIONS, BIG_EVENT_ACTION];
 
 const NAPS_BEFORE_DIMINISHING = 4;
 const NAP_DIMINISHED_FACTOR = 0.25;
@@ -391,6 +392,18 @@ export function executeActionById(
       hoursSpent: 0,
       newStats: stats,
       notice: 'Hành vi không tồn tại trong danh mục.',
+      soundCue: 'neutral',
+    };
+  }
+
+  if (action.joint) {
+    return {
+      success: false,
+      actionId,
+      actionTitle: action.title,
+      hoursSpent: 0,
+      newStats: stats,
+      notice: 'Hành vi này cần đi cùng bạn bè (xem resolveJointAction).',
       soundCue: 'neutral',
     };
   }

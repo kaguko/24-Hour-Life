@@ -55,6 +55,10 @@ export const ACTION_SKILL: Record<string, { skill: SkillId; xp: number }> = {
   volunteer: { skill: 'heart', xp: 4 },
   pet_bonding: { skill: 'heart', xp: 1 },
   public_speaking: { skill: 'heart', xp: 5 },
+  heart_to_heart: { skill: 'heart', xp: 4 },
+  eat_together: { skill: 'heart', xp: 1 },
+  run_together: { skill: 'body', xp: 3 },
+  study_group: { skill: 'mind', xp: 3 },
 
   work_focused: { skill: 'craft', xp: 2 },
   work_overtime: { skill: 'craft', xp: 1 },

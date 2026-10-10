@@ -28,3 +28,6 @@ export * from './dayRecap.js';
 export * from './meme.js';
 export * from './rng.js';
 export * from './gameState.js';
+export * from './jointActions.js';
+export * from './social.js';
+export * from './simulateGroup.js';

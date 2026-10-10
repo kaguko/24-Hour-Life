@@ -43,6 +43,18 @@ export interface ActionPrimitive {
   maxPerDay?: number;
   /** Cần kỹ năng đạt cấp này mới làm được (skill: mind | body | heart | craft) */
   requiresSkill?: { skill: string; level: number };
+  /**
+   * Hành vi chung: chỉ làm được khi đi cùng người khác (xem social.ts). Làm một mình sẽ bị từ chối.
+   * Mỗi người ngoài bạn thêm `socialPerPartner` Kết nối và `costPerPartner` (cộng dồn) vào chỉ số.
+   */
+  joint?: {
+    minPlayers: number;
+    maxPlayers: number;
+    socialPerPartner: number;
+    costPerPartner?: Partial<PlayerStatsPrimitive>;
+    /** Áp lực đồng trang lứa: người ý chí thấp dễ sa ngã thêm khi cả nhóm cùng buông thả */
+    peerPressure?: boolean;
+  };
 }
 
 export type SoundCue =
