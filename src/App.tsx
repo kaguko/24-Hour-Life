@@ -18,6 +18,7 @@ import {
 import { SkillsPanel } from './ui/SkillsPanel';
 import { GoalsPanel } from './ui/GoalsPanel';
 import { CityMap } from './ui/CityMap';
+import { FeedPanel } from './ui/FeedPanel';
 import { IntrusionModal } from './ui/IntrusionModal';
 import { BigEventPanel } from './ui/BigEventPanel';
 import { BigEventModal } from './ui/BigEventModal';
@@ -166,9 +167,9 @@ export default function App() {
   }, [history, plans]);
 
   // Tự chuyển giữa phòng (ở nhà) và bản đồ (đang ở ngoài)
-  const [view, setView] = useState<'room' | 'map'>('room');
+  const [view, setView] = useState<'feed' | 'room' | 'map'>('feed');
   useEffect(() => {
-    setView(location === 'home' ? 'room' : 'map');
+    setView(location === 'home' ? 'feed' : 'map');
   }, [location]);
   const here = locationDef(location);
 
@@ -232,6 +233,7 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5">
                     {([
+                      ['feed', '🔥 Feed'],
                       ['room', '🏠 Phòng'],
                       ['map', '🗺️ Thành phố'],
                     ] as const).map(([id, label]) => (
@@ -249,7 +251,21 @@ export default function App() {
                       📍 {here.emoji} {here.name}
                     </span>
                   </div>
-                  {view === 'map' ? (
+                  {view === 'feed' ? (
+                    <FeedPanel
+                      day={day}
+                      hoursUsed={hoursUsed}
+                      hoursRemaining={hoursRemaining}
+                      stats={stats}
+                      actions={PLAYABLE_ACTIONS}
+                      lastActionId={lastAction?.id ?? null}
+                      lastActionN={lastAction?.n ?? 0}
+                      lockReasons={lockReasons}
+                      habitTags={habitTags}
+                      onSelectAction={takeAction}
+                      onShowAll={() => setShowCards(true)}
+                    />
+                  ) : view === 'map' ? (
                     <CityMap
                       location={location}
                       avatarId={avatarId}

@@ -139,3 +139,52 @@ export function memeAction(id: string, fallbackTitle: string): MemeLine {
 export function memeEvent(id: string, fallbackTitle: string): MemeLine {
   return MEME_EVENTS[id] ?? { e: '⚡', line: fallbackTitle };
 }
+
+/** Bộ sinh số giả ngẫu nhiên có seed (mulberry32) để bài trong feed ổn định giữa các lần dựng */
+function seeded(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+interface FeedActionLike {
+  id: string;
+  category: string;
+  dopaminePathway: string;
+  isTemptation: boolean;
+}
+
+/**
+ * Chọn 4 "lá bài" cho màn feed: 1 cám dỗ + 1 lành mạnh + 1 theo nhu cầu hiện tại + 1 ngẫu nhiên.
+ * Chỉ chọn hành vi đang làm được (isOk). Cùng seed => cùng bài.
+ */
+export function pickFeedChoices(
+  actions: FeedActionLike[],
+  isOk: (id: string) => boolean,
+  stats: { energy: number; money: number; social: number; mental: number },
+  seed: number
+): string[] {
+  const rand = seeded(seed);
+  const pool = actions.filter((a) => a.category !== 'travel' && a.id !== 'big_event' && isOk(a.id));
+  const picked: string[] = [];
+  const take = (list: FeedActionLike[]) => {
+    const rest = list.filter((a) => !picked.includes(a.id));
+    if (rest.length) picked.push(rest[Math.floor(rand() * rest.length)].id);
+  };
+  take(pool.filter((a) => a.isTemptation));
+  take(pool.filter((a) => a.dopaminePathway === 'slow'));
+  // Nhu cầu: kiệt sức -> nghỉ; thiếu tiền -> việc; cô đơn -> kết nối; còn lại -> bất kỳ
+  const need =
+    stats.energy < 35 ? pool.filter((a) => a.category === 'rest')
+    : stats.money < 1500 ? pool.filter((a) => a.category === 'work')
+    : stats.social < 40 ? pool.filter((a) => a.category === 'social')
+    : pool.filter((a) => a.category === 'wellness');
+  take(need.length ? need : pool);
+  take(pool);
+  return picked;
+}
