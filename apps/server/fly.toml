@@ -1,0 +1,29 @@
+# Fly.io. Tạo app lần đầu (từ gốc repo):
+#   fly launch --no-deploy --copy-config --config apps/server/fly.toml --dockerfile apps/server/Dockerfile
+#   fly secrets set CORS_ORIGINS=https://ten-game.vercel.app --config apps/server/fly.toml
+#   fly deploy --config apps/server/fly.toml --dockerfile apps/server/Dockerfile
+app = "twentyfour-hour-life-server"
+primary_region = "sin"
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Phòng chơi nằm trong bộ nhớ của tiến trình: không tự tắt máy khi vắng khách, và chỉ chạy 1 máy
+  # (muốn mở rộng ngang phải thêm Redis presence/driver của Colyseus).
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health"
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "10s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

@@ -13,10 +13,13 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "preview": "npm run preview -w @24h/web",
-    "clean": "npm run clean --workspaces --if-present"
+    "clean": "npm run clean --workspaces --if-present",
+    "dev:all": "concurrently -k -n web,server -c cyan,magenta \"npm run dev -w @24h/web\" \"npm run dev -w @24h/server\"",
+    "dev:server": "npm run dev -w @24h/server"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "concurrently": "^10.0.6",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"
   }

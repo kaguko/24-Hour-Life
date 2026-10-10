@@ -157,6 +157,7 @@ apps/server       @24h/server  Colyseus 0.18: LifeRoom (nhiều người chơi, 
 
 - Ở root: `npm run dev | build | lint | test` chạy qua các workspace (domain trước, rồi web).
 - `apps/web` đọc thẳng `packages/domain/src` (điều kiện `source` trong `exports`) nên có HMR và không cần build domain trước; Node/server dùng `dist`.
+- **Chạy cả web + server:** `npm run dev:all`. Triển khai server (Docker, Fly.io, CORS, `VITE_SERVER_URL`): xem `docs/deploy-server.md`.
 - **Server:** `npm run dev -w @24h/server` (watch) hoặc `npm run build && npm start -w @24h/server`. Biến môi trường `PORT` (mặc định 2567); `GET /health` trả `{status:"ok"}`.
   - Tạo phòng: `client.create("life")` -> mã 4 ký tự là `room.roomId`; vào phòng: `client.joinById(code, {name})`. Tối đa 8 người, phòng không liệt kê công khai.
   - Client chỉ gửi `action {actionId}`, `move {x,z}`, `chat {text}`; server validate và áp dụng bằng `@24h/domain`. Message lạ bị ngắt kết nối.
