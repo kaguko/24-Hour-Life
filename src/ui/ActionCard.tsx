@@ -1,7 +1,5 @@
-import React from 'react';
-import { tagTone } from '../lib/tagTone';
-import { ActionPrimitive, PlayerStatsPrimitive } from '../domain';
-import { Clock, ArrowRight, AlertTriangle, Flame, Zap, Sprout } from 'lucide-react';
+import React, { useState } from 'react';
+import { ActionPrimitive, PlayerStatsPrimitive, memeAction, STAT_EMOJI } from '../domain';
 
 interface ActionCardProps {
   action: ActionPrimitive;
@@ -14,6 +12,8 @@ interface ActionCardProps {
   habitTag?: string | null;
 }
 
+type StatKey = keyof typeof STAT_EMOJI;
+
 export const ActionCard: React.FC<ActionCardProps> = ({
   action,
   currentStats,
@@ -22,197 +22,98 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   lockReason = null,
   habitTag = null,
 }) => {
+  const [showInfo, setShowInfo] = useState(false);
   const isAffordableTime = hoursRemaining >= action.hours && !lockReason;
   const isLowWillpower = currentStats.willpower < 35;
 
-  // Ảo giác cám dỗ khi ý chí thấp
+  // Ảo giác cám dỗ khi ý chí thấp: hành vi nhanh trông hấp dẫn hơn, hành vi chậm bị sức ì
   const isTemptationIllusion = isLowWillpower && action.dopaminePathway === 'fast';
   const isHealthyFriction = isLowWillpower && action.dopaminePathway === 'slow' && action.willpowerCost >= 10;
 
-  // Tính số hiển thị Dopamine (nếu có ảo giác thì phóng to)
+  const meme = memeAction(action.id, action.title);
   const baseDopamine = action.baseDopamine ?? 0;
-  const displayDopamine = isTemptationIllusion
-    ? baseDopamine + (action.perceivedDopamineBonus ?? 20)
-    : baseDopamine;
+  const dopamine = isTemptationIllusion ? baseDopamine + (action.perceivedDopamineBonus ?? 20) : baseDopamine;
+
+  const chips: Array<[StatKey, number | undefined, string]> = [
+    ['dopamine', dopamine || undefined, ''],
+    ['energy', action.baseEnergy, ''],
+    ['mental', action.baseMental, ''],
+    ['social', action.baseSocial, ''],
+    ['willpower', action.baseWillpower, ''],
+    ['money', action.baseMoney, 'k'],
+  ];
 
   return (
     <div
-      className={`relative p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+      className={`relative p-3 rounded-2xl border transition-all flex flex-col items-center text-center gap-1.5 ${
         !isAffordableTime
-          ? 'bg-stone-50/70 border-stone-200 opacity-50 grayscale-20'
+          ? 'bg-stone-50/70 border-stone-200 opacity-50 grayscale'
           : isTemptationIllusion
-          ? 'bg-gradient-to-br from-fuchsia-50 via-pink-50 to-white border-fuchsia-300 ring-2 ring-fuchsia-300/60 shadow-md scale-[1.01]'
+          ? 'bg-gradient-to-br from-fuchsia-50 via-pink-50 to-white border-fuchsia-300 ring-2 ring-fuchsia-300/60 shadow-md'
           : isHealthyFriction
-          ? 'bg-stone-50 border-stone-200/90 text-stone-600'
-          : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-xs'
+          ? 'bg-stone-50 border-stone-200'
+          : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-sm'
       }`}
     >
-      <div>
-        {/* Top Badges: Category & Dopamine Pathway */}
-        <div className="flex items-start justify-between gap-1 mb-2">
-          <div className="flex items-center gap-1.5 text-xs text-stone-500">
-            <Clock className="w-3.5 h-3.5 text-stone-400" />
-            <span className="font-semibold text-stone-800 tabular-nums">{action.hours}h</span>
-            <span>·</span>
-            {action.dopaminePathway === 'fast' ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.2 rounded">
-                <Zap className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
-                <span>Dopamine Nhanh</span>
-              </span>
-            ) : action.dopaminePathway === 'slow' ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.2 rounded">
-                <Sprout className="w-2.5 h-2.5 text-emerald-600" />
-                <span>Dopamine Chậm</span>
-              </span>
-            ) : (
-              <span className="capitalize text-stone-600">
-                {action.category === 'rest'
-                  ? 'Nghỉ ngơi'
-                  : action.category === 'work'
-                  ? 'Công việc'
-                  : 'Hoạt động'}
-              </span>
-            )}
-          </div>
+      <div className="absolute top-2 left-2.5 text-[11px] font-bold tabular-nums text-stone-500">⏱ {action.hours}h</div>
+      <button
+        type="button"
+        onClick={() => setShowInfo((v) => !v)}
+        aria-label="Xem chi tiết"
+        aria-expanded={showInfo}
+        className="absolute top-1.5 right-2 w-6 h-6 rounded-full text-[11px] font-bold text-stone-500 hover:bg-stone-100"
+      >
+        ⓘ
+      </button>
 
-          {/* Cảnh báo / ảo giác */}
-          {isTemptationIllusion && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-fuchsia-700 bg-fuchsia-100 px-2 py-0.5 rounded-full animate-bounce shrink-0">
-              <Flame className="w-3 h-3 text-fuchsia-600 fill-fuchsia-600" />
-              <span>Cực hấp dẫn!</span>
+      <div className={`text-5xl leading-none mt-4 ${isTemptationIllusion ? 'animate-bounce' : ''}`} aria-hidden>
+        {meme.e}
+      </div>
+      <div className="text-sm font-extrabold text-stone-900 leading-snug min-h-[2.5rem] flex items-center">{meme.line}</div>
+
+      <div className="flex flex-wrap justify-center gap-1 text-[11px] tabular-nums font-semibold">
+        {chips.map(([key, value, suffix]) =>
+          value ? (
+            <span
+              key={key}
+              className={`px-1.5 py-0.5 rounded-full ${
+                value > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+              } ${key === 'dopamine' && isTemptationIllusion ? 'ring-1 ring-fuchsia-400 font-extrabold' : ''}`}
+            >
+              {STAT_EMOJI[key]}
+              {value > 0 ? '+' : ''}
+              {value}
+              {suffix}
             </span>
-          )}
-
-          {isHealthyFriction && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0">
-              <AlertTriangle className="w-2.5 h-2.5" />
-              <span>Sức ì nỗ lực</span>
-            </span>
-          )}
-        </div>
-
-        {/* Title & Description */}
-        <h4 className="text-sm font-bold text-stone-900 mb-1 leading-snug">
-          {action.title}
-        </h4>
-        {habitTag && (
-          <p className={`text-[11px] font-medium mb-1 ${tagTone(habitTag)}`}>{habitTag}</p>
+          ) : null
         )}
-        <p className="text-xs text-stone-600 mb-3 line-clamp-2 leading-relaxed">
-          {action.description}
-        </p>
-
-        {/* Stat Changes Preview */}
-        <div className="flex flex-wrap gap-1.5 mb-3 text-[11px]">
-          {/* Dopamine tag */}
-          {displayDopamine !== 0 && (
-            <span
-              className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                isTemptationIllusion
-                  ? 'bg-fuchsia-200 text-fuchsia-900 font-bold text-xs ring-1 ring-fuchsia-400'
-                  : action.dopaminePathway === 'fast'
-                  ? 'bg-amber-100 text-amber-900'
-                  : action.dopaminePathway === 'slow'
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-stone-100 text-stone-600'
-              }`}
-            >
-              {displayDopamine > 0 ? `+${displayDopamine}` : displayDopamine} Dopamine
-              {action.dopaminePathway === 'fast' ? ' ⚡' : action.dopaminePathway === 'slow' ? ' 🌱' : ''}
-            </span>
-          )}
-
-          {/* Energy */}
-          {action.baseEnergy !== undefined && (
-            <span
-              className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                action.baseEnergy > 0
-                  ? 'bg-amber-100 text-amber-800'
-                  : 'bg-stone-100 text-stone-700'
-              }`}
-            >
-              {action.baseEnergy > 0 ? `+${action.baseEnergy}` : action.baseEnergy} Năng lượng
-            </span>
-          )}
-
-          {/* Mental */}
-          {action.baseMental !== undefined && (
-            <span
-              className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                action.baseMental > 0
-                  ? 'bg-sky-100 text-sky-800'
-                  : 'bg-stone-100 text-stone-700'
-              }`}
-            >
-              {action.baseMental > 0 ? `+${action.baseMental}` : action.baseMental} Tinh thần
-            </span>
-          )}
-
-          {/* Social */}
-          {action.baseSocial !== undefined && (
-            <span
-              className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                action.baseSocial > 0
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-stone-100 text-stone-700'
-              }`}
-            >
-              {action.baseSocial > 0 ? `+${action.baseSocial}` : action.baseSocial} Kết nối
-            </span>
-          )}
-
-          {/* Money */}
-          {action.baseMoney !== undefined && (
-            <span
-              className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                action.baseMoney > 0
-                  ? 'bg-teal-100 text-teal-800 font-bold'
-                  : 'bg-stone-100 text-stone-700'
-              }`}
-            >
-              {action.baseMoney > 0 ? `+${action.baseMoney}k` : `${action.baseMoney}k`} VNĐ
-            </span>
-          )}
-
-          {/* Willpower */}
-          {action.baseWillpower !== undefined && (
-            <span
-              className={`px-1.5 py-0.5 rounded tabular-nums font-medium ${
-                action.baseWillpower > 0
-                  ? 'bg-indigo-100 text-indigo-800'
-                  : 'bg-stone-100 text-stone-700'
-              }`}
-            >
-              {action.baseWillpower > 0 ? `+${action.baseWillpower}` : action.baseWillpower} Ý chí
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* Button Action */}
+      {(habitTag || isTemptationIllusion) && (
+        <div className="text-[11px] font-semibold text-fuchsia-700">{isTemptationIllusion ? '🔥 Cực cuốn!' : habitTag}</div>
+      )}
+
+      {showInfo && (
+        <div className="text-xs text-stone-600 leading-snug text-left bg-stone-50 rounded-lg p-2 w-full">
+          <b>{action.title}</b>
+          <p className="mt-0.5">{action.description}</p>
+          {habitTag && <p className="mt-0.5 text-emerald-700 font-medium">{habitTag}</p>}
+        </div>
+      )}
+
       <button
         disabled={!isAffordableTime}
         onClick={() => onSelect(action.id)}
-        className={`w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${
+        aria-label={`Chọn hành vi này: ${action.title}`}
+        className={`w-full py-2 rounded-xl text-sm font-extrabold transition-all ${
           !isAffordableTime
-            ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
+            ? 'bg-stone-200 text-stone-400 cursor-not-allowed text-xs font-semibold'
             : isTemptationIllusion
-            ? 'bg-fuchsia-600 hover:bg-fuchsia-700 text-white shadow-xs font-bold'
-            : isHealthyFriction
-            ? 'bg-stone-800 hover:bg-stone-900 text-stone-100'
+            ? 'bg-fuchsia-600 hover:bg-fuchsia-700 text-white'
             : 'bg-stone-900 hover:bg-stone-800 text-white'
         }`}
       >
-        <span>
-          {!isAffordableTime
-            ? lockReason ?? 'Không đủ thời gian'
-            : isTemptationIllusion
-            ? 'Lướt liền cho sướng!'
-            : isHealthyFriction
-            ? 'Vượt sức ì để rèn luyện'
-            : 'Chọn hành vi này'}
-        </span>
-        {isAffordableTime && <ArrowRight className="w-3.5 h-3.5" />}
+        {!isAffordableTime ? lockReason ?? 'Hết giờ' : isTemptationIllusion ? 'Lướt liền!' : isHealthyFriction ? 'Cố lên 💪' : 'Làm!'}
       </button>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ActionPrimitive, PlayerStatsPrimitive } from '../domain';
 import { ActionCard } from './ActionCard';
-import { AlertCircle, Sprout, Zap, Briefcase, Moon, LayoutGrid, Users } from 'lucide-react';
+import { Sprout, Zap, Briefcase, Moon, LayoutGrid, Users } from 'lucide-react';
 
 interface ActionGridProps {
   actions: ActionPrimitive[];
@@ -27,12 +27,12 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
   const [filter, setFilter] = useState<FilterView>('all');
 
   const filterTabs: Array<{ id: FilterView; label: string; icon: React.ElementType }> = [
-    { id: 'all', label: `Tất cả (${actions.length})`, icon: LayoutGrid },
-    { id: 'slow_dopamine', label: '🌱 Dopamine Chậm (Bền vững)', icon: Sprout },
-    { id: 'fast_dopamine', label: '⚡ Dopamine Nhanh (Dễ nghiện)', icon: Zap },
-    { id: 'work', label: '💼 Công việc & Kỹ năng', icon: Briefcase },
-    { id: 'social', label: '🤝 Kết nối', icon: Users },
-    { id: 'rest', label: '🌙 Giấc ngủ & Nghỉ ngơi', icon: Moon },
+    { id: 'all', label: `Tất cả ${actions.length}`, icon: LayoutGrid },
+    { id: 'slow_dopamine', label: '🌱 Chậm', icon: Sprout },
+    { id: 'fast_dopamine', label: '⚡ Nhanh', icon: Zap },
+    { id: 'work', label: '💼 Việc', icon: Briefcase },
+    { id: 'social', label: '🤝 Hội', icon: Users },
+    { id: 'rest', label: '🌙 Nghỉ', icon: Moon },
   ];
 
   const filteredActions = actions.filter((a) => {
@@ -49,14 +49,10 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Cảnh báo suy kiệt ý chí & ảo giác dopamine */}
+      {/* Ý chí thấp: cảnh báo ngắn */}
       {isLowWillpower && (
-        <div className="p-3.5 bg-fuchsia-50 border border-fuchsia-200 rounded-xl flex items-start gap-2.5 text-fuchsia-900 shadow-xs">
-          <AlertCircle className="w-4 h-4 text-fuchsia-600 shrink-0 mt-0.5" />
-          <div className="text-xs leading-relaxed">
-            <span className="font-bold">Bẫy suy kiệt ý chí ({currentStats.willpower}%): </span>
-            Khi năng lượng ý chí cạn, não bộ tự động tìm <strong>con đường Dopamine Nhanh</strong> (TikTok, game, đồ ngọt). Chúng trông cực kỳ hấp dẫn và dễ chịu trong thoáng chốc, trong khi các nguồn <strong>Dopamine Chậm</strong> (chạy bộ, học đàn, trò chuyện sâu) bị não bộ phản kháng vì đòi hỏi nỗ lực!
-          </div>
+        <div className="px-3 py-2 bg-fuchsia-50 border border-fuchsia-200 rounded-xl text-fuchsia-900 text-sm font-bold text-center">
+          🛡️ Ý chí {currentStats.willpower}% — não đang bị brainrot, cẩn thận ⚡
         </div>
       )}
 
@@ -83,7 +79,7 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {filteredActions.map((action) => (
           <ActionCard
             key={action.id}
