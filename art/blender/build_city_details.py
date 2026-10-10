@@ -53,10 +53,11 @@ ensure_mat("mat_leaf", "62B06D"); ensure_mat("mat_grass2", "A5D6A0"); ensure_mat
 ensure_mat("mat_sand", "E8D3A3"); ensure_mat("mat_white", "F5F3EC"); ensure_mat("mat_dark", "2D3340"); ensure_mat("mat_stone", "9AA3AE")
 ensure_mat("mat_asphalt", "3B4150"); ensure_mat("mat_leaf2", "4E9A5B")
 ensure_mat("mat_lamp", "FFF1C2", emit="FFD27A", strength=1.0)
+ensure_mat("mat_glow", "9BEBFF", emit="3FD0FF", strength=2.2)
 ensure_mat("mat_neon", "FF8FB8", emit="FF4F9A", strength=1.0)
 ensure_mat("mat_window", "F6EBD9", emit="FFD98A", strength=0.2)
 MATS = ["pal_%02d" % i for i in range(1, 13)] + ["mat_leaf", "mat_leaf2", "mat_grass2", "mat_water", "mat_sand", "mat_white", "mat_dark",
-        "mat_stone", "mat_asphalt", "mat_lamp", "mat_neon", "mat_window"]
+        "mat_stone", "mat_asphalt", "mat_lamp", "mat_neon", "mat_window", "mat_glow"]
 IDX = {n: i for i, n in enumerate(MATS)}
 
 # ---------- primitive (bmesh), mọi hàm nhận tên vật liệu ----------
@@ -301,6 +302,19 @@ def bus_stop(bm):
     for sx in (-1.4, 1.4): add_box(bm, 0.05, 1.0, 1.6, sx, -0.1, 1.2, "pal_12")
     add_box(bm, 1.8, 0.45, 0.07, 0, -0.35, 0.55, "pal_08"); add_box(bm, 0.5, 0.05, 0.8, 1.7, 0.7, 0.0, "pal_11")
     add_cyl(bm, 0.04, 0.04, 2.6, 1.9, 0.75, 1.3, "pal_11", 6); add_cyl(bm, 0.28, 0.28, 0.05, 1.9, 0.7, 2.5, "pal_02", 12, axis="y"); add_box(bm, 0.12, 0.03, 0.34, 1.9, 0.66, 2.5, "pal_07")
+def mascot_stage(bm):
+    """Bục của Blob (linh vật của game): hai bậc đá, vành sáng xanh, 4 đèn trụ và bảng tên. Mặt trên cao 0.55 m, Blob lơ lửng phía trên."""
+    add_cyl(bm, 1.05, 1.05, 0.22, 0, 0, 0.11, "pal_11", 24)
+    add_cyl(bm, 0.9, 0.9, 0.2, 0, 0, 0.32, "mat_stone", 24)
+    add_cyl(bm, 0.95, 0.95, 0.06, 0, 0, 0.44, "mat_glow", 24)
+    add_cyl(bm, 0.78, 0.78, 0.1, 0, 0, 0.5, "pal_07", 24)
+    for k in range(4):
+        a = math.radians(45 + 90 * k)
+        x, y = math.cos(a) * 0.98, math.sin(a) * 0.98
+        add_cyl(bm, 0.04, 0.05, 0.85, x, y, 0.55, "pal_11", 6)
+        add_ico(bm, 0.1, x, y, 1.02, "mat_lamp", 1, 1)
+    add_box(bm, 0.78, 0.06, 0.26, 0, 1.02, 0.2, "mat_dark")
+    add_text(bm, "BLOB", 0.17, 0, 1.06, 0.2, "mat_glow")
 def statue(bm):
     add_box(bm, 1.2, 1.2, 0.5, 0, 0, 0.25, "pal_11"); add_box(bm, 0.8, 0.8, 0.5, 0, 0, 0.75, "mat_stone")
     add_ico(bm, 0.28, 0, 0, 1.3, "pal_04", 1.3, 1); add_ico(bm, 0.2, 0, 0, 1.75, "pal_04", 1, 1)
@@ -373,7 +387,7 @@ put(food_cart, *polar(155, 5.0), math.radians(-60), 0.9)
 put(pond, *polar(205, 5.0), 0.0, 1.0, sc=0.8)
 put(flowerbed, *polar(245, 5.0), 0.0, 0.9, sc=0.9)
 put(flowerbed, *polar(295, 5.0), 0.0, 0.9, sc=0.9, cols=("pal_04", "pal_01", "pal_07"))
-put(statue, *polar(335, 5.0), 0.0, 0.6)
+put(mascot_stage, *polar(335, 5.0), face(1, 1), 0.95)   # chỗ của Blob: client đặt linh vật đúng toạ độ này (world/mascot.ts)
 put(sandbox, *polar(25, 7.3), 0.0, 0.8)
 for ang, rot in ((0, 90), (90, 180), (180, 270), (270, 0)):
     x, z = polar(ang + 30, 7.35)

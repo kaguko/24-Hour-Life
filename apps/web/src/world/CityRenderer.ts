@@ -7,6 +7,8 @@ import { locationDef } from '@24h/domain';
 import { RESIDENTS, type Anim, type AnimalKind, type AnimalMood, type EmoteKind, type ResidentState } from '@24h/protocol';
 import { ACTION_ANIM_SECONDS, CLIP_FOR, CLIP_FOR_EMOTE, EMOTE_EMOJI, type ClipSpec } from './animMap';
 import { NavGrid, type NavData, type Vec2 } from './nav';
+import { MascotActor } from './MascotActor';
+import type { MascotLine } from './mascot';
 
 /** Thông tin một người chơi để dựng nhân vật. Vị trí của người chơi cục bộ do renderer tự điều khiển. */
 export interface WorldPlayerInfo {
@@ -28,6 +30,8 @@ export interface CityRendererOptions {
   onAnimal?: (animalId: string) => void;
   /** Bấm vào một cư dân thành phố */
   onResident?: (residentId: string) => void;
+  /** Bấm vào Blob (linh vật): nghe câu tiếp theo */
+  onMascot?: () => void;
   /** Bấm vào một người chơi khác */
   onPlayer?: (playerId: string) => void;
   /** Bấm vào toà nhà: khoá cửa trong nav (vd 'cafe') */
@@ -169,6 +173,7 @@ export class CityRenderer {
   private readonly animals = new Map<string, AnimalActor>();
   private readonly animalCache = new Map<string, Promise<THREE.Group>>();
   private readonly residents = new Map<string, ResidentActor>();
+  private mascot: MascotActor | null = null;
   private selectedId: string | null = null;
   private readonly clock = new THREE.Clock();
   private readonly buildingMeshes: THREE.Object3D[] = [];
@@ -247,6 +252,7 @@ export class CityRenderer {
     this.scene.add(gltf.scene);
     if (backdrop) this.scene.add(backdrop.scene);
     if (details) this.scene.add(details.scene);
+    this.mascot = new MascotActor(this.scene, this.labels.domElement);
     this.buildSigns(navData);
     this.setClock(8);
     this.camTarget.set(navData.spawn.x, 0, navData.spawn.z);
@@ -555,19 +561,23 @@ export class CityRenderer {
   }
 
   /** Người chơi (khác mình) hoặc con vật gần điểm bấm nhất trên màn hình, trong PICK_RADIUS_PX */
-  private pickActor(clientX: number, clientY: number): { type: 'animal' | 'player' | 'resident'; id: string } | null {
+  private pickActor(clientX: number, clientY: number): { type: 'animal' | 'player' | 'resident' | 'mascot'; id: string } | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
-    const found: Array<{ type: 'animal' | 'player' | 'resident'; id: string; d: number }> = [];
+    const found: Array<{ type: 'animal' | 'player' | 'resident' | 'mascot'; id: string; d: number }> = [];
     const v = new THREE.Vector3();
-    const test = (type: 'animal' | 'player' | 'resident', id: string, x: number, y: number, z: number) => {
+    const test = (type: 'animal' | 'player' | 'resident' | 'mascot', id: string, x: number, y: number, z: number, radius = PICK_RADIUS_PX) => {
       v.set(x, y, z).project(this.camera);
       const sx = rect.left + ((v.x + 1) / 2) * rect.width;
       const sy = rect.top + ((1 - v.y) / 2) * rect.height;
       const d = Math.hypot(sx - clientX, sy - clientY);
-      if (d <= PICK_RADIUS_PX) found.push({ type, id, d });
+      if (d <= radius) found.push({ type, id, d });
     };
     for (const a of this.animals.values()) test('animal', a.id, a.pos.x, 0.5 * ANIMAL_SCALE, a.pos.z);
     for (const a of this.residents.values()) test('resident', a.id, a.pos.x, 0.8, a.pos.z);
+    if (this.mascot) {
+      const p = this.mascot.pickPoint();
+      test('mascot', 'blob', p.x, p.y, p.z, 78);
+    }
     for (const a of this.actors.values()) if (a.id !== this.localId && !a.inside) test('player', a.id, a.pos.x, 0.8, a.pos.z);
     found.sort((x, y) => x.d - y.d);
     return found[0] ? { type: found[0].type, id: found[0].id } : null;
@@ -712,6 +722,15 @@ export class CityRenderer {
       turn('leg_l', 'x', kick);
       turn('leg_r', 'x', -kick);
     }
+  }
+
+  // ---------- Blob, linh vật nói câu triết lý ----------
+  mascotSay(line: MascotLine, ms: number): void {
+    this.mascot?.say(line, ms);
+  }
+
+  mascotBounce(): void {
+    this.mascot?.bounce();
   }
 
   // ---------- cư dân thành phố (NPC) ----------
@@ -977,6 +996,7 @@ export class CityRenderer {
 
     this.updateAnimals(dt, now);
     this.updateResidents(dt, now);
+    this.mascot?.update(now);
 
     // camera bám người chơi cục bộ
     const me = this.actors.get(this.localId);
@@ -985,6 +1005,7 @@ export class CityRenderer {
     this.updateOcclusion(dt);
     this.updateInside();
 
+    this.mascot?.layout(this.camera);
     this.renderer.render(this.scene, this.camera);
     this.labels.render(this.scene, this.camera);
   };
@@ -1063,6 +1084,10 @@ export class CityRenderer {
     this.raycaster.setFromCamera(ndc, this.camera);
 
     const picked = this.pickActor(e.clientX, e.clientY);
+    if (picked?.type === 'mascot' && this.opts.onMascot) {
+      this.opts.onMascot();
+      return;
+    }
     if (picked?.type === 'resident' && this.opts.onResident) {
       this.opts.onResident(picked.id);
       return;
@@ -1122,6 +1147,8 @@ export class CityRenderer {
       this.scene.remove(a.group);
     }
     this.residents.clear();
+    this.mascot?.dispose();
+    this.mascot = null;
     for (const s of this.signs.values()) {
       this.scene.remove(s.label);
       s.el.remove();

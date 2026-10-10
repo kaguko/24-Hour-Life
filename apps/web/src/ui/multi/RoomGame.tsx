@@ -8,6 +8,7 @@ import { ActionGrid } from '../ActionGrid';
 import { MorningModal } from '../MorningModal';
 import { useNow, usePrivateState, useRoomSnapshot, useRoomStatus, useToasts } from './hooks';
 import { Notices, RoomTopBar, StatRail, StatStrip, fmtMoney } from './RoomHud';
+import { MascotCard } from './MascotCard';
 
 const CityStage = lazy(() => import('./CityStage').then((m) => ({ default: m.CityStage })));
 
@@ -159,6 +160,7 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
           <div data-testid="my-stats">
             <StatStrip stats={me.stats} />
           </div>
+          <MascotCard name={me.name} stats={me.stats} />
           <p className="text-sm text-[var(--ink-dim)]">
             <b className="text-white">Chế độ nhẹ:</b> không dựng cảnh 3D. Dùng danh sách hành vi bên dưới; mọi người trong phòng vẫn thấy bạn như bình thường.
           </p>

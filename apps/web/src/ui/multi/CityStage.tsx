@@ -5,6 +5,8 @@ import type { RoomConnection, RoomSnapshot } from '../../net/room';
 import { audioAdapter } from '../../adapters/audioAdapter';
 import { avatarUrl, type AvatarId } from '../../lib/avatars';
 import { CityRenderer } from '../../world/CityRenderer';
+import type { MascotStats } from '../../world/mascot';
+import { useMascotTalk } from './useMascot';
 import { EMOTE_EMOJI } from '../../world/animMap';
 
 const EMOTE_LABEL: Record<EmoteKind, string> = { wave: 'Vẫy', highfive: 'Đập tay', hug: 'Ôm', dance: 'Nhảy', cheer: 'Hò reo' };
@@ -53,6 +55,18 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
   snapRef.current = snapshot;
   const selectedRef = useRef<string | null>(null);
 
+  // Blob: nói câu triết lý liên tục; bấm vào Blob để nghe câu khác
+  const mascotStats = useRef<MascotStats | null>(null);
+  mascotStats.current = snapshot.me?.stats ?? null;
+  const { next: mascotNext } = useMascotTalk({
+    enabled: state === 'ready',
+    name: snapshot.me?.name ?? 'bạn',
+    statsRef: mascotStats,
+    say: (line, ms) => rendererRef.current?.mascotSay(line, ms),
+  });
+  const mascotNextRef = useRef(mascotNext);
+  mascotNextRef.current = mascotNext;
+
   const pushFeed = (text: string) => {
     const id = ++feedId.current;
     setFeed((f) => [...f.slice(-3), { id, text }]);
@@ -73,6 +87,7 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
           setActiveResidentId(null);
           renderer?.walkLocalTo(x, z);
         },
+        onMascot: () => mascotNextRef.current(),
         onResident: (residentId) => {
           const r = renderer;
           const pos = r?.residentPosition(residentId);
@@ -369,7 +384,7 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
 
       {hintVisible && (
         <div className="hidden sm:block absolute left-3 bottom-3 px-2.5 py-1.5 rounded-xl hud-glass text-[11px] text-[var(--ink-dim)] pointer-events-none max-w-[42%] anim-rise">
-          Bấm đường để đi · bấm toà nhà, cư dân hay thú cưng để tương tác · kéo để xoay
+          Bấm đường để đi · bấm toà nhà, cư dân, thú cưng hay Blob để tương tác · kéo để xoay
         </div>
       )}
     </div>

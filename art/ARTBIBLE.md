@@ -29,3 +29,5 @@ Quy tắc kỹ thuật
 Ảnh tham chiếu: `art/artbible.png` (bảng màu + nhân vật Kenney làm chuẩn tỉ lệ), `art/city_preview.png`, `art/room_preview.png`, `art/props_preview.png`.
 
 Lớp chi tiết thành phố (`city_details.glb` ~280 KB, `city_backdrop.glb` ~110 KB) dùng cùng bảng màu `pal_*`; prop Kenney (đèn giao thông, máy arcade...) giữ colormap riêng. Mọi vật phát sáng đêm phải dùng đúng tên `mat_window` / `mat_lamp` / `mat_neon` để client bật theo giờ.
+
+Linh vật **Blob**: dùng đúng bộ sticker có sẵn `public/stickers/{lockedin,win,cooked,loss,rizz}.png` (không vẽ lại). Nét mặt theo chủ đề câu nói: lockedin = kỷ luật / học tập, win = dopamine chậm / điều độ / ý nghĩa, cooked = dopamine nhanh / dại dột, loss = kiệt sức / tiền bạc, rizz = kết nối. Màu hào quang lấy từ `MOOD_TAG` trong `apps/web/src/world/mascot.ts`.
