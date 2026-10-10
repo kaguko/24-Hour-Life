@@ -35,7 +35,6 @@ export const GoalsPanel: React.FC<GoalsPanelProps> = ({ goals }) => {
                 <div className="text-sm font-bold leading-snug truncate">{g.title}</div>
               </div>
             </div>
-            <p className="text-[11px] text-indigo-200/90 leading-snug mt-1.5 line-clamp-2">{g.description}</p>
             <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mt-2">
               <div
                 className={`h-full rounded-full bg-gradient-to-r ${bar} transition-[width] duration-500`}

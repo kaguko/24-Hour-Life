@@ -42,17 +42,16 @@ export const BigEventPanel: React.FC<BigEventPanelProps> = ({ state, day, hoursU
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300">Sự kiện lớn của tuần</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300">Boss cuối tuần 🔥</span>
             <span className={`text-[11px] font-bold tabular-nums ${done ? (TIER_TONE[state.result!.tier]) : urgent ? 'text-amber-200 animate-pulse' : 'text-indigo-200'}`}>{when}</span>
           </div>
           <div className="text-sm font-extrabold leading-snug">{def.title}</div>
-          <p className="text-[11px] text-indigo-200/90 leading-snug mt-0.5 line-clamp-2">{def.description}</p>
         </div>
       </div>
       {!done && (
         <div className="mt-2.5">
           <div className="flex items-center justify-between text-[11px] mb-1">
-            <span className="text-indigo-200">Chuẩn bị: <strong className="text-white">{prep.label}</strong></span>
+            <span className="text-indigo-200">Độ sẵn sàng: <strong className="text-white">{prep.label}</strong></span>
             <span className="text-indigo-300/80 italic">{rumor}</span>
           </div>
           <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">

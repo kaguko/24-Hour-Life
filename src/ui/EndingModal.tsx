@@ -7,6 +7,7 @@ import { ENDING_PALETTES } from '../lib/endingPalette';
 import { AvatarId, avatarUrl } from '../lib/avatars';
 import { Share2, RotateCcw, Check, Copy } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { Sticker } from './Sticker';
 
 interface EndingModalProps {
   ending: EndingPrimitive;
@@ -34,6 +35,7 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals
   const pal = ENDING_PALETTES[ending.palette];
   const [reflection, setReflection] = useState<'less' | 'same' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [readMore, setReadMore] = useState(false);
   const stageRef = useRef<EndingStageHandle>(null);
   const [stageFailed, setStageFailed] = useState(false);
   // Món đồ trên sân khấu: hành vi người chơi làm nhiều nhất
@@ -133,10 +135,23 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals
 
         {/* Giải thích & bài học */}
         <div className="p-5 space-y-4">
-          <div>
-            <p className="text-[11px] font-semibold text-stone-500 mb-1">{OUTCOME_LABEL[ending.outcome]}</p>
-            <p className="text-sm text-stone-800 leading-relaxed">{ending.description}</p>
-            <p className="text-xs italic text-stone-600 mt-2 pl-2 border-l-2 border-stone-300">{ending.lesson}</p>
+          <div className="text-center">
+            <Sticker kind={ending.outcome === 'survived' ? 'W' : ending.outcome === 'bankrupt' ? 'broke' : 'cooked'} seed={ending.score} size={120} />
+            <p className="text-[11px] font-semibold text-stone-500 mt-1">{OUTCOME_LABEL[ending.outcome]}</p>
+            <button
+              type="button"
+              onClick={() => setReadMore((v) => !v)}
+              aria-expanded={readMore}
+              className="mt-1 text-xs font-bold text-stone-600 hover:text-stone-900"
+            >
+              {readMore ? 'Gọn lại ▲' : 'Đọc kỹ hơn ▼'}
+            </button>
+            {readMore && (
+              <div className="text-left mt-2">
+                <p className="text-sm text-stone-800 leading-relaxed">{ending.description}</p>
+                <p className="text-xs italic text-stone-600 mt-2 pl-2 border-l-2 border-stone-300">{ending.lesson}</p>
+              </div>
+            )}
           </div>
 
           {/* Hành trình 7 ngày: dữ liệu thật của chính người chơi */}

@@ -86,6 +86,13 @@ export default function App() {
     confirmBigEvent,
   } = useGameAdapter();
 
+  // Thông báo ngắn: tự tắt sau 5 giây
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 5000);
+    return () => clearTimeout(t);
+  }, [notice, setNotice]);
+
   // Chuyển ngày: nhân vật lên giường, phòng tối ("Ngày N khép lại"), rồi bình minh, rồi mới hiện báo cáo sáng
   const [nightPhase, setNightPhase] = useState<'none' | 'dusk' | 'dawn'>('none');
   // Báo cáo sáng chỉ hiện sau khi màn chuyển đêm chạy xong (tránh chớp modal ở khung hình đầu)
@@ -199,9 +206,6 @@ export default function App() {
                     <h4 className="text-sm font-bold text-rose-900">
                       {lifeStatus.label}
                     </h4>
-                    <p className="text-xs text-rose-700">
-                      {lifeStatus.description}
-                    </p>
                   </div>
                 </div>
                 <button
@@ -217,7 +221,7 @@ export default function App() {
             {/* Thông báo tức thời khi hành vi có hiệu ứng đặc biệt */}
             {notice && (
               <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-xl flex items-center justify-between animate-in fade-in duration-200">
-                <span>{notice}</span>
+                <span>{notice.split(/(?<=[.!?…])\s/)[0]}</span>
                 <button
                   onClick={() => setNotice(null)}
                   className="text-amber-700 hover:text-amber-950 text-xs font-bold px-2 py-0.5"
