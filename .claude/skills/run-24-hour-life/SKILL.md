@@ -31,6 +31,14 @@ node .claude/skills/run-24-hour-life/driver.mjs shot "$TEMP/shot.png"
 Smoke prints PASS/FAIL lines + a JSON summary, exit 0 on success, and writes `smoke-1-room.png` / `smoke-2-after-action.png` into the out dir. **Open the PNGs** — expect the 3D room + 07:00 HUD, then a timeline bar showing "Lướt TikTok / Reels" 2h and the action grid.
 Extend `driver.mjs` for deeper flows; useful selectors: buttons by accessible name `Bắt đầu ngày 1` (intro), `Danh sách hành vi`, `Chọn hành vi này` (one per action card), nav `Thành phố` / `Phòng` / `Mô phỏng 1000 lần`; modals are `role=dialog`.
 
+## Multiplayer e2e (2 browsers)
+```bash
+npm run dev:all > "$TEMP/devall.log" 2>&1 &        # web :3000 + server :2567
+node .claude/skills/run-24-hour-life/multi.mjs "$TEMP/multi"
+```
+Tạo phòng, vào bằng mã (và mã sai), chat, rủ chạy bộ cùng, hành vi một mình, qua đêm, báo cáo sáng + "Bạn bè hôm qua"; 13 PASS/FAIL, ảnh `multi-*.png`.
+Khi dev, `window.__city.debugActors()` cho biết nhân vật 3D đã tải mô hình/clip chưa. Dừng server: kill tiến trình đang nghe cổng 3000 và 2567.
+
 ## Direct domain invocation (no browser)
 Game rules are pure TS in `packages/domain/src/` (no React/localStorage), so for balance/logic changes:
 ```bash

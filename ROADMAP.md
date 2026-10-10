@@ -132,45 +132,50 @@ Trước đây luật qua đêm coi `dopamine ≥ 75` từ **bất kỳ nguồn 
 
 ---
 
-## 🗂️ 3. Sơ Đồ Cấu Trúc Mã Nguồn (Clean Architecture Lite)
+## 🗂️ 3. Sơ Đồ Cấu Trúc Mã Nguồn (monorepo npm workspaces)
 
 ```
 /
-├── ROADMAP.md                  # Bản đồ tiến độ và chỉ dẫn cho Agent (File này)
-├── README.md                   # Tài liệu tổng quan dự án
-├── metadata.json               # Metadata của applet
-├── index.html                  # Entry HTML với thẻ meta SEO/Social
-├── src/
-│   ├── main.tsx                # Khởi chạy React app
-│   ├── App.tsx                 # Vòng lặp điều phối chính (kết nối qua useGameAdapter)
-│   ├── index.css               # Tailwind CSS v4 (@import "tailwindcss";)
-│   │
-│   ├── domain/                 # 🧠 DOMAIN PURE (Rule 1 & 2: NO React/UI/Storage, Primitive I/O)
-│   │   ├── types.ts            # Kiểu dữ liệu primitive (PlayerStatsPrimitive, SoundCue, ...)
-│   │   ├── stats.ts            # Toán học chỉ số, clampStats, evaluateLifeStatus
-│   │   ├── actions.ts          # 15 hành vi, executeActionById(actionId, stats, hoursRemaining)
-│   │   ├── consequence.ts      # processOvernightCycle(stats, actionIds, sleepDebt, day)
-│   │   ├── events.ts           # rollDomainEvent, resolveDomainChoice
-│   │   ├── simulate.ts         # runDomainSimulation (mô phỏng headless 1000 ván)
-│   │   └── index.ts            # Facade tổng hợp API domain
-│   │
-│   ├── adapters/               # 🔌 ADAPTERS (Rule 3: Cắm UI, Storage, Audio vào Domain)
-│   │   ├── storageAdapter.ts   # Cắm localStorage vào domain primitives
-│   │   ├── audioAdapter.ts     # Cắm Web Audio API vào domain sound cues
-│   │   └── useGameAdapter.ts   # React Hook Controller kết nối UI với Domain
-│   │
-│   └── ui/                     # 🖥️ VIEW LAYER: Giao diện thuần (nhận DTOs & callbacks)
-│       ├── TopNav.tsx          # Thanh điều hướng chuẩn 3 vùng
-│       ├── StatsHUD.tsx        # Bảng đo 6 chỉ số phản hồi động
-│       ├── TimeTrack.tsx       # Thanh quỹ thời gian 24 giờ
-│       ├── ActionCard.tsx      # Thẻ hành vi (ảo giác phóng đại dopamine khi ý chí thấp)
-│       ├── ActionGrid.tsx      # Lưới hành vi & bộ lọc danh mục
-│       ├── MorningModal.tsx    # Modal hậu quả trễ qua đêm & quy luật hé lộ
-│       ├── EventModal.tsx      # Modal xử lý biến cố ngẫu nhiên
-│       ├── WeekReviewModal.tsx # Modal tổng kết tuần 7 ngày & câu hỏi phản tư
-│       ├── SimulationBench.tsx # Bàn thí nghiệm mô phỏng thuật toán trực tiếp
-│       └── GuideModal.tsx      # Bảng giải thích quy luật & triết lý thiết kế
+├── packages/domain/      # 🧠 @24h/domain: luật chơi thuần (NO React/UI/Storage/Math.random; rng được tiêm). build bằng tsc -> dist
+│   └── src/              # actions, consequence, events, intrusion, goals, map, planner, simulate, gameState (PlayerState + applyAction/endDay/rollDayEvents),
+│                         # jointActions + social (hành vi chung, áp lực đồng trang lứa), groupEvents (biến cố nhóm), simulateGroup (mô phỏng nhóm)
+├── packages/protocol/    # @24h/protocol: hợp đồng client <-> server (tên message, giới hạn, kiểu payload, Anim, AVATAR_IDS)
+├── apps/web/             # Vite + React 19 + three.js
+│   ├── src/adapters/     # useGameAdapter (một người), audio, storage
+│   ├── src/net/          # room.ts: kết nối Colyseus -> snapshot thuần cho React
+│   ├── src/world/        # CityRenderer (three.js), nav.ts (A* trên city_nav.json), animMap.ts
+│   ├── src/ui/           # giao diện một người; ui/multi/ = Lobby, RoomGame, CityStage
+│   └── public/models/    # city.glb (Draco), city_nav.json, room_home.glb, props/, characters/ (Kenney)
+├── apps/server/          # Colyseus 0.18: LifeRoom (planning -> night -> morning), engine, joint, limits, cors; Dockerfile, fly.toml
+├── art/                  # art bible, ảnh xem trước, script Blender (art/blender)
+├── docs/deploy-server.md # Docker / Fly.io / Railway / biến môi trường
+└── vercel.json           # build web khi Root Directory là / (apps/web/vercel.json khi Root Directory = apps/web)
 ```
+
+### ✅ GIAI ĐOẠN "PHÒNG CHUNG 2–8 NGƯỜI + THÀNH PHỐ 3D" (đã làm)
+- **A**: rng tiêm vào domain; PlayerState + hàm thuần; npm workspaces (mô phỏng một người trùng khớp byte-by-byte trước/sau từng bước).
+- **B**: server Colyseus authoritative (client chỉ gửi `action/move/chat/ready/joint/nudge`), vòng đời ngày, bot Balanced thay người rớt mạng sau 60s,
+  6 hành vi chung + áp lực đồng trang lứa + động viên, biến cố nhóm, Docker/Fly, CORS allow-list, giới hạn chống lạm dụng.
+- **C**: art bible 12 màu; thành phố 60x60m (8 địa điểm của `map.ts` + game center trang trí), phòng trọ, 8 prop; nhân vật tái dùng Kenney (đã có 32 clip).
+- **D**: tab "Chơi cùng bạn": sảnh (mã 4 ký tự), cảnh 3D (đi bộ A*, xoay/zoom, ngày-đêm), danh sách người chơi, chat + bong bóng, rủ nhau, báo cáo sáng riêng + "Bạn bè hôm qua" (không xếp hạng), chế độ nhẹ.
+
+### 📊 Cân bằng nhóm (đo bằng `runGroupSimulation`, 600–1000 ván, 4 người)
+| Nhóm 4 người cùng chiến lược | Sống đủ 7 ngày | Ghi chú |
+|---|---|---|
+| Balanced | 100% | Kết nối ~100 (một mình ~68) |
+| Party Animal | ~65% (một mình ~89%) | nhậu nhóm tốn hơn nhậu một mình, nhiều người thì càng nặng |
+| Dopamine Chaser | ~17% (một mình 0%) | có bạn nên không còn bị cô lập, nhưng cả bàn cùng sa ngã |
+| Workaholic / Pure Sleeper | ~3% / ~2% | |
+| Bàn hỗn hợp (2 Balanced + Party + Chaser) | Party ~82%, Chaser ~95% | **bạn bè kéo nhau lên**: Chaser sống tốt hơn hẳn khi có người rủ làm việc lành mạnh |
+
+Kết luận thật (không chỉnh số cho đẹp): chơi nhóm cho Kết nối cao hơn một mình; cả nhóm cám dỗ sụp nhanh hơn nhóm lành mạnh; bạn bè lành mạnh cứu người yếu hơn.
+**Balanced vẫn sống ~100%** kể cả với biến cố nhóm: đó là tính chất của cân bằng một người (có một chiến lược giữ mọi chỉ số), muốn đổi phải đổi độ khó cốt lõi
+nên chưa làm. Mục tiêu "Balanced không còn 100%" chưa đạt, ghi lại ở đây để playtest quyết định.
+
+### ⏳ Còn lại / ý tưởng tiếp
+- Playtest 2 buổi x 4 người (xem `PLAYTEST.md`, mục multiplayer), đo thời gian chờ nhau và việc hiểu hành vi chung.
+- Sự kiện / cám dỗ xâm nhập / sự kiện lớn trong phòng nhiều người (domain đã có hàm thuần: `rollDayEvents`, `applyIntrusionAnswer`, `applyBigEventOutcome`).
+- Nhiều phòng trên nhiều máy cần Redis presence/driver của Colyseus.
 
 ---
 

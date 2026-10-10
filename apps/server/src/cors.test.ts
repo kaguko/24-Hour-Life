@@ -40,3 +40,10 @@ test('readConfig: CORS_ORIGINS tách dấu phẩy, bỏ / cuối, "*" = mở h�
   assert.throws(() => readConfig({ CORS_ORIGINS: 'a.app' }));
   assert.throws(() => readConfig({ CORS_ORIGINS: 'https://a.app/path' }));
 });
+
+test('readConfig: giới hạn chống lạm dụng đọc từ env, sai thì báo lỗi', () => {
+  assert.deepEqual(readConfig({}).limits, { maxRooms: 200, joinsPerMinute: 120 });
+  assert.deepEqual(readConfig({ MAX_ROOMS: '10', JOINS_PER_MINUTE: '30' }).limits, { maxRooms: 10, joinsPerMinute: 30 });
+  assert.throws(() => readConfig({ MAX_ROOMS: '0' }));
+  assert.throws(() => readConfig({ JOINS_PER_MINUTE: 'abc' }));
+});

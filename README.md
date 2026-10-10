@@ -147,6 +147,13 @@ npm run lint
 npm run build
 ```
 
+### Chơi nhiều người (tab "Chơi cùng bạn")
+
+2–8 người cùng sống một tuần trong một thành phố 3D: mỗi người tự lo 24 giờ của mình, rủ nhau làm hoạt động chung (ăn, chạy bộ, học nhóm, tâm sự, xem phim, nhậu),
+động viên nhau; server tính mọi chỉ số, client chỉ gửi ý định. Không streak, không bảng xếp hạng, không quảng cáo.
+Chạy thử: `npm run dev:all`, mở `http://localhost:3000` (vài tab), tab **Chơi cùng bạn** → tạo phòng → gửi mã 4 ký tự.
+Số liệu cân bằng nhóm và phiếu playtest: `ROADMAP.md`, `PLAYTEST.md`. Triển khai server: `docs/deploy-server.md`.
+
 ### Cấu Trúc Monorepo (npm workspaces)
 
 ```

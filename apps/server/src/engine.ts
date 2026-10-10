@@ -41,6 +41,8 @@ export interface PlayerSession {
   /** Đã gửi bao nhiêu lời động viên trong ngày `encouragedDay` */
   encouragedDay: number;
   encouragedCount: number;
+  /** Những người mình đã động viên trong ngày `encouragedDay` */
+  nudgedTargets: Set<string>;
 }
 
 export type ActionOutcome = { ok: false; reason: string } | { ok: true; notice: string | null };
@@ -82,6 +84,7 @@ export class LifeEngine {
       lastReport: null,
       encouragedDay: 0,
       encouragedCount: 0,
+      nudgedTargets: new Set(),
     };
     this.players.set(id, session);
     return session;
@@ -210,13 +213,29 @@ export class LifeEngine {
     if (from.encouragedDay !== from.state.day) {
       from.encouragedDay = from.state.day;
       from.encouragedCount = 0;
+      from.nudgedTargets = new Set();
     }
     const res = encourage(from.state, to.state, from.encouragedCount);
     if (!res.ok) return { ok: false, reason: res.reason ?? 'Không gửi được.' };
     from.state = res.sender;
     to.state = res.target;
     from.encouragedCount++;
+    from.nudgedTargets.add(targetId);
     return { ok: true };
+  }
+
+  /** Hôm nay `supporterId` đã động viên `victimId` chưa (tính là "ở bên cạnh" khi bạn gặp chuyện) */
+  hasSupported(supporterId: string, victimId: string): boolean {
+    const p = this.players.get(supporterId);
+    return !!p && p.encouragedDay === p.state.day && p.nudgedTargets.has(victimId);
+  }
+
+  /** Áp trạng thái mới cho một nhóm người (biến cố nhóm) */
+  setStates(updates: Array<{ id: string; state: PlayerState }>): void {
+    for (const u of updates) {
+      const p = this.players.get(u.id);
+      if (p) p.state = u.state;
+    }
   }
 
   /** Kẹp đích vào thế giới và vào quãng đường tối đa theo thời gian trôi qua. Trả false nếu payload sai. */

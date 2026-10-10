@@ -2,6 +2,6 @@ import { readConfig } from './config.js';
 import { installCors } from './cors.js';
 import { createServer } from './server.js';
 
-const { port, corsOrigins } = readConfig();
+const { port, corsOrigins, limits } = readConfig();
 installCors(corsOrigins);
-await createServer().listen(port);
+await createServer({ limits }).listen(port);

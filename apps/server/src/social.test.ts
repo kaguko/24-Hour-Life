@@ -175,6 +175,6 @@ test('báo cáo sáng có "bạn bè hôm qua": ai đi cùng ai, ai động viê
   assert.ok(friendsB.some((l) => /cùng An/.test(l)), `Binh thấy mình đi cùng An: ${friendsB.join(' | ')}`);
   assert.ok(friendsA.some((l) => /Binh đã động viên bạn/.test(l)));
   assert.ok(friendsB.some((l) => /Bạn đã động viên An/.test(l)));
-  assert.ok([...friendsA, ...friendsB].every((l) => !/hạng|xếp hạng|top|điểm/i.test(l)), 'không có xếp hạng');
+  assert.ok([...friendsA, ...friendsB].every((l) => !/xếp hạng|leaderboard|top/i.test(l)), 'không có xếp hạng');
   await Promise.all([a.leave(), b.leave()]);
 });

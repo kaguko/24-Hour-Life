@@ -31,3 +31,4 @@ export * from './gameState.js';
 export * from './jointActions.js';
 export * from './social.js';
 export * from './simulateGroup.js';
+export * from './groupEvents.js';

@@ -14,6 +14,7 @@ import { rollDomainEvent, resolveDomainChoice } from './events.js';
 import { DOMAIN_STRATEGIES, chooseStrategyAction, type DomainStrategy, type RunTracePrimitive } from './simulate.js';
 import { jointActionDef } from './jointActions.js';
 import { PRESSURE_WILLPOWER_THRESHOLD, offerPressure, resolveJointAction } from './social.js';
+import { applyGroupEvent, rollGroupEvent } from './groupEvents.js';
 import type { Rng } from './rng.js';
 
 /** Mỗi sáng, chiến lược muốn làm hành vi chung nào (ưu tiên giảm dần). Rỗng = tự lo thân. */
@@ -79,6 +80,16 @@ function formGroups(strategies: DomainStrategy[], states: PlayerState[], active:
       }
     }
   }
+  // Lời rủ lành mạnh còn chỗ: người chưa có nhóm mà đang thiếu Kết nối thì nhận lời (người tự lo thân, prefs rỗng, không nhận)
+  for (const [actionId, members] of groups) {
+    const joint = jointActionDef(actionId)?.joint;
+    if (!joint || joint.peerPressure) continue;
+    for (let i = 0; i < states.length && members.length < joint.maxPlayers; i++) {
+      if (!active[i] || taken.has(i) || prefs[i].length === 0 || states[i].stats.social >= 70) continue;
+      members.push(i);
+      taken.add(i);
+    }
+  }
   return { groups, pressureJoins };
 }
 
@@ -101,7 +112,8 @@ function playSoloUntil(strategy: DomainStrategy, state: PlayerState, rng: Rng, u
 }
 
 /** Một ván cho cả nhóm. Mỗi phần tử `strategies` là một người chơi. */
-export function playGroupRun(strategies: DomainStrategy[], daysPerRun: number, rng: Rng): GroupRunResult {
+export function playGroupRun(strategies: DomainStrategy[], daysPerRun: number, rng: Rng, options: { groupEvents?: boolean } = {}): GroupRunResult {
+  const withEvents = options.groupEvents ?? true;
   const n = strategies.length;
   let states = strategies.map(() => newPlayerState([], { id: BIG_EVENT_IDS[0], difficulty: 1 }));
   const alive = strategies.map(() => true);
@@ -132,7 +144,7 @@ export function playGroupRun(strategies: DomainStrategy[], daysPerRun: number, r
       }
     }
 
-    // 3. Phần còn lại của ngày + biến cố + qua đêm, từng người
+    // 3. Phần còn lại của ngày + biến cố riêng, từng người
     for (let i = 0; i < n; i++) {
       if (!alive[i]) continue;
       let s = playSoloUntil(strategies[i], states[i], rng, null);
@@ -143,6 +155,25 @@ export function playGroupRun(strategies: DomainStrategy[], daysPerRun: number, r
           s = { ...s, stats: resolveDomainChoice(ev.id, choice.id, s.stats).newStats };
         }
       }
+      states[i] = s;
+    }
+
+    // 3b. Biến cố nhóm (đêm nay): cả nhóm cùng chịu, hoặc một người gặp chuyện còn bạn bè thì sao
+    if (withEvents) {
+      const playing = states.map((s, i) => (alive[i] ? i : -1)).filter((i) => i >= 0);
+      const eventId = rollGroupEvent(playing.length, rng);
+      if (eventId) {
+        // Còn sức thì ở bên bạn: không kiệt sức và tinh thần chưa xuống đáy
+        const supporter = (i: number) => states[i].stats.energy >= 40 && states[i].stats.mental >= 40;
+        const out = applyGroupEvent(eventId, states, strategies.map((s) => s.id), (i) => supporter(i), rng);
+        states = out.states;
+      }
+    }
+
+    // 3c. Qua đêm, từng người
+    for (let i = 0; i < n; i++) {
+      if (!alive[i]) continue;
+      let s = states[i];
       s = endDay(s, rng).state;
       survived[i] = day;
       timelines[i].push({ day, stats: s.stats });
@@ -193,7 +224,7 @@ export interface GroupSimulationResult {
 }
 
 /** Mô phỏng `runs` ván cho một nhóm có cấu thành `strategyIds` (một id mỗi người). */
-export function runGroupSimulation(strategyIds: string[], runs: number, daysPerRun: number, rng: Rng): GroupSimulationResult {
+export function runGroupSimulation(strategyIds: string[], runs: number, daysPerRun: number, rng: Rng, options: { groupEvents?: boolean } = {}): GroupSimulationResult {
   const strategies = strategyIds.map((id) => DOMAIN_STRATEGIES.find((s) => s.id === id) ?? DOMAIN_STRATEGIES[4]);
   const n = strategies.length;
   const survivals = new Array<number>(n).fill(0);
@@ -204,7 +235,7 @@ export function runGroupSimulation(strategyIds: string[], runs: number, daysPerR
   let pressure = 0;
 
   for (let r = 0; r < runs; r++) {
-    const run = playGroupRun(strategies, daysPerRun, rng);
+    const run = playGroupRun(strategies, daysPerRun, rng, options);
     pressure += run.pressureJoins;
     run.traces.forEach((t, i) => {
       if (!t.endedEarly) survivals[i]++;

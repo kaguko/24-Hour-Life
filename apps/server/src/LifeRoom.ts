@@ -1,9 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { CloseCode, Room, matchMaker, type Client, type Delayed } from '@colyseus/core';
-import { LAST_DAY, evaluateLifeStatus, jointActionDef } from '@24h/domain';
+import { CloseCode, Room, ServerError, matchMaker, type AuthContext, type Client, type Delayed } from '@colyseus/core';
+import { LAST_DAY, applyGroupEvent, evaluateLifeStatus, jointActionDef, rollGroupEvent } from '@24h/domain';
 import { AVATAR_IDS, animForAction, isAvatarId } from '@24h/protocol';
 import { generateRoomCode } from './code.js';
 import { sanitizeText } from './chat.js';
+import { DEFAULT_LIMITS, RateLimiter, sanitizeName, scrubLinks, type Limits } from './limits.js';
 import { LifeEngine, type PlayerSession } from './engine.js';
 import { JointBoard, type Offer } from './joint.js';
 import {
@@ -72,6 +73,7 @@ export class LifeRoom extends Room<{ state: LifeState }> {
 
   /** Ghi đè ở lớp con (xem createLifeRoom). Không bao giờ lấy từ client. */
   protected timing: Timing = DEFAULT_TIMING;
+  protected limits: Limits = DEFAULT_LIMITS;
 
   private engine!: LifeEngine;
   private board!: JointBoard;
@@ -84,7 +86,18 @@ export class LifeRoom extends Room<{ state: LifeState }> {
   /** Lời mời đã nhận trong ngày: playerId -> offerId -> dòng kể */
   private invitedBy = new Map<string, Map<string, string>>();
 
+  /** Giới hạn lượt tạo/vào phòng theo IP (dùng chung cho mọi phòng trong tiến trình) */
+  private static joinLimiter?: RateLimiter;
+
+  onAuth(_client: Client, _options: unknown, context: AuthContext): boolean {
+    const ctor = this.constructor as typeof LifeRoom;
+    ctor.joinLimiter ??= new RateLimiter(this.limits.joinsPerMinute);
+    if (!ctor.joinLimiter.hit(context.ip ?? 'unknown')) throw new ServerError(429, 'Bạn thao tác quá nhanh, thử lại sau một phút.');
+    return true;
+  }
+
   async onCreate(): Promise<void> {
+    if (matchMaker.stats.local.roomCount > this.limits.maxRooms) throw new ServerError(503, 'Máy chủ đang đầy, thử lại sau.');
     // Mã phòng = roomId: người chơi vào bằng joinById(code). Phòng riêng tư nên không liệt kê.
     this.roomId = await uniqueRoomCode();
     await this.setPrivate(true);
@@ -167,7 +180,8 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     });
 
     this.onMessage('chat', (client, message: unknown) => {
-      const text = sanitizeText((message as { text?: unknown } | null)?.text);
+      const raw = sanitizeText((message as { text?: unknown } | null)?.text);
+      const text = raw ? scrubLinks(raw) : null;
       const session = this.engine.players.get(client.sessionId);
       if (!text || !session) return;
       const now = Date.now();
@@ -185,7 +199,7 @@ export class LifeRoom extends Room<{ state: LifeState }> {
   }
 
   onJoin(client: Client, options?: { name?: unknown; avatar?: unknown }): void {
-    const name = sanitizeText(options?.name, 24) ?? `Người chơi ${this.state.players.size + 1}`;
+    const name = sanitizeName(options?.name) ?? `Người chơi ${this.state.players.size + 1}`;
     const session = this.engine.addPlayer(client.sessionId, name, Date.now());
 
     const player = new PlayerSchema();
@@ -483,6 +497,7 @@ export class LifeRoom extends Room<{ state: LifeState }> {
 
     const day = this.state.day;
     this.reports.clear();
+    this.applyNightlyGroupEvent(day);
     for (const s of this.engine.players.values()) {
       const night = this.engine.runNight(s.id);
       if (night) {
@@ -497,6 +512,27 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       message.friends = lines.length > 0 ? lines : ['Hôm qua bạn chủ yếu sống một mình. Thử rủ ai đó làm gì chung xem sao.'];
     }
     this.schedule(this.timing.nightMs, () => this.enterMorning());
+  }
+
+  /**
+   * Biến cố nhóm của đêm nay (nếu có): tính trước khi qua đêm để chỉ số thay đổi được tính vào báo cáo.
+   * Rng riêng theo roomSeed + ngày, nên kết quả tất định theo phòng.
+   */
+  private applyNightlyGroupEvent(day: number): void {
+    const players = [...this.engine.players.values()];
+    const active = players.filter((s) => !s.state.finished);
+    const rng = this.engine.rngForLabel('group-event', day);
+    const eventId = rollGroupEvent(active.length, rng);
+    if (!eventId) return;
+    const out = applyGroupEvent(
+      eventId,
+      players.map((s) => s.state),
+      players.map((s) => s.name),
+      (i, victim) => this.engine.hasSupported(players[i].id, players[victim].id),
+      rng
+    );
+    this.engine.setStates(players.map((s, i) => ({ id: s.id, state: out.states[i] })));
+    players.forEach((s, i) => out.notes[i].forEach((line) => this.note(s.id, `🎲 ${out.title}: ${line}`)));
   }
 
   private expireOffer(offer: Offer): void {
@@ -550,9 +586,11 @@ export class LifeRoom extends Room<{ state: LifeState }> {
 }
 
 /** Tạo lớp phòng với thời gian tùy chỉnh (mặc định 90s lên kế hoạch, giữ chỗ 60s). Chỉ server quyết định, client không đổi được. */
-export function createLifeRoom(timing: Partial<Timing> = {}): typeof LifeRoom {
-  const merged: Timing = { ...DEFAULT_TIMING, ...timing };
+export function createLifeRoom(timing: Partial<Timing> = {}, limits: Partial<Limits> = {}): typeof LifeRoom {
+  const mergedTiming: Timing = { ...DEFAULT_TIMING, ...timing };
+  const mergedLimits: Limits = { ...DEFAULT_LIMITS, ...limits };
   return class ConfiguredLifeRoom extends LifeRoom {
-    protected override timing = merged;
+    protected override timing = mergedTiming;
+    protected override limits = mergedLimits;
   };
 }
