@@ -150,3 +150,31 @@ test('private_state: hành vi đã làm và lý do khóa do server tính, gửi 
   assert.deepEqual(states[states.length - 1].actionsToday, ['sleep_nap']);
   await a.leave();
 });
+
+test('báo cáo sáng có "bạn bè hôm qua": ai đi cùng ai, ai động viên, ai đang chật vật; không xếp hạng', { timeout: 30000 }, async () => {
+  const { room, a, b } = await twoPlayers();
+  const morningA = inbox<any>(a, 'morning');
+  const morningB = inbox<any>(b, 'morning');
+  const invites = inbox<InviteMessage>(b, 'invite');
+
+  a.send('joint', { op: 'offer', actionId: 'run_together' });
+  await waitUntil(() => invites.length === 1);
+  b.send('joint', { op: 'join', offerId: invites[0].offerId });
+  await waitUntil(() => [...room.state.offers.values()][0]?.members.length === 2);
+  a.send('joint', { op: 'start' });
+  await waitUntil(() => room.state.offers.size === 0);
+  b.send('nudge', { targetId: a.sessionId });
+  await sleep(200);
+
+  a.send('ready');
+  b.send('ready');
+  await waitUntil(() => morningA.length === 1 && morningB.length === 1, 6000, 'báo cáo sáng');
+  const friendsA: string[] = morningA[0].friends;
+  const friendsB: string[] = morningB[0].friends;
+  assert.ok(friendsA.some((l) => /cùng Binh/.test(l)), `An thấy mình đi cùng Binh: ${friendsA.join(' | ')}`);
+  assert.ok(friendsB.some((l) => /cùng An/.test(l)), `Binh thấy mình đi cùng An: ${friendsB.join(' | ')}`);
+  assert.ok(friendsA.some((l) => /Binh đã động viên bạn/.test(l)));
+  assert.ok(friendsB.some((l) => /Bạn đã động viên An/.test(l)));
+  assert.ok([...friendsA, ...friendsB].every((l) => !/hạng|xếp hạng|top|điểm/i.test(l)), 'không có xếp hạng');
+  await Promise.all([a.leave(), b.leave()]);
+});

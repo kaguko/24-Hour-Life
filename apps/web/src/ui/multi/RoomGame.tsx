@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { JOINT_ACTIONS, LOCATIONS, PLAYABLE_ACTIONS, jointActionDef, locationDef, locationOf, type DayGrade, type NightResultPrimitive } from '@24h/domain';
 import type { InviteMessage } from '@24h/protocol';
+import { audioAdapter } from '../../adapters/audioAdapter';
 import { avatarUrl, type AvatarId } from '../../lib/avatars';
 import type { PlayerView, RoomConnection } from '../../net/room';
 import { ActionGrid } from '../ActionGrid';
@@ -34,11 +35,28 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
   const priv = usePrivateState(conn);
   const now = useNow(500);
   const { toasts, push } = useToasts();
-  const [report, setReport] = useState<NightResultPrimitive | null>(null);
+  const [report, setReport] = useState<{ report: NightResultPrimitive; friends: string[] } | null>(null);
   const [invites, setInvites] = useState<InviteMessage[]>([]);
   const [focusLocation, setFocusLocation] = useState<string | null>(null);
   const [showCards, setShowCards] = useState(false);
   const [chatText, setChatText] = useState('');
+
+  // Nhạc nền: trình duyệt chỉ cho phát sau thao tác đầu tiên; đổi sắc thái theo giờ trong game
+  useEffect(() => {
+    const start = () => {
+      if (audioAdapter.enabled) audioAdapter.startMusic();
+    };
+    window.addEventListener('pointerdown', start, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', start);
+      audioAdapter.stopMusic();
+    };
+  }, []);
+  const clockHour = 7 + (snap.me?.hoursUsed ?? 0);
+  useEffect(() => {
+    const h = clockHour % 24;
+    audioAdapter.setMusicNight(h >= 19 || h < 6);
+  }, [clockHour]);
 
   const me = snap.me;
   const others = snap.players.filter((p) => p.id !== snap.sessionId);
@@ -48,21 +66,35 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
   useEffect(() => {
     const offs = [
       conn.on('action_result', (m) => {
-        if (!m.ok) push(m.reason ?? 'Không làm được.', 'bad');
-        else if (m.notice) push(m.notice.split(/(?<=[.!?…])\s/)[0], 'good');
+        if (!m.ok) {
+          push(m.reason ?? 'Không làm được.', 'bad');
+          audioAdapter.playCue('neutral');
+        } else if (m.notice) push(m.notice.split(/(?<=[.!?…])\s/)[0], 'good');
       }),
       conn.on('joint_result', (m) => {
         if (!m.ok) push(m.reason ?? 'Không thành.', 'bad');
-        else if (m.withNames) push(`${m.notice ?? 'Xong!'}${m.fellForPressure ? ' (bạn bị kéo ở lại thêm)' : ''}`, m.fellForPressure ? 'bad' : 'good');
+        else if (m.withNames) {
+          push(`${m.notice ?? 'Xong!'}${m.fellForPressure ? ' (bạn bị kéo ở lại thêm)' : ''}`, m.fellForPressure ? 'bad' : 'good');
+          audioAdapter.playCue(jointActionDef(m.actionId)?.isTemptation ? 'temptation' : 'healthy');
+        }
         else if (m.notice) push(m.notice, 'info');
       }),
       conn.on('nudge_result', (m) => {
         if (!m.ok) push(m.reason ?? 'Không gửi được.', 'bad');
         else push('Đã gửi lời động viên 💪', 'good');
       }),
-      conn.on('nudged', (m) => push(`${m.fromName} vừa động viên bạn: hồi chút ý chí 💪`, 'good')),
-      conn.on('invite', (m) => setInvites((list) => [...list.filter((i) => i.offerId !== m.offerId), m])),
-      conn.on('morning', (m) => setReport(m.report)),
+      conn.on('nudged', (m) => {
+        push(`${m.fromName} vừa động viên bạn: hồi chút ý chí 💪`, 'good');
+        audioAdapter.playCue('healthy');
+      }),
+      conn.on('invite', (m) => {
+        setInvites((list) => [...list.filter((i) => i.offerId !== m.offerId), m]);
+        audioAdapter.playCue('event');
+      }),
+      conn.on('morning', (m) => {
+        setReport({ report: m.report, friends: m.friends });
+        audioAdapter.playCue('night');
+      }),
     ];
     return () => offs.forEach((off) => off());
   }, [conn, push]);
@@ -357,7 +389,8 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
       {/* Báo cáo sáng riêng của mình */}
       {report && (
         <MorningModal
-          report={report}
+          report={report.report}
+          friendNotes={report.friends}
           dayGrades={(priv?.dayGrades ?? []) as DayGrade[]}
           onContinue={() => {
             setReport(null);

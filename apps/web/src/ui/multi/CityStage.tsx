@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { locationOf } from '@24h/domain';
 import { animForAction } from '@24h/protocol';
 import type { RoomConnection, RoomSnapshot } from '../../net/room';
+import { audioAdapter } from '../../adapters/audioAdapter';
 import { CityRenderer } from '../../world/CityRenderer';
 
 interface CityStageProps {
@@ -40,6 +41,7 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
           });
         },
         onLocalMove: (x, z) => conn.sendMove(x, z),
+        onStep: () => audioAdapter.playRoomSfx(`step${1 + Math.floor(Math.random() * 3)}`, 0.2),
       });
     } catch {
       setState('error'); // không tạo được WebGL
@@ -64,7 +66,10 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
       const nav = r.getNav();
       const doorKey = nav.data.locations[locationOf(actionId)] ?? 'home';
       const anim = animForAction(actionId);
-      const go = () => r.playLocalAnim(anim);
+      const go = () => {
+        audioAdapter.playRoomSfx('door-open', 0.3);
+        r.playLocalAnim(anim);
+      };
       if (!r.walkLocalToDoor(doorKey, go)) go();
     };
     const offAction = conn.on('action_result', (m) => {

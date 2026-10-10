@@ -81,6 +81,19 @@ const socialAfter = await a.getByTestId('my-stats').textContent();
 check('chạy bộ cùng nhau: chỉ số của An đổi', socialBefore !== socialAfter, `${socialBefore} -> ${socialAfter}`);
 await a.screenshot({ path: join(outDir, 'multi-3-A-after-joint.png') });
 
+// hành vi một mình: mở danh sách, chọn hành vi làm được đầu tiên; nhân vật đi tới địa điểm
+const posBefore = await a.evaluate(() => window.__city?.debugActors().find((x) => x.id)?.pos);
+await a.getByRole('button', { name: /Hành vi/ }).click();
+const firstEnabled = a.getByRole('button', { name: 'Chọn hành vi này' }).locator(':scope:not([disabled])').first();
+await firstEnabled.scrollIntoViewIfNeeded();
+const hoursBefore = await a.getByTestId('room-game').textContent();
+await firstEnabled.click();
+await a.waitForTimeout(3000);
+const hoursText = (await a.getByTestId('room-game').textContent()).match(/đã dùng ([\d.]+)h/)?.[1];
+check('hành vi một mình tốn giờ (server áp dụng)', Number(hoursText) > 1.75, `đã dùng ${hoursText}h`);
+const actors = await a.evaluate(() => window.__city?.debugActors());
+check('nhân vật 3D có mô hình + 32 clip', actors?.length === 2 && actors.every((x) => x.hasModel && x.clips === 32), JSON.stringify(actors?.map((x) => x.anim)));
+
 // qua đêm: cả hai ready
 await a.getByTestId('ready-btn').click();
 await b.getByTestId('ready-btn').click();
@@ -90,6 +103,8 @@ check('sang buổi sáng khi cả hai ready', true);
 await a.screenshot({ path: join(outDir, 'multi-4-A-morning.png') });
 const modalA = await a.locator('[role="dialog"]').count();
 check('An thấy báo cáo sáng riêng', modalA >= 1);
+const notes = await a.getByTestId('friend-notes').textContent();
+check('báo cáo có "Bạn bè hôm qua" (đi cùng Binh)', /cùng Binh/.test(notes ?? ''), notes?.slice(0, 120));
 
 check('không có lỗi trang', errors.length === 0, errors.slice(0, 3).join(' | '));
 await browser.close();

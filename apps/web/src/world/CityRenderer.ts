@@ -27,6 +27,8 @@ export interface CityRendererOptions {
   onBuilding?: (doorKey: string) => void;
   /** Vị trí cục bộ, gọi ~10 lần/giây khi đang di chuyển (để gửi server) */
   onLocalMove?: (x: number, z: number) => void;
+  /** Mỗi bước chân của người chơi cục bộ (để phát tiếng bước chân) */
+  onStep?: () => void;
 }
 
 const CHAR_HEIGHT = 1.6;
@@ -85,6 +87,7 @@ export class CityRenderer {
   private path: Vec2[] = [];
   private onArrive: (() => void) | null = null;
   private lastSend = 0;
+  private stepTimer = 0;
   private raf = 0;
   private disposed = false;
   private zoom = 1;
@@ -432,6 +435,11 @@ export class CityRenderer {
           }
           moving = true;
           speed = LOCAL_SPEED;
+          this.stepTimer += dt;
+          if (this.stepTimer > 0.38) {
+            this.stepTimer = 0;
+            this.opts.onStep?.();
+          }
           if (now - this.lastSend > MOVE_SEND_MS) {
             this.lastSend = now;
             this.opts.onLocalMove?.(actor.pos.x, actor.pos.z);

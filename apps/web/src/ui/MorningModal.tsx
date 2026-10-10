@@ -13,6 +13,8 @@ interface MorningModalProps {
   /** Hạng của các ngày đã qua (gồm cả ngày vừa kết thúc) */
   dayGrades?: DayGrade[];
   onContinue: () => void;
+  /** Phòng chơi nhiều người: chuyện giữa bạn và bạn bè hôm qua (không xếp hạng) */
+  friendNotes?: string[];
 }
 
 /** Màu theo hạng trên nền tối */
@@ -41,7 +43,7 @@ const fmtDelta = (key: keyof PlayerStatsPrimitive, d: number) =>
 const GRADE_REACTION: Record<DayGrade, ReactionKind> = { S: 'W', A: 'W', B: 'lockedin', C: 'cooked', D: 'L' };
 const GRADE_MEME: Record<DayGrade, string> = { S: 'Goated', A: 'W đậm', B: 'Tạm ổn', C: 'Cooked nhẹ', D: 'Cooked thật' };
 
-export const MorningModal: React.FC<MorningModalProps> = ({ report, dayGrades = [], onContinue }) => {
+export const MorningModal: React.FC<MorningModalProps> = ({ report, dayGrades = [], onContinue, friendNotes }) => {
   const [more, setMore] = useState(false);
   // Đêm cuối (ngày 7) hoặc đã sụp đổ: nút dẫn tới màn hình kết cục thay vì "ngày tiếp theo"
   const isFinalNight = report.dayCompleted >= 7 || evaluateLifeStatus(report.newStats).isGameOver;
@@ -125,6 +127,17 @@ export const MorningModal: React.FC<MorningModalProps> = ({ report, dayGrades = 
                 <span className="font-semibold truncate">{recap.worst.title}</span>
               </div>
             )}
+          </div>
+        )}
+
+        {friendNotes && friendNotes.length > 0 && (
+          <div className="px-5 pt-3" data-testid="friend-notes">
+            <div className="text-xs font-bold text-[#d8c3ad] mb-1">👥 Bạn bè hôm qua</div>
+            <ul className="space-y-1 text-sm text-[#e6defd]">
+              {friendNotes.map((n, i) => (
+                <li key={i} className="bg-sky-400/10 border border-sky-300/20 rounded-xl px-3 py-1.5">{n}</li>
+              ))}
+            </ul>
           </div>
         )}
 

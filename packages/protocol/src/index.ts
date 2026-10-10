@@ -103,6 +103,11 @@ export interface MorningReportMessage {
   report: NightResultPrimitive;
   /** Ván của người này đã kết thúc (đủ ngày hoặc sụp đổ) */
   finished: boolean;
+  /**
+   * "Bạn bè hôm qua": chuyện đã xảy ra giữa bạn và mọi người (ai rủ ai, ai động viên ai, ai đang chật vật).
+   * Chỉ kể chuyện, không xếp hạng.
+   */
+  friends: string[];
 }
 
 /** Có người rủ làm hành vi chung */

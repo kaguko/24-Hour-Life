@@ -79,6 +79,10 @@ export class LifeRoom extends Room<{ state: LifeState }> {
   private started = false;
   private phaseTimer?: Delayed;
   private reports = new Map<string, MorningReportMessage>();
+  /** Chuyện xã hội trong ngày của từng người (đưa vào báo cáo sáng) */
+  private story = new Map<string, string[]>();
+  /** Lời mời đã nhận trong ngày: playerId -> offerId -> dòng kể */
+  private invitedBy = new Map<string, Map<string, string>>();
 
   async onCreate(): Promise<void> {
     // Mã phòng = roomId: người chơi vào bằng joinById(code). Phòng riêng tư nên không liệt kê.
@@ -149,6 +153,8 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       this.syncSession(targetId);
       reply({ ok: true });
       const sender = this.engine.players.get(client.sessionId)!;
+      this.note(client.sessionId, `Bạn đã động viên ${this.nameOf(targetId)}.`);
+      this.note(targetId, `${sender.name} đã động viên bạn.`);
       this.clients.getById(targetId)?.send('nudged', { fromId: sender.id, fromName: sender.name });
     });
 
@@ -250,6 +256,24 @@ export class LifeRoom extends Room<{ state: LifeState }> {
 
   // ---- Hành vi chung (lời rủ) ----
 
+  private note(id: string, line: string): void {
+    const list = this.story.get(id) ?? [];
+    list.push(line);
+    this.story.set(id, list);
+  }
+
+  /** Bạn bè đang chật vật (ý chí / tinh thần / tiền thấp): gợi ý ai có thể cần một lời động viên */
+  private strugglingFriends(selfId: string): string[] {
+    const out: string[] = [];
+    for (const s of this.engine.players.values()) {
+      if (s.id === selfId || s.state.finished) continue;
+      const { willpower, mental, money } = s.state.stats;
+      const why = [willpower < 35 ? `ý chí ${willpower}` : '', mental < 30 ? `tinh thần ${mental}` : '', money < 300 ? 'gần hết tiền' : ''].filter(Boolean);
+      if (why.length > 0) out.push(`${s.name} đang chật vật (${why.join(', ')}). Một lời động viên có thể giúp.`);
+    }
+    return out;
+  }
+
   private nameOf(id: string): string {
     return this.engine.players.get(id)?.name ?? '';
   }
@@ -313,6 +337,10 @@ export class LifeRoom extends Room<{ state: LifeState }> {
           if (other.id === id || other.state.finished || other.bot || !other.connected) continue;
           const pressure = this.engine.applyOfferPressure(other.id, res.offer.actionId);
           this.syncSession(other.id);
+          const title = jointActionDef(res.offer.actionId)?.title ?? res.offer.actionId;
+          const byHost = this.invitedBy.get(other.id) ?? new Map<string, string>();
+          byHost.set(res.offer.id, `${host.name} rủ bạn: ${title}${pressure < 0 ? ` (bạn thấy hơi bị cuốn, ${pressure} ý chí)` : ''}. Bạn không đi.`);
+          this.invitedBy.set(other.id, byHost);
           const invite: InviteMessage = { offerId: res.offer.id, actionId: res.offer.actionId, hostId: host.id, hostName: host.name, pressure };
           this.clients.getById(other.id)?.send('invite', invite);
         }
@@ -363,6 +391,13 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     }
 
     const names = res.results.filter((r) => r.ok).map((r) => this.nameOf(r.playerId));
+    const title = jointActionDef(res.offer.actionId)?.title ?? res.offer.actionId;
+    for (const r of res.results) {
+      if (!r.ok) continue;
+      this.invitedBy.get(r.playerId)?.delete(res.offer.id); // đã đi thì không còn là lời mời bị bỏ qua
+      const mates = names.filter((n) => n !== this.nameOf(r.playerId));
+      this.note(r.playerId, `${title} cùng ${mates.join(', ')}${r.fellForPressure ? ' (cả nhóm kéo nhau ở lại thêm)' : ''}.`);
+    }
     for (const r of res.results) {
       if (r.ok && !this.engine.hasTimeLeft(r.playerId)) this.engine.setReady(r.playerId, true);
       this.sendJoint(r.playerId, {
@@ -420,6 +455,8 @@ export class LifeRoom extends Room<{ state: LifeState }> {
   private beginPlanning(): void {
     this.setPhase('planning', this.timing.planningMs);
     this.reports.clear();
+    this.story.clear();
+    this.invitedBy.clear();
     for (const s of this.engine.players.values()) {
       s.ready = s.state.finished;
       if (s.bot && !s.state.finished) this.engine.runBot(s.id);
@@ -437,7 +474,11 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     if (this.state.day === 1) void this.lock();
 
     // Lời rủ chưa thành thì hết hạn, không ai bị tốn gì
-    for (const offer of this.board.clear()) this.expireOffer(offer);
+    for (const offer of this.board.clear()) {
+      this.expireOffer(offer);
+      const title = jointActionDef(offer.actionId)?.title ?? offer.actionId;
+      for (const m of offer.members) this.note(m, `Lời rủ "${title}" không thành (không đủ người trước khi hết ngày).`);
+    }
     this.syncOffers();
 
     const day = this.state.day;
@@ -446,9 +487,14 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       const night = this.engine.runNight(s.id);
       if (night) {
         const finished = evaluateLifeStatus(night.newStats).isGameOver || day >= LAST_DAY;
-        this.reports.set(s.id, { day, report: night, finished });
+        this.reports.set(s.id, { day, report: night, finished, friends: [] });
       }
       this.syncSession(s.id);
+    }
+    // "Bạn bè hôm qua": cần chỉ số sau đêm của cả phòng nên dựng sau khi mọi người đã qua đêm
+    for (const [id, message] of this.reports) {
+      const lines = [...(this.story.get(id) ?? []), ...(this.invitedBy.get(id)?.values() ?? []), ...this.strugglingFriends(id)];
+      message.friends = lines.length > 0 ? lines : ['Hôm qua bạn chủ yếu sống một mình. Thử rủ ai đó làm gì chung xem sao.'];
     }
     this.schedule(this.timing.nightMs, () => this.enterMorning());
   }
