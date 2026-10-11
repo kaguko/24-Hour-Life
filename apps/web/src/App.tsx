@@ -14,9 +14,12 @@ import {
   computeSkillXp,
   habitTag,
   evaluateGoals,
+  cravingActionIds,
+  DOMAIN_ACTIONS,
 } from '@24h/domain';
 import { SkillsPanel } from './ui/SkillsPanel';
 import { GoalsPanel } from './ui/GoalsPanel';
+import { TraitsPanel } from './ui/TraitsPanel';
 import { CityMap } from './ui/CityMap';
 import { FeedPanel } from './ui/FeedPanel';
 import { IntrusionModal } from './ui/IntrusionModal';
@@ -78,6 +81,7 @@ export default function App() {
     dayGrades,
     history,
     goalIds,
+    traitIds,
     finished,
     location,
     travelTo,
@@ -146,6 +150,11 @@ export default function App() {
   );
 
   // Báo khi vừa hoàn thành một mục tiêu (bỏ qua lần dựng đầu)
+  const cravings = useMemo(
+    () => cravingActionIds(history, actionsToday.map((a) => a.id)).map((id) => DOMAIN_ACTIONS.find((a) => a.id === id)?.title.split('(')[0].trim() ?? id),
+    [history, actionsToday]
+  );
+
   const doneGoalsRef = useRef<Set<string> | null>(null);
   const goalKeyRef = useRef('');
   useEffect(() => {
@@ -305,6 +314,8 @@ export default function App() {
                 </div>
 
                 <BigEventPanel state={bigEvent} day={day} hoursUsed={hoursUsed} prep={bigPrep} rumor={bigRumor} />
+
+                <TraitsPanel traitIds={traitIds} cravings={cravings} />
 
                 <GoalsPanel goals={goals} />
 

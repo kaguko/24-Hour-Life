@@ -15,6 +15,7 @@ import {
   buildJourney,
   DayGrade,
   isGoalId,
+  isTraitId,
   GOAL_COUNT_PER_RUN,
   LocationId,
   isLocationId,
@@ -56,7 +57,7 @@ export function useGameAdapter() {
     gameRef.current = next;
     setGame(next);
   }, []);
-  const { day, hoursUsed, stats, sleepDebt, actionsTodayIds, history, dayStartStats, dayGrades, goalIds, location, finished, bigEvent } = game;
+  const { day, hoursUsed, stats, sleepDebt, actionsTodayIds, history, dayStartStats, dayGrades, goalIds, location, finished, bigEvent, traitIds } = game;
 
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [avatarId, setAvatarId] = useState<AvatarId>(DEFAULT_AVATAR);
@@ -91,6 +92,8 @@ export function useGameAdapter() {
       if (isAvatarId(saved.avatarId)) setAvatarId(saved.avatarId);
       const savedGoals = (saved.goalIds ?? []).filter(isGoalId);
       if (savedGoals.length === GOAL_COUNT_PER_RUN) next.goalIds = savedGoals;
+      // Ván cũ chưa có tính cách: giữ nguyên luật cũ thay vì bốc giữa chừng
+      next.traitIds = (saved.traitIds ?? []).filter(isTraitId);
       if (isLocationId(saved.location)) next.location = saved.location;
       if (saved.bigEvent && isBigEventId(saved.bigEvent.id) && typeof saved.bigEvent.difficulty === 'number') {
         next.bigEvent = { id: saved.bigEvent.id, difficulty: saved.bigEvent.difficulty, result: saved.bigEvent.result as BigEventState['result'] };
@@ -115,10 +118,11 @@ export function useGameAdapter() {
       dayStartStats,
       dayGrades,
       goalIds,
+      traitIds,
       location,
       bigEvent,
     });
-  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds, location, bigEvent]);
+  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds, traitIds, location, bigEvent]);
 
   const hoursRemaining = hoursLeftOf(game);
 
@@ -368,6 +372,7 @@ export function useGameAdapter() {
     history,
     actionsTodayIds,
     goalIds,
+    traitIds,
     finished,
     location,
     travelTo,

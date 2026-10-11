@@ -8,6 +8,7 @@ import { BIG_EVENT_ACTION } from './bigEventAction.js';
 import { JOINT_ACTIONS } from './jointActions.js';
 import { actionLockReason, clockFromHoursRemaining } from './availability.js';
 import { applyProgression, computeSkillXp, skillLevels } from './progression.js';
+import { applyTraits } from './traits.js';
 
 const CORE_ACTIONS: ActionPrimitive[] = [
   // ========================================================
@@ -381,7 +382,9 @@ export function executeActionById(
   actionsTodayIds: string[] = [],
   day = 1,
   history: string[][] = [],
-  rng: Rng
+  rng: Rng,
+  /** Tính cách của người chơi (xem traits.ts); rỗng = không đổi gì */
+  traitIds: string[] = []
 ): ActionResultPrimitive {
   const action = DOMAIN_ACTIONS.find((a) => a.id === actionId);
   if (!action) {
@@ -552,7 +555,8 @@ export function executeActionById(
     if (soundCue === 'neutral') soundCue = 'healthy';
   }
 
-  const newStats = applyStatDeltas(stats, prog.deltas);
+  const withTraits = applyTraits(action, prog.deltas, clockFromHoursRemaining(hoursRemaining), traitIds);
+  const newStats = applyStatDeltas(stats, withTraits);
 
   return {
     success: true,

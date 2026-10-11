@@ -155,17 +155,28 @@ export interface IntrusionContext {
   lastActionId?: string;
   /** Hành vi vừa làm có thuộc loại nghỉ/ngủ không */
   lastWasRest?: boolean;
+  /** Độ mạnh cơn thèm của thói quen xấu (xem craving.ts); 0 = không có */
+  craving?: number;
+  /** Hệ số theo tính cách (1 = bình thường) */
+  intrusionMult?: number;
 }
+
+/** Có cơn thèm thì cám dỗ tìm đến được cả khi ý chí còn dưới mức này */
+const CRAVING_WILLPOWER_CEILING = 65
 
 /** Xác suất bị xâm nhập sau một hành vi */
 export function intrusionChance(stats: PlayerStatsPrimitive, ctx: IntrusionContext): number {
-  if (stats.willpower >= INTRUSION_WILLPOWER_LIMIT) return 0;
+  const craving = ctx.craving ?? 0;
+  const lowWill = stats.willpower < INTRUSION_WILLPOWER_LIMIT;
+  if (!lowWill && !(craving > 0 && stats.willpower < CRAVING_WILLPOWER_CEILING)) return 0;
   if (ctx.hoursLeft < 1 || ctx.intrusionsToday >= MAX_PER_DAY || ctx.lastWasRest) return 0;
   if (ctx.lastActionId && isIntrusionActionId(ctx.lastActionId)) return 0;
-  let p = ((INTRUSION_WILLPOWER_LIMIT - stats.willpower) / INTRUSION_WILLPOWER_LIMIT) * 0.55;
+  let p = lowWill ? ((INTRUSION_WILLPOWER_LIMIT - stats.willpower) / INTRUSION_WILLPOWER_LIMIT) * 0.55 : 0;
+  // Cơn thèm đòi lại thú vui đã thành nếp
+  if (craving > 0) p += 0.12 * craving;
   // Khuya khoắt thì khó cưỡng hơn
   if (ctx.clock >= 22 || ctx.clock < 2) p *= 1.25;
-  return Math.min(0.7, p);
+  return Math.min(0.7, p * (ctx.intrusionMult ?? 1));
 }
 
 /** Bốc một cám dỗ xâm nhập, hoặc null nếu hôm nay bạn "thoát". `rng` trả số trong [0,1). */

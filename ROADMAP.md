@@ -115,6 +115,13 @@ Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, kh
 - [x] **Phòng 3D (three.js, tải lười)**: căn phòng arcade từ Kenney Mini Arcade; nhân vật đã chọn đi tới đúng máy theo hành vi (game → máy arcade, đồ ăn → máy bán hàng, mua sắm → máy gắp, nhậu → máy nhảy, tập → bóng rổ, làm việc → quầy, ngủ → nằm xuống); phòng sáng/tối theo giờ và năng lượng, nháy hồng khi dopamine > 75, nhân vật xám khi tinh thần thấp. Bố cục 2 cột trên desktop, phòng dính trên cùng ở mobile. Bundle chính 110KB gzip; cảnh 3D (156KB gzip) tải riêng. Đồ thị hành vi → máy nằm ở `lib/roomStations.ts`.
 - [x] Kiểm thử UI tự động bằng Playwright (Edge headless): intro → chơi → kết cục → chia sẻ → reload → chơi lại, cả desktop và mobile.
 
+### ✅ CHIỀU SÂU GIAI ĐOẠN 1: TÍNH CÁCH & CƠN THÈM (ĐÃ HOÀN THÀNH)
+- [x] **`domain/traits.ts`**: 8 nét tính cách (Cú đêm, Chim sớm, Dễ bị cuốn, Kỷ luật thép, Hướng nội, Hướng ngoại, Cày cuốc, Hay lo), mỗi nét có mặt lợi + mặt hại; mỗi ván bốc 2 nét không mâu thuẫn (`pickTraitIds`), lưu trong `PlayerState.traitIds`. Áp lên chỉ số hành vi qua `applyTraits` (gọi cuối `executeActionById`, tham số `traitIds` tùy chọn nên không có tính cách = hành vi cũ).
+- [x] **`domain/craving.ts`**: cơn thèm = mặt tối của thói quen. Thú vui nhanh đã lặp ≥2 ngày liền mà hôm nay chưa làm sẽ réo gọi, làm cám dỗ xâm nhập (`intrusion.ts`) tìm đến cả khi ý chí 45–65; tính cách đổi độ mạnh (`intrusionMult`, `cravingMult`).
+- [x] Giao diện: `TraitsPanel` (tính cách + cơn thèm hôm nay). Ván lưu cũ không có `traitIds` thì chơi như luật cũ.
+- [x] Mô phỏng: `sim.ts <id> <runs> traits` bốc tính cách ngẫu nhiên mỗi ván. 1000 ván: Chaser 0%, Workaholic ~4%, Sleeper ~1%, Party ~91%, Balanced 100% sống: cân bằng giữ nguyên.
+- [ ] Giai đoạn 2: chuỗi cốt truyện nhiều ngày & mục tiêu dài hạn. Giai đoạn 3: nhà & nội thất (đồ tạo bằng TRELLIS.2 → Blender → GLB).
+
 ### ✅ SỬA LỖI: Sụp dopamine chỉ do dopamine NHANH
 Trước đây luật qua đêm coi `dopamine ≥ 75` từ **bất kỳ nguồn nào** là "sụp dopamine nhanh", nên chơi toàn hành vi lành mạnh vẫn bị phạt oan và HUD báo "Nguy cơ sụp đổ". Nay `domain/dopamine.ts` (`summarizeFastDopamine`) chỉ tính dopamine thu được từ hành vi **nhanh** trong ngày (≥ 45 điểm hoặc ≥ 3.5 giờ); HUD và phòng 3D dùng cùng hàm này. Đã kiểm tra 6 kịch bản (kể cả ảnh chụp lỗi gốc) + trình duyệt; số liệu mô phỏng 5 chiến lược không đổi.
 

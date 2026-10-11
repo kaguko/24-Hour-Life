@@ -5,6 +5,7 @@ import { PLAYABLE_ACTIONS } from './actions.js';
 import { planAction, type PlanResult } from './planner.js';
 import { clockFromHoursRemaining } from './availability.js';
 import { BIG_EVENT_IDS } from './bigEvents.js';
+import { pickTraitIds } from './traits.js';
 import { applyAction, endDay, hoursLeftOf, newPlayerState, startNextDay, type PlayerState } from './gameState.js';
 import { rollDomainEvent, resolveDomainChoice } from './events.js';
 
@@ -149,9 +150,9 @@ export function chooseStrategyAction(strategy: DomainStrategy, state: PlayerStat
 }
 
 /** Chơi 1 ván headless và ghi lại chỉ số cuối mỗi ngày (sau khi qua đêm). */
-export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rng): RunTracePrimitive {
+export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rng, traitIds: string[] = []): RunTracePrimitive {
   // Mô phỏng không xét mục tiêu / sự kiện lớn nên dùng giá trị cố định (không tiêu thụ rng)
-  let state = newPlayerState([], { id: BIG_EVENT_IDS[0], difficulty: 1 });
+  let state = newPlayerState([], { id: BIG_EVENT_IDS[0], difficulty: 1 }, traitIds);
   let survivedDays = 0;
   let collapseDay: number | null = null;
   let collapseReason: RunTracePrimitive['collapseReason'] = null;
@@ -213,7 +214,9 @@ export function runDomainSimulation(
   strategyId: string,
   totalRuns = 500,
   daysPerRun: number,
-  rng: Rng
+  rng: Rng,
+  /** Mỗi ván bốc ngẫu nhiên tính cách như ván thật (mặc định tắt: số liệu cũ không đổi) */
+  randomTraits = false
 ): SimulationResultPrimitive {
   const strategy = DOMAIN_STRATEGIES.find((s) => s.id === strategyId) || DOMAIN_STRATEGIES[4];
 
@@ -230,7 +233,7 @@ export function runDomainSimulation(
   let sumSurvivalDays = 0;
 
   for (let run = 0; run < totalRuns; run++) {
-    const trace = playOneRun(strategy, daysPerRun, rng);
+    const trace = playOneRun(strategy, daysPerRun, rng, randomTraits ? pickTraitIds(rng) : []);
     if (!trace.endedEarly) survivals++;
     else if (trace.collapseReason === 'bankrupt') bankruptcies++;
     else burnouts++;

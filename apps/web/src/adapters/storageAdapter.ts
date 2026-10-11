@@ -24,6 +24,8 @@ export interface SerializedGameState {
   dayGrades?: string[];
   /** Mục tiêu đã bốc cho ván này */
   goalIds?: string[];
+  /** Tính cách của ván này (ván cũ không có) */
+  traitIds?: string[];
   /** Địa điểm hiện tại của nhân vật */
   location?: string;
   /** Sự kiện lớn của tuần: loại, độ khó ẩn, kết quả (nếu đã diễn ra) */

@@ -17,6 +17,8 @@ import { TIER_LABEL, bigEventDef, pickBigEvent } from './bigEvents.js';
 import type { BigEventOutcome, BigEventState, BigEventTier } from './bigEvents.js';
 import { BIG_EVENT_ACTION_ID, BIG_EVENT_HOURS } from './bigEventAction.js';
 import { pickGoalIds } from './goals.js';
+import { pickTraitIds, traitIntrusionMult } from './traits.js';
+import { cravingLevel } from './craving.js';
 import type { DayGrade } from './dayRecap.js';
 import type { Rng } from './rng.js';
 
@@ -41,6 +43,8 @@ export interface PlayerState {
   finished: boolean;
   bigEvent: BigEventState;
   intrusionsToday: number;
+  /** Tính cách của ván này (xem traits.ts) */
+  traitIds: string[];
 }
 
 /** Cám dỗ đang xâm nhập: round tăng mỗi lần chiều theo, dừng lại càng khó */
@@ -52,7 +56,7 @@ export interface IntrusionState {
   note: string | null;
 }
 
-export function newPlayerState(goalIds: string[], bigEvent: BigEventState): PlayerState {
+export function newPlayerState(goalIds: string[], bigEvent: BigEventState, traitIds: string[] = []): PlayerState {
   return {
     day: 1,
     hoursUsed: 0,
@@ -67,13 +71,15 @@ export function newPlayerState(goalIds: string[], bigEvent: BigEventState): Play
     finished: false,
     bigEvent,
     intrusionsToday: 0,
+    traitIds,
   };
 }
 
-/** Ván mới: bốc mục tiêu rồi sự kiện lớn (thứ tự gọi rng cố định) */
+/** Ván mới: bốc mục tiêu, sự kiện lớn rồi tính cách (thứ tự gọi rng cố định) */
 export function createPlayerState(rng: Rng): PlayerState {
   const goalIds = pickGoalIds(rng);
-  return newPlayerState(goalIds, pickBigEvent(rng));
+  const bigEvent = pickBigEvent(rng);
+  return newPlayerState(goalIds, bigEvent, pickTraitIds(rng));
 }
 
 export const hoursLeftOf = (state: PlayerState): number => Math.max(0, DAY_HOURS - state.hoursUsed);
@@ -109,7 +115,7 @@ export function applyAction(
   let blocked: string | null = null;
 
   for (const stepId of steps) {
-    const r = executeActionById(stepId, stats, left, ids, state.day, state.history, rng);
+    const r = executeActionById(stepId, stats, left, ids, state.day, state.history, rng, state.traitIds);
     if (!r.success) {
       blocked = r.notice;
       break;
@@ -181,6 +187,8 @@ export function rollDayEvents(state: PlayerState, ctx: DayEventContext, rng: Rng
         intrusionsToday: state.intrusionsToday,
         lastActionId: lastId,
         lastWasRest: lastAction?.category === 'rest',
+        craving: cravingLevel(state.history, state.actionsTodayIds, state.traitIds),
+        intrusionMult: traitIntrusionMult(state.traitIds),
       },
       rng
     );
@@ -282,7 +290,7 @@ export function applyIntrusionAnswer(
 
   // Chiều theo, hoặc muốn dừng nhưng ý chí không đủ
   const left = hoursLeftOf(state);
-  const r = executeActionById(def.actionId, state.stats, left, state.actionsTodayIds, state.day, state.history, rng);
+  const r = executeActionById(def.actionId, state.stats, left, state.actionsTodayIds, state.day, state.history, rng, state.traitIds);
   if (!r.success) return { state, intrusion: null, cue: null, actionId: null, endsDay: false };
 
   const nextLeft = left - r.hoursSpent;
