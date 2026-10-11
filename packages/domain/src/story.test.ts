@@ -256,3 +256,24 @@ test('evaluateEnding: có truyện thì cộng điểm (tối đa 100) và gắn
   const capped = evaluateEnding(history, { ...stats, energy: 100, mental: 100, willpower: 100, social: 100, money: 5000 }, ['friend', 'project'], allGood);
   assert.ok(capped.score <= 100);
 });
+
+test('hai mạch gắn với địa điểm mới: bác Tư câu cá và buổi chiều yên tĩnh', () => {
+  const ids = STORYLINES.map((s) => s.id);
+  assert.ok(ids.includes('fisher') && ids.includes('quiet'));
+  const fisher = (go: string, second: string, third: string): StoryLog => [entry('fisher:1', 2, go), entry('fisher:2', 4, second), entry('fisher:3', 6, third)];
+  const quiet = (go: string, second: string, third: string): StoryLog => [entry('quiet:1', 2, go), entry('quiet:2', 4, second), entry('quiet:3', 6, third)];
+  const fl = STORYLINES.find((s) => s.id === 'fisher')!;
+  const ql = STORYLINES.find((s) => s.id === 'quiet')!;
+  assert.equal(fl.outcome(fisher('go', 'listen', 'accept')), 'mentor');
+  assert.equal(fl.outcome(fisher('go', 'polite', 'sit')), 'visitor');
+  assert.equal(fl.outcome(fisher('later', 'go2', 'sit')), 'visitor');
+  assert.equal(fl.outcome(fisher('decline', 'pass', 'reflect')), 'passerby');
+  assert.equal(ql.outcome(quiet('go', 'answer', 'write')), 'calm');
+  assert.equal(ql.outcome(quiet('maybe', 'go2', 'sit')), 'curious');
+  assert.equal(ql.outcome(quiet('refuse', 'ignore', 'more')), 'noise');
+  assert.equal(fl.epilogues.mentor.tone, 'good');
+  assert.equal(ql.epilogues.noise.tone, 'bad');
+  // Chương 2 đổi theo chương 1
+  assert.notEqual(buildStoryEvent('fisher:2', [entry('fisher:1', 2, 'go')])!.title, buildStoryEvent('fisher:2', [entry('fisher:1', 2, 'decline')])!.title);
+  assert.notEqual(buildStoryEvent('quiet:2', [entry('quiet:1', 2, 'go')])!.title, buildStoryEvent('quiet:2', [entry('quiet:1', 2, 'refuse')])!.title);
+});

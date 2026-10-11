@@ -484,6 +484,219 @@ const LANDLORD: Storyline = {
   ],
 };
 
+// ───────────────────────── 5. Bác Tư câu cá ─────────────────────────
+
+const fisherOutcome = (log: StoryLog): string => {
+  const went = chose(log, 'fisher:1', 'go');
+  if (went && chose(log, 'fisher:2', ['listen', 'borrow'])) return 'mentor';
+  if (went || chose(log, 'fisher:2', ['go2', 'join'])) return 'visitor';
+  return 'passerby';
+};
+
+const FISHER: Storyline = {
+  id: 'fisher',
+  emoji: '🎣',
+  title: 'Bác Tư câu cá',
+  blurb: 'Một lời rủ ra bờ sông.',
+  outcome: fisherOutcome,
+  epilogues: {
+    mentor: { tone: 'good', title: 'Có người để ngồi cùng', text: 'Bạn có thêm một người bạn không cùng tuổi nhưng cùng nhịp thở. Bờ sông giờ là nơi bạn có thể quay lại bất cứ lúc nào.' },
+    visitor: { tone: 'mixed', title: 'Một buổi chiều bên sông', text: 'Bạn đã ngồi cạnh bác một buổi chiều, đủ để biết có một chỗ như thế tồn tại. Chỉ cần quay lại.' },
+    passerby: { tone: 'bad', title: 'Chiếc ghế bên bờ sông', text: 'Chiếc ghế nhỏ bên bờ sông vẫn đó, nhưng người ngồi đã đi. Có những lời rủ chỉ đến một lần.' },
+  },
+  beats: [
+    {
+      id: 'fisher:1',
+      minDay: 2,
+      build: () => ({
+        title: 'Lời rủ của bác Tư',
+        description: 'Bác Tư bán nước ở đầu hẻm gọi với theo: "Chiều nay ra bờ sông ngồi với bác. Cá cắn hay không đâu có quan trọng."',
+        choices: [
+          c('go', 'Ra bờ sông ngồi với bác (2.5h, -20k)', 2.5, { mental: 14, social: 10, energy: -4, money: -20 }, 'Hai người ngồi im gần một tiếng. Bạn nhận ra mình lâu lắm rồi chưa ngồi im với ai.'),
+          c('later', 'Hẹn bác hôm khác (0h)', 0, { social: 2 }, 'Bác cười: "Ừ, sông vẫn ở đó." Bạn tự nhủ nhất định sẽ đi.'),
+          c('decline', 'Cảm ơn nhưng đang bận (0h)', 0, { social: -2, mental: -1 }, 'Bác gật đầu rồi quay lại bán nước. Bạn đi tiếp, có chút gì đó hơi lỡ.'),
+        ],
+      }),
+    },
+    {
+      id: 'fisher:2',
+      minDay: 4,
+      build: (log) => {
+        if (chose(log, 'fisher:1', 'go')) {
+          return {
+            title: 'Chuyện của bác Tư',
+            description: 'Bác kể ngày xưa bác làm kế toán ba mươi năm, một sáng thức dậy và thấy mình chưa từng thật sự sống. Bác đưa bạn chiếc cần câu cũ.',
+            choices: [
+              c('listen', 'Ngồi nghe hết câu chuyện (1.5h)', 1.5, { mental: 12, social: 8, willpower: 4, energy: -2 }, 'Bác không khuyên gì cả. Nhưng câu chuyện của bác làm bạn nhìn tuần này khác đi.'),
+              c('borrow', 'Mượn cần câu thử (1h)', 1, { dopamine: 8, mental: 6 }, 'Bạn quăng dây thật vụng. Cá không cắn, nhưng bạn cười nhiều hơn cả tuần.'),
+              c('polite', 'Cảm ơn rồi xin phép về (0h)', 0, { mental: -1 }, 'Bạn lịch sự rút lui. Bác không phật lòng, chỉ cười hiền.'),
+            ],
+          };
+        }
+        if (chose(log, 'fisher:1', 'later')) {
+          return {
+            title: 'Bác Tư nhắn lại',
+            description: 'Bác gửi một tin ngắn: "Chiều nay sông đẹp lắm." Không trách, không giục.',
+            choices: [
+              c('go2', 'Lần này đi thật (2h)', 2, { mental: 10, social: 6, energy: -3 }, 'Chỗ ngồi bên bờ sông đã được bác để sẵn một chiếc ghế nhỏ.'),
+              c('again', 'Lại hẹn nữa (0h)', 0, { social: -3 }, 'Bạn hẹn hôm khác. Tin nhắn của bác dừng ở đó.'),
+            ],
+          };
+        }
+        return {
+          title: 'Chiếc ghế trống bên bờ sông',
+          description: 'Bạn đi ngang bờ sông và thấy bác Tư ngồi một mình với chiếc ghế nhỏ bên cạnh bỏ trống.',
+          choices: [
+            c('join', 'Ghé ngồi một lát (1h)', 1, { mental: 7, social: 5 }, 'Bác không hỏi vì sao bạn từ chối hôm trước. Chỉ đưa cho bạn chai nước.'),
+            c('pass', 'Đi thẳng (0h)', 0, { mental: -3 }, 'Bạn bước nhanh qua. Có cảm giác bác nhìn theo, hoặc có thể là bạn tưởng thế.'),
+          ],
+        };
+      },
+    },
+    {
+      id: 'fisher:3',
+      minDay: 6,
+      build: (log) => {
+        const out = fisherOutcome(log);
+        if (out === 'mentor') {
+          return {
+            title: 'Chiếc cần câu cũ',
+            description: 'Bác Tư đặt chiếc cần câu vào tay bạn: "Cho cậu. Tuần sau bác đi thăm con, cần có người giữ bờ sông."',
+            choices: [
+              c('accept', 'Nhận và hứa sẽ ra câu (0.5h)', 0.5, { mental: 12, social: 10, willpower: 5 }, 'Chiếc cần nhẹ hơn bạn nghĩ. Bạn cầm nó cả đường về như cầm một lời hứa.'),
+              c('dinner', 'Rủ bác về nhà ăn cơm (2h, -80k)', 2, { social: 20, mental: 10, money: -80, energy: -4 }, 'Bữa cơm giản dị với một người xa lạ trở nên ấm hơn bữa nào trong tuần.'),
+            ],
+          };
+        }
+        if (out === 'visitor') {
+          return {
+            title: 'Bờ sông chiều thứ Bảy',
+            description: 'Bác Tư vẫn ngồi đó, chiếc ghế nhỏ bên cạnh vẫn trống. Bác không nhìn lên, chỉ nói: "Nếu cậu muốn."',
+            choices: [
+              c('sit', 'Ngồi với bác đến tối (2h)', 2, { mental: 12, social: 8, energy: -2 }, 'Hoàng hôn xuống chậm hơn bạn nhớ. Bạn không muốn ai gọi mình về.'),
+              c('wave', 'Chào bác rồi về (0h)', 0, { social: 1 }, 'Một cái vẫy tay. Bác gật đầu, và chiếc ghế nhỏ vẫn trống.'),
+            ],
+          };
+        }
+        return {
+          title: 'Chiếc ghế đã dọn đi',
+          description: 'Bờ sông chiều nay không còn bác Tư. Chiếc ghế nhỏ cũng biến mất. Có tin bác chuyển lên ở với con.',
+          choices: [
+            c('reflect', 'Đứng nhìn dòng sông một lúc (0.5h)', 0.5, { mental: -4, willpower: 3, social: 2 }, 'Dòng sông vẫn chảy như hôm trước. Chỉ là một lời rủ giờ không còn ai nói.'),
+            c('scroll2', 'Mở điện thoại cho đỡ trống (1h)', 1, { dopamine: 8, mental: -4, social: -3 }, 'Một giờ trôi qua mà bạn không nhớ đã xem gì.'),
+          ],
+        };
+      },
+    },
+  ],
+};
+
+// ───────────────────────── 6. Một buổi chiều yên tĩnh ─────────────────────────
+
+const quietOutcome = (log: StoryLog): string => {
+  const went = chose(log, 'quiet:1', 'go');
+  if (went && chose(log, 'quiet:2', 'answer')) return 'calm';
+  if (went || chose(log, 'quiet:2', ['go2', 'listen'])) return 'curious';
+  return 'noise';
+};
+
+const QUIET: Storyline = {
+  id: 'quiet',
+  emoji: '🙏',
+  title: 'Một buổi chiều yên tĩnh',
+  blurb: 'Lời rủ đi chùa của người hàng xóm.',
+  outcome: quietOutcome,
+  epilogues: {
+    calm: { tone: 'good', title: 'Tìm được một góc yên tĩnh', text: 'Bạn đã có một nơi để quay về khi đầu óc quá ồn. Không cần ở đó lâu, chỉ cần biết nó tồn tại.' },
+    curious: { tone: 'mixed', title: 'Tiếng chuông vẫn còn vọng', text: 'Bạn chưa hiểu hết điều mình đã nghe, nhưng tiếng chuông vẫn còn đó khi bạn cần tới.' },
+    noise: { tone: 'bad', title: 'Một tuần ồn ào', text: 'Cả tuần bạn bị thông báo kéo đi hết hướng này tới hướng khác. Sự yên tĩnh không đi tìm ai, chỉ chờ người đến.' },
+  },
+  beats: [
+    {
+      id: 'quiet:1',
+      minDay: 2,
+      build: () => ({
+        title: 'Lời rủ của cô Hạnh',
+        description: 'Cô Hạnh hàng xóm gõ cửa: "Chiều nay cô lên chùa ngồi một lát cho yên đầu óc. Con đi với cô không?"',
+        choices: [
+          c('go', 'Đi cùng cô (2h, -30k)', 2, { mental: 16, willpower: 6, social: 6, energy: -3, money: -30 }, 'Lên đến chùa, cô Hạnh chỉ lặng lẽ chỉ chỗ ngồi. Không ai nói gì mà bạn vẫn hiểu.'),
+          c('maybe', 'Hẹn lần sau (0h)', 0, { social: 1 }, 'Cô gật đầu: "Cô còn đi mấy lần nữa." Lời hẹn nằm đó một cách thoải mái.'),
+          c('refuse', 'Từ chối, bạn không thích chỗ yên tĩnh (0h)', 0, { mental: -1 }, 'Bạn viện cớ. Cô cười rồi đi, chỉ để lại mùi hương nhang thoảng qua.'),
+        ],
+      }),
+    },
+    {
+      id: 'quiet:2',
+      minDay: 4,
+      build: (log) => {
+        if (chose(log, 'quiet:1', 'go')) {
+          return {
+            title: 'Câu hỏi của sư cô',
+            description: 'Cô Hạnh dẫn bạn gặp sư cô. Sư cô nhìn bạn một lúc rồi hỏi nhẹ: "Con đang chạy đi đâu mà vội thế?"',
+            choices: [
+              c('answer', 'Trả lời thật lòng (1h)', 1, { mental: 12, willpower: 6, social: 3, energy: -2 }, 'Bạn mở lời khó khăn, nhưng sau mười phút những điều mình giữ lâu nay tự nói ra.'),
+              c('joke', 'Cười trừ, nói đang bận (0h)', 0, { mental: -1 }, 'Sư cô mỉm cười: "Ai cũng bận. Bận không phải câu trả lời." Bạn đỏ mặt.'),
+            ],
+          };
+        }
+        if (chose(log, 'quiet:1', 'maybe')) {
+          return {
+            title: 'Cô Hạnh rủ lần nữa',
+            description: 'Cô Hạnh gặp bạn ở đầu hẻm: "Hôm nay cô lại đi chùa, con rảnh thì đi cùng."',
+            choices: [
+              c('go2', 'Lần này đi thật (2h, -30k)', 2, { mental: 14, willpower: 5, social: 5, energy: -3, money: -30 }, 'Sân chùa yên đến mức nghe được tiếng lá rơi. Bạn thấy mình thở chậm lại.'),
+              c('skip', 'Lại hẹn (0h)', 0, { social: -2 }, 'Cô không hỏi thêm. Bạn bắt đầu thấy ngại khi nhìn thẳng vào mắt cô.'),
+            ],
+          };
+        }
+        return {
+          title: 'Tiếng chuông vọng qua cửa sổ',
+          description: 'Chiều nay gió đổi hướng, tiếng chuông chùa xa xa vọng đến tận phòng bạn.',
+          choices: [
+            c('listen', 'Ngồi nghe chuông (0.5h)', 0.5, { mental: 8, willpower: 3 }, 'Từng hồi chuông ngân dài. Lần đầu tiên trong tuần phòng bạn thật sự yên.'),
+            c('ignore', 'Đeo tai nghe vào (0h)', 0, { dopamine: 3, mental: -2 }, 'Tiếng nhạc che lấp tiếng chuông. Bạn không nhận ra mình vừa bỏ lỡ điều gì.'),
+          ],
+        };
+      },
+    },
+    {
+      id: 'quiet:3',
+      minDay: 6,
+      build: (log) => {
+        const out = quietOutcome(log);
+        if (out === 'calm') {
+          return {
+            title: 'Cuốn sổ nhỏ',
+            description: 'Sư cô đưa bạn một cuốn sổ nhỏ: "Mỗi tối viết ba điều con thấy biết ơn. Không cần dài."',
+            choices: [
+              c('write', 'Viết ba điều biết ơn (0.5h)', 0.5, { mental: 12, willpower: 6 }, 'Điều đầu tiên bạn viết là một chiếc ghế ở góc chùa. Điều thứ ba làm bạn dừng lại rất lâu.'),
+              c('share', 'Chia sẻ với cô Hạnh (1h)', 1, { social: 14, mental: 8 }, 'Hai người ngồi đọc cho nhau nghe. Lâu lắm bạn mới thấy mình được hiểu.'),
+            ],
+          };
+        }
+        if (out === 'curious') {
+          return {
+            title: 'Chuông chiều thứ Bảy',
+            description: 'Chiều thứ Bảy, tiếng chuông lại ngân lên. Bạn không chắc mình muốn gì, chỉ chắc là có điều gì đó đang kéo bạn lại.',
+            choices: [
+              c('sit', 'Đến ngồi lại một lát (1.5h)', 1.5, { mental: 12, willpower: 5, energy: -1 }, 'Không cần hiểu gì cả. Chỉ cần có mặt.'),
+              c('later2', 'Để lần khác (0h)', 0, { mental: -1 }, 'Tiếng chuông tắt. Bạn tự hứa lần sau, và lần sau thường rất xa.'),
+            ],
+          };
+        }
+        return {
+          title: 'Một tuần ồn ào',
+          description: 'Điện thoại rung bảy mươi lần hôm nay. Bạn không nhớ nổi mình đã trả lời bao nhiêu, và cũng không nhớ mình thật sự muốn gì.',
+          choices: [
+            c('pause', 'Tắt thông báo một giờ (1h)', 1, { mental: 8, willpower: 4, dopamine: -2 }, 'Một giờ không có tiếng rung. Cảm giác ban đầu giống như cai nghiện, sau đó là nhẹ.'),
+            c('more', 'Lướt thêm cho khuây (1h)', 1, { dopamine: 8, mental: -5 }, 'Bạn lướt thêm một giờ. Cảm giác ồn ào vẫn còn nguyên khi đặt máy xuống.'),
+          ],
+        };
+      },
+    },
+  ],
+};
+
 /**
  * Mức đổi tiền trọ mỗi ngày (nghìn VNĐ, có thể âm) vào đêm của `day`, suy ra từ nhật ký mạch Chủ trọ:
  * thông báo tăng giá có hiệu lực ngay hôm đó; đóng trước tiền phòng thì chỉ còn nửa mức tăng; chuyển phòng thì rẻ hơn gốc.
@@ -499,7 +712,7 @@ export function storyRentDelta(log: StoryLog, day: number): number {
   return delta;
 }
 
-export const STORYLINES: Storyline[] = [FRIEND, PROJECT, HEALTH, LANDLORD];
+export const STORYLINES: Storyline[] = [FRIEND, PROJECT, HEALTH, LANDLORD, FISHER, QUIET];
 export const STORIES_PER_RUN = 2;
 export const STORY_BEATS_PER_LINE = 3;
 

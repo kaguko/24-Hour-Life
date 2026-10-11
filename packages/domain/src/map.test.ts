@@ -94,3 +94,25 @@ test('hành vi địa điểm mới có lợi ích rõ ràng nhưng đều có c
     assert.ok(cost, `${id} cần có cái giá (tiền, sức hoặc thời gian)`);
   }
 });
+
+import { PLACE_EVENTS } from './placeEvents.js';
+import { rollPlaceEvent } from './events.js';
+import { mulberry32 } from './rng.js';
+
+test('mỗi địa điểm mới có ít nhất một sự kiện riêng, lựa chọn hợp lệ', () => {
+  for (const place of NEW_PLACES) {
+    const events = PLACE_EVENTS.filter((e) => e.places?.includes(place));
+    assert.ok(events.length >= 1, `${place} chưa có sự kiện`);
+    for (const e of events) {
+      assert.ok(e.choices.length >= 2, e.id);
+      assert.equal(new Set(e.choices.map((c) => c.id)).size, e.choices.length, e.id);
+      for (const c of e.choices) {
+        assert.ok(c.label && c.feedback, `${e.id}/${c.id}`);
+        assert.ok(c.timeHours >= 0 && c.timeHours <= 3, `${e.id}/${c.id}`);
+      }
+    }
+    const rolled = new Set(Array.from({ length: 40 }, (_, i) => rollPlaceEvent(place, 3, mulberry32(i + 1))?.id));
+    assert.ok([...rolled].every((id) => id && events.some((e) => e.id === id)), `${place}: bốc sai sự kiện`);
+  }
+  assert.equal(new Set(PLACE_EVENTS.map((e) => e.id)).size, PLACE_EVENTS.length, 'id sự kiện trùng');
+});

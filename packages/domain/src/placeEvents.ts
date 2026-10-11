@@ -163,4 +163,72 @@ export const PLACE_EVENTS: EventPrimitive[] = [
       { id: 'decline', label: 'Khéo léo từ chối (0h)', timeHours: 0, deltas: { willpower: 6, social: 2 }, feedback: 'Bạn nâng ly nước ngọt. Không ai để ý, và bạn thấy tự hào.' },
     ],
   },
+  // ---------- Địa điểm mới ----------
+  {
+    id: 'clinic_advice',
+    title: 'Lời dặn của bác sĩ',
+    description: 'Bác sĩ nhìn quầng thâm dưới mắt bạn, hỏi vài câu về giấc ngủ rồi nói thẳng: "Cậu đang sống như thể ngày mai không cần dậy."',
+    minDay: 1,
+    places: ['clinic'],
+    choices: [
+      { id: 'listen', label: 'Ngồi nghe và ghi lại (0.5h)', timeHours: 0.5, deltas: { mental: 8, willpower: 6, energy: 3 }, feedback: 'Ba dòng ghi chú ngắn: ngủ trước 23h, bớt màn hình, uống đủ nước. Đơn giản đến mức khó tin.' },
+      { id: 'nod', label: 'Gật đầu cho xong chuyện (0h)', timeHours: 0, deltas: { mental: -2 }, feedback: 'Bạn gật đầu, bước ra ngoài và quên mất lời dặn trước khi tới cổng.' },
+    ],
+  },
+  {
+    id: 'cinema_combo',
+    title: 'Combo bắp nước giảm giá',
+    description: 'Cô bán vé cười: "Mua thêm combo bắp nước hôm nay giảm một nửa nè!" Bạn thật ra chưa đói.',
+    minDay: 1,
+    places: ['cinema'],
+    choices: [
+      { id: 'combo', label: 'Mua combo (-90k)', timeHours: 0, deltas: { money: -90, dopamine: 12, willpower: -4, energy: 3 }, feedback: 'Bắp ngọt và nước ngọt lớn đến mức không thể uống hết. Phim chưa chiếu mà bạn đã no.' },
+      { id: 'ticket_only', label: 'Chỉ lấy vé (0h)', timeHours: 0, deltas: { willpower: 5, mental: 2 }, feedback: 'Vào rạp tay không, nhẹ nhàng. Bạn xem phim mà không lăn tăn chuyện ăn uống.' },
+    ],
+  },
+  {
+    id: 'night_market_haggle',
+    title: 'Gánh hàng rong mời chào',
+    description: 'Một bác bán đồ thủ công vẫy bạn lại: "Chú em xem, cái này vừa vặn với chú em lắm!" Bạn không cần nó.',
+    minDay: 1,
+    places: ['night_market'],
+    choices: [
+      { id: 'haggle', label: 'Mặc cả vui vẻ (0.25h, -40k)', timeHours: 0.25, deltas: { money: -40, social: 6, dopamine: 6 }, feedback: 'Hai bên cười ầm lên khi chốt giá. Bạn ra về với một món nhỏ và một chuyện kể.' },
+      { id: 'splurge', label: 'Mua luôn cho gọn (-150k)', timeHours: 0, deltas: { money: -150, dopamine: 14, willpower: -6 }, feedback: 'Cảm giác chốt đơn dễ chịu kéo dài đúng ba phút, đến khi bạn tự hỏi mình sẽ để nó ở đâu.' },
+      { id: 'pass', label: 'Cười và đi tiếp (0h)', timeHours: 0, deltas: { willpower: 7, mental: 2 }, feedback: 'Bạn chắp tay cảm ơn. Bác cười, không hề phật ý.' },
+    ],
+  },
+  {
+    id: 'river_fisher_hello',
+    title: 'Người câu cá bắt chuyện',
+    description: 'Một người đàn ông ngồi im cả buổi chiều bỗng quay sang: "Cậu có chuyện gì lo à? Nhìn mặt là biết."',
+    minDay: 1,
+    places: ['riverside'],
+    choices: [
+      { id: 'talk', label: 'Ngồi xuống nói chuyện (0.5h)', timeHours: 0.5, deltas: { social: 8, mental: 8, dopamine: 4 }, feedback: 'Bạn kể một nửa, ông gật gù và chỉ nói: "Cá cắn hay không đâu có quan trọng." Lạ là bạn thấy nhẹ hẳn.' },
+      { id: 'smile', label: 'Cười nhẹ rồi đi tiếp (0h)', timeHours: 0, deltas: { social: 2 }, feedback: 'Bạn mỉm cười. Ông quay lại với chiếc cần câu như chưa có chuyện gì.' },
+    ],
+  },
+  {
+    id: 'river_wind',
+    title: 'Gió sông thổi mạnh',
+    description: 'Gió sông thổi lộng chiều nay, mang theo mùi nước và tiếng còi tàu xa xa. Không ai gọi bạn, không có thông báo nào.',
+    minDay: 1,
+    places: ['riverside'],
+    choices: [
+      { id: 'stay', label: 'Đứng thêm một lúc (0.5h)', timeHours: 0.5, deltas: { mental: 10, willpower: 4, dopamine: 3 }, feedback: 'Có những phút bạn chỉ đứng yên. Đầu óc tự dọn lại như ngăn kéo được mở ra phơi.' },
+      { id: 'photo', label: 'Chụp ảnh đăng mạng (0.25h)', timeHours: 0.25, deltas: { dopamine: 8, mental: -2, willpower: -3 }, feedback: 'Ảnh rất đẹp. Và bạn mất nửa tiếng sau đó để xem có ai thả tim chưa.' },
+    ],
+  },
+  {
+    id: 'temple_bell',
+    title: 'Tiếng chuông chùa',
+    description: 'Tiếng chuông ngân dài trong sân chùa, từng hồi một. Mọi người xung quanh đều im lặng.',
+    minDay: 1,
+    places: ['temple'],
+    choices: [
+      { id: 'sit', label: 'Ngồi lặng nghe (0.5h)', timeHours: 0.5, deltas: { mental: 10, willpower: 4, energy: 2 }, feedback: 'Âm thanh tan dần và đầu óc bạn cũng tan theo. Một sự yên tĩnh bạn không có ở nhà.' },
+      { id: 'photo', label: 'Quay video đăng mạng (0.25h)', timeHours: 0.25, deltas: { dopamine: 8, mental: -2, willpower: -2 }, feedback: 'Bạn quay trọn tiếng chuông, rồi nhận ra chính mình chưa thật sự nghe nó.' },
+    ],
+  },
 ];
