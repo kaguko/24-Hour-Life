@@ -9,6 +9,7 @@ import { JOINT_ACTIONS } from './jointActions.js';
 import { actionLockReason, clockFromHoursRemaining } from './availability.js';
 import { applyProgression, computeSkillXp, skillLevels } from './progression.js';
 import { applyTraits } from './traits.js';
+import { applyItems } from './shop.js';
 
 const CORE_ACTIONS: ActionPrimitive[] = [
   // ========================================================
@@ -384,7 +385,9 @@ export function executeActionById(
   history: string[][] = [],
   rng: Rng,
   /** Tính cách của người chơi (xem traits.ts); rỗng = không đổi gì */
-  traitIds: string[] = []
+  traitIds: string[] = [],
+  /** Đồ đã mua trong ván (xem shop.ts); rỗng = không đổi gì */
+  itemIds: string[] = []
 ): ActionResultPrimitive {
   const action = DOMAIN_ACTIONS.find((a) => a.id === actionId);
   if (!action) {
@@ -556,7 +559,8 @@ export function executeActionById(
   }
 
   const withTraits = applyTraits(action, prog.deltas, clockFromHoursRemaining(hoursRemaining), traitIds);
-  const newStats = applyStatDeltas(stats, withTraits);
+  const withItems = applyItems(action, withTraits, itemIds);
+  const newStats = applyStatDeltas(stats, withItems);
 
   return {
     success: true,

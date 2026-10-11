@@ -17,6 +17,8 @@ import {
   isGoalId,
   isTraitId,
   isStoryId,
+  isItemId,
+  buyItem,
   buildStoryEvent,
   GOAL_COUNT_PER_RUN,
   LocationId,
@@ -59,7 +61,7 @@ export function useGameAdapter() {
     gameRef.current = next;
     setGame(next);
   }, []);
-  const { day, hoursUsed, stats, sleepDebt, actionsTodayIds, history, dayStartStats, dayGrades, goalIds, location, finished, bigEvent, traitIds, storyIds, storyLog } = game;
+  const { day, hoursUsed, stats, sleepDebt, actionsTodayIds, history, dayStartStats, dayGrades, goalIds, location, finished, bigEvent, traitIds, storyIds, storyLog, ownedItemIds } = game;
 
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [avatarId, setAvatarId] = useState<AvatarId>(DEFAULT_AVATAR);
@@ -96,6 +98,7 @@ export function useGameAdapter() {
       if (savedGoals.length === GOAL_COUNT_PER_RUN) next.goalIds = savedGoals;
       // Ván cũ chưa có tính cách: giữ nguyên luật cũ thay vì bốc giữa chừng
       next.traitIds = (saved.traitIds ?? []).filter(isTraitId);
+      next.ownedItemIds = [...new Set((saved.ownedItemIds ?? []).filter(isItemId))];
       next.storyIds = (saved.storyIds ?? []).filter(isStoryId);
       // Chỉ giữ các mục nhật ký còn dựng lại được (chống dữ liệu lưu hỏng)
       next.storyLog = (saved.storyLog ?? []).filter(
@@ -128,10 +131,11 @@ export function useGameAdapter() {
       traitIds,
       storyIds,
       storyLog,
+      ownedItemIds,
       location,
       bigEvent,
     });
-  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds, traitIds, storyIds, storyLog, location, bigEvent]);
+  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds, traitIds, storyIds, storyLog, ownedItemIds, location, bigEvent]);
 
   const hoursRemaining = hoursLeftOf(game);
 
@@ -328,6 +332,17 @@ export function useGameAdapter() {
     [activeEvent, game, commit]
   );
 
+  const buy = useCallback(
+    (itemId: string) => {
+      const res = buyItem(gameRef.current, itemId);
+      setNotice(res.notice);
+      if (!res.ok) return;
+      audioAdapter.playCue('healthy');
+      commit(res.state);
+    },
+    [commit]
+  );
+
   const resetGame = useCallback(() => {
     storageAdapter.clear();
     commit(createPlayerState(rng));
@@ -384,6 +399,8 @@ export function useGameAdapter() {
     traitIds,
     storyIds,
     storyLog,
+    ownedItemIds,
+    buy,
     finished,
     location,
     travelTo,

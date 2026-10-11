@@ -129,6 +129,12 @@ Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, kh
 - [x] Test duyệt toàn bộ đường đi của từng mạch (mọi chương dựng được, mọi kết cục tới được và có phần kết) + chạy trọn 7 ngày với lựa chọn ngẫu nhiên. Ván lưu cũ không có `storyIds` thì không có truyện.
 - [ ] Chưa làm: mạch truyện đổi tiền phòng thật (hiện chỉ là chi một lần), cần Giai đoạn 3 (nhà); kết cục chính chưa phân nhánh theo truyện.
 
+### ✅ CHIỀU SÂU GIAI ĐOẠN 3A: CỬA HÀNG NỘI THẤT (ĐÃ HOÀN THÀNH)
+- [x] **`domain/shop.ts`**: 7 món (Gối êm, Đèn bàn học, Kệ sách, Tivi & tủ, Chậu cây nhỏ, Tủ lạnh nhỏ, Bàn trà), mỗi món đổi cách chỉ số vận hành (`applyItems`, gọi cuối `executeActionById`, tham số `itemIds` tùy chọn). Tổng giá 4.700k > tiền đầu ván 4.500k nên phải chọn; luôn giữ lại ≥500k (`SHOP_RESERVE`). Tivi có mặt hại (cám dỗ +20%), tủ lạnh giảm cám dỗ ăn vặt. `PlayerState.ownedItemIds`, `buyItem`.
+- [x] Phòng 3D: `lib/roomItems.ts` (mô hình + toạ độ từng món, mô hình Kenney Furniture Kit trong `public/models/furniture/`), `RoomScene` thêm/bớt đồ theo `ownedItemIds` (có thể gồm nhiều mô hình ghép). `ShopPanel` (nút "🛒 Cửa hàng nội thất"). Ván cũ không có `ownedItemIds` thì chưa có đồ.
+- [x] Cân bằng: `sim.ts <id> <runs> traits items` cho có đủ mọi món từ đầu (trường hợp tốt nhất, bỏ qua giá). 1000 ván: Chaser 0%, Workaholic 3%, Sleeper 1%, Party ~90%, Balanced 100%: đồ không phá cân bằng.
+- [ ] Giai đoạn 3B: đồ mới tạo bằng TRELLIS.2 → Blender → GLB (cho món Kenney không có). Chưa làm: đổi tiền phòng thật theo mạch Chủ trọ.
+
 ### ✅ SỬA LỖI: Sụp dopamine chỉ do dopamine NHANH
 Trước đây luật qua đêm coi `dopamine ≥ 75` từ **bất kỳ nguồn nào** là "sụp dopamine nhanh", nên chơi toàn hành vi lành mạnh vẫn bị phạt oan và HUD báo "Nguy cơ sụp đổ". Nay `domain/dopamine.ts` (`summarizeFastDopamine`) chỉ tính dopamine thu được từ hành vi **nhanh** trong ngày (≥ 45 điểm hoặc ≥ 3.5 giờ); HUD và phòng 3D dùng cùng hàm này. Đã kiểm tra 6 kịch bản (kể cả ảnh chụp lỗi gốc) + trình duyệt; số liệu mô phỏng 5 chiến lược không đổi.
 

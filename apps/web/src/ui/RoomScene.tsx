@@ -5,6 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { ActionPrimitive, PlayerStatsPrimitive, SleepTiming, sleepAdviceNow } from '@24h/domain';
 import { AvatarId } from '../lib/avatars';
+import { ROOM_ITEMS } from '../lib/roomItems';
 import {
   ACTION_EMOTE,
   ACTION_VISUALS,
@@ -48,6 +49,8 @@ interface RoomSceneProps {
   habitTags?: Record<string, string>;
   /** Phát âm thanh trong phòng (bước chân, đồ vật, cửa) */
   onSound?: (name: string, volume?: number) => void;
+  /** Đồ nội thất đã mua (id trong domain/shop.ts), hiện lên trong phòng */
+  ownedItemIds?: string[];
 }
 
 interface Picked {
@@ -59,6 +62,7 @@ interface Picked {
 interface SceneApi {
   setAvatar: (id: AvatarId) => void;
   trigger: (actionId: string) => void;
+  setItems: (ids: string[]) => void;
 }
 
 /** Chỉ số hiện ngay trong phòng (thu gọn) */
@@ -143,6 +147,8 @@ function uniqueMaterials(root: THREE.Object3D): THREE.MeshStandardMaterial[] {
   return mats;
 }
 
+const NO_ITEMS: string[] = [];
+
 const RoomScene: React.FC<RoomSceneProps> = ({
   avatarId,
   stats,
@@ -157,6 +163,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   onSound,
   coach = false,
   sleeping = false,
+  ownedItemIds = NO_ITEMS,
 }) => {
   const soundRef = useRef(onSound);
   soundRef.current = onSound;
@@ -193,7 +200,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   const coachRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<SceneApi | null>(null);
   const liveRef = useRef({ stats, hoursUsed, crashRisk, sleeping, coachOn: false });
-  const pendingRef = useRef<{ avatar: AvatarId; action: string | null }>({ avatar: avatarId, action: null });
+  const pendingRef = useRef<{ avatar: AvatarId; action: string | null; items: string[] }>({ avatar: avatarId, action: null, items: ownedItemIds });
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -278,6 +285,47 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       }
       room.add(obj);
       return mats;
+    };
+
+    // Đồ nội thất mua được: thêm/bớt theo danh sách id; mỗi món có thể gồm nhiều mô hình ghép lại
+    const itemGroups = new Map<string, THREE.Group>();
+    const itemLoading = new Set<string>();
+    let wantedItems: string[] = [];
+    const setItems = async (ids: string[]) => {
+      wantedItems = ids;
+      for (const [id, g] of itemGroups) {
+        if (!ids.includes(id)) {
+          room.remove(g);
+          itemGroups.delete(id);
+        }
+      }
+      for (const id of ids) {
+        const parts = ROOM_ITEMS[id];
+        if (!parts || itemGroups.has(id) || itemLoading.has(id)) continue;
+        itemLoading.add(id);
+        try {
+          const group = new THREE.Group();
+          for (const part of parts) {
+            const inner = await getModel(`/models/furniture/${part.model}.glb`);
+            const box = new THREE.Box3().setFromObject(inner);
+            const c = box.getCenter(new THREE.Vector3());
+            inner.position.set(-c.x, -box.min.y, -c.z);
+            const o = new THREE.Group();
+            o.add(inner);
+            o.scale.setScalar(FURNITURE_SCALE * (part.scale ?? 1));
+            o.position.set(part.x, part.y ?? 0, part.z);
+            o.rotation.y = part.rotY ?? 0;
+            group.add(o);
+          }
+          if (!wantedItems.includes(id)) continue;
+          room.add(group);
+          itemGroups.set(id, group);
+        } catch {
+          // Món đồ không tải được thì bỏ qua, phòng vẫn dùng bình thường
+        } finally {
+          itemLoading.delete(id);
+        }
+      }
     };
 
     // Đèn ban đêm: đèn cây (vàng ấm) và màn hình máy tính (xanh nhạt) tự bật khi trời tối
@@ -632,7 +680,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
       anim.glow = 1;
     };
 
-    apiRef.current = { setAvatar: (id) => void loadAvatar(id), trigger };
+    apiRef.current = { setAvatar: (id) => void loadAvatar(id), trigger, setItems: (ids) => void setItems(ids) };
 
     // Tải toàn bộ cảnh
     let disposed = false;
@@ -683,6 +731,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           addHusky(),
         ]);
         if (disposed) return;
+        void setItems(pendingRef.current.items);
         if (pendingRef.current.action) trigger(pendingRef.current.action);
         setReady(true);
       } catch {
@@ -967,6 +1016,12 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     pendingRef.current.avatar = avatarId;
     apiRef.current?.setAvatar(avatarId);
   }, [avatarId]);
+
+  // Đồ mới mua hiện lên trong phòng
+  useEffect(() => {
+    pendingRef.current.items = ownedItemIds;
+    apiRef.current?.setItems(ownedItemIds);
+  }, [ownedItemIds]);
 
   // Hành vi mới
   useEffect(() => {

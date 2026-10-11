@@ -28,6 +28,8 @@ export interface SerializedGameState {
   traitIds?: string[];
   /** Mạch truyện của ván và nhật ký lựa chọn (ván cũ không có) */
   storyIds?: string[];
+  /** Đồ nội thất đã mua (ván cũ không có) */
+  ownedItemIds?: string[];
   storyLog?: Array<{ beat: string; day: number; choice: string }>;
   /** Địa điểm hiện tại của nhân vật */
   location?: string;

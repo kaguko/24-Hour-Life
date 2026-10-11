@@ -150,9 +150,9 @@ export function chooseStrategyAction(strategy: DomainStrategy, state: PlayerStat
 }
 
 /** Chơi 1 ván headless và ghi lại chỉ số cuối mỗi ngày (sau khi qua đêm). */
-export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rng, traitIds: string[] = []): RunTracePrimitive {
+export function playOneRun(strategy: DomainStrategy, daysPerRun: number, rng: Rng, traitIds: string[] = [], itemIds: string[] = []): RunTracePrimitive {
   // Mô phỏng không xét mục tiêu / sự kiện lớn nên dùng giá trị cố định (không tiêu thụ rng)
-  let state = newPlayerState([], { id: BIG_EVENT_IDS[0], difficulty: 1 }, traitIds);
+  let state = newPlayerState([], { id: BIG_EVENT_IDS[0], difficulty: 1 }, traitIds, [], itemIds);
   let survivedDays = 0;
   let collapseDay: number | null = null;
   let collapseReason: RunTracePrimitive['collapseReason'] = null;
@@ -216,7 +216,9 @@ export function runDomainSimulation(
   daysPerRun: number,
   rng: Rng,
   /** Mỗi ván bốc ngẫu nhiên tính cách như ván thật (mặc định tắt: số liệu cũ không đổi) */
-  randomTraits = false
+  randomTraits = false,
+  /** Đồ cho sẵn từ đầu ván (thử trường hợp tốt nhất: có mọi món) */
+  itemIds: string[] = []
 ): SimulationResultPrimitive {
   const strategy = DOMAIN_STRATEGIES.find((s) => s.id === strategyId) || DOMAIN_STRATEGIES[4];
 
@@ -233,7 +235,7 @@ export function runDomainSimulation(
   let sumSurvivalDays = 0;
 
   for (let run = 0; run < totalRuns; run++) {
-    const trace = playOneRun(strategy, daysPerRun, rng, randomTraits ? pickTraitIds(rng) : []);
+    const trace = playOneRun(strategy, daysPerRun, rng, randomTraits ? pickTraitIds(rng) : [], itemIds);
     if (!trace.endedEarly) survivals++;
     else if (trace.collapseReason === 'bankrupt') bankruptcies++;
     else burnouts++;

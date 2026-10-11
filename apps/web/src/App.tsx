@@ -23,6 +23,7 @@ import { SkillsPanel } from './ui/SkillsPanel';
 import { GoalsPanel } from './ui/GoalsPanel';
 import { TraitsPanel } from './ui/TraitsPanel';
 import { StoryPanel } from './ui/StoryPanel';
+import { ShopPanel } from './ui/ShopPanel';
 import { CityMap } from './ui/CityMap';
 import { FeedPanel } from './ui/FeedPanel';
 import { IntrusionModal } from './ui/IntrusionModal';
@@ -51,6 +52,7 @@ export default function App() {
   // Danh sách thẻ chữ: thu gọn mặc định, chọn hành vi chính bằng cách bấm trong phòng 3D
   const [showCards, setShowCards] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showShop, setShowShop] = useState(false);
 
   // Clean Architecture: Adapter hook connects Domain to UI
   const {
@@ -87,6 +89,8 @@ export default function App() {
     traitIds,
     storyIds,
     storyLog,
+    ownedItemIds,
+    buy,
     finished,
     location,
     travelTo,
@@ -316,6 +320,7 @@ export default function App() {
                       onSound={playRoomSfx}
                       coach={showCoach && !isIntroOpen}
                       sleeping={!!morningReport}
+                      ownedItemIds={ownedItemIds}
                     />
                   </Suspense>
                   )}
@@ -352,7 +357,7 @@ export default function App() {
                 />
 
                 {/* Chi tiết: mở khi cần */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => setShowStats((v) => !v)}
                     className={`btn py-2.5 text-xs ${showStats ? 'btn-primary' : 'btn-soft'}`}
@@ -365,7 +370,15 @@ export default function App() {
                   >
                     📋 Danh sách hành vi ({PLAYABLE_ACTIONS.length})
                   </button>
+                  <button
+                    onClick={() => setShowShop((v) => !v)}
+                    className={`btn py-2.5 text-xs ${showShop ? 'btn-primary' : 'btn-soft'}`}
+                  >
+                    🛒 Cửa hàng nội thất
+                  </button>
                 </div>
+
+                {showShop && <ShopPanel money={stats.money} ownedIds={ownedItemIds} onBuy={buy} />}
 
                 {showStats && (
                   <div className="paper p-3 sm:p-4 space-y-3 anim-rise">

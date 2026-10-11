@@ -19,6 +19,7 @@ import { BIG_EVENT_ACTION_ID, BIG_EVENT_HOURS } from './bigEventAction.js';
 import { pickGoalIds } from './goals.js';
 import { pickTraitIds, traitIntrusionMult } from './traits.js';
 import { cravingLevel } from './craving.js';
+import { itemById, itemBuyBlock, itemIntrusionMult } from './shop.js';
 import { dueStoryEvent, isStoryEventId, pickStoryIds, resolveStoryChoice } from './story.js';
 import type { StoryLog } from './story.js';
 import type { DayGrade } from './dayRecap.js';
@@ -50,6 +51,8 @@ export interface PlayerState {
   /** Các mạch truyện của ván này và nhật ký lựa chọn (xem story.ts) */
   storyIds: string[];
   storyLog: StoryLog;
+  /** Đồ nội thất đã mua trong ván (xem shop.ts) */
+  ownedItemIds: string[];
 }
 
 /** Cám dỗ đang xâm nhập: round tăng mỗi lần chiều theo, dừng lại càng khó */
@@ -61,7 +64,7 @@ export interface IntrusionState {
   note: string | null;
 }
 
-export function newPlayerState(goalIds: string[], bigEvent: BigEventState, traitIds: string[] = [], storyIds: string[] = []): PlayerState {
+export function newPlayerState(goalIds: string[], bigEvent: BigEventState, traitIds: string[] = [], storyIds: string[] = [], ownedItemIds: string[] = []): PlayerState {
   return {
     day: 1,
     hoursUsed: 0,
@@ -79,6 +82,7 @@ export function newPlayerState(goalIds: string[], bigEvent: BigEventState, trait
     traitIds,
     storyIds,
     storyLog: [],
+    ownedItemIds,
   };
 }
 
@@ -123,7 +127,7 @@ export function applyAction(
   let blocked: string | null = null;
 
   for (const stepId of steps) {
-    const r = executeActionById(stepId, stats, left, ids, state.day, state.history, rng, state.traitIds);
+    const r = executeActionById(stepId, stats, left, ids, state.day, state.history, rng, state.traitIds, state.ownedItemIds);
     if (!r.success) {
       blocked = r.notice;
       break;
@@ -198,7 +202,7 @@ export function rollDayEvents(state: PlayerState, ctx: DayEventContext, rng: Rng
         lastActionId: lastId,
         lastWasRest: lastAction?.category === 'rest',
         craving: cravingLevel(state.history, state.actionsTodayIds, state.traitIds),
-        intrusionMult: traitIntrusionMult(state.traitIds),
+        intrusionMult: traitIntrusionMult(state.traitIds) * itemIntrusionMult(state.ownedItemIds),
       },
       rng
     );
@@ -305,7 +309,7 @@ export function applyIntrusionAnswer(
 
   // Chiều theo, hoặc muốn dừng nhưng ý chí không đủ
   const left = hoursLeftOf(state);
-  const r = executeActionById(def.actionId, state.stats, left, state.actionsTodayIds, state.day, state.history, rng, state.traitIds);
+  const r = executeActionById(def.actionId, state.stats, left, state.actionsTodayIds, state.day, state.history, rng, state.traitIds, state.ownedItemIds);
   if (!r.success) return { state, intrusion: null, cue: null, actionId: null, endsDay: false };
 
   const nextLeft = left - r.hoursSpent;
@@ -351,5 +355,26 @@ export function applyBigEventOutcome(
     notice: `${bigEventDef(state.bigEvent.id).title}: ${TIER_LABEL[outcome.tier]} (${outcome.score}/100).`,
     cue: outcome.tier === 'great' || outcome.tier === 'pass' ? 'victory' : 'defeat',
     endsDay: hoursUsed >= DAY_HOURS,
+  };
+}
+
+export interface BuyItemResult {
+  state: PlayerState;
+  ok: boolean;
+  notice: string;
+}
+
+/** Mua một món đồ: trừ tiền, thêm vào phòng. Không đủ tiền (còn giữ lại SHOP_RESERVE), đã có, hoặc ván đã xong => không đổi. */
+export function buyItem(state: PlayerState, itemId: string): BuyItemResult {
+  const item = itemById(itemId);
+  const block = state.finished ? 'unknown' : itemBuyBlock(itemId, state.ownedItemIds, state.stats.money);
+  if (!item || block) {
+    const notice = block === 'owned' ? 'Bạn đã có món này rồi.' : block === 'poor' ? 'Chưa đủ tiền: cần giữ lại một khoản cho tiền trọ.' : 'Không mua được món này.';
+    return { state, ok: false, notice };
+  }
+  return {
+    ok: true,
+    notice: `Đã mua ${item.emoji} ${item.name} (-${item.cost}k).`,
+    state: { ...state, stats: applyStatDeltas(state.stats, { money: -item.cost }), ownedItemIds: [...state.ownedItemIds, itemId] },
   };
 }
