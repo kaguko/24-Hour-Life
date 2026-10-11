@@ -12,6 +12,8 @@ interface ActionGridProps {
   lockReasons?: Record<string, string>;
   /** Nhãn thói quen của từng hành vi */
   habitTags?: Record<string, string>;
+  /** Đặt trong bảng hẹp (bên phải cảnh 3D): màn hình rộng chỉ một cột */
+  compact?: boolean;
 }
 
 type FilterView = 'all' | 'slow_dopamine' | 'fast_dopamine' | 'work' | 'social' | 'rest';
@@ -23,6 +25,7 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
   onSelectAction,
   lockReasons = {},
   habitTags = {},
+  compact = false,
 }) => {
   const [filter, setFilter] = useState<FilterView>('all');
 
@@ -75,7 +78,7 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 ${compact ? 'lg:grid-cols-1' : ''}`}>
         {filteredActions.map((action) => (
           <ActionCard
             key={action.id}

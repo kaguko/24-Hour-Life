@@ -13,8 +13,9 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
 const errors = [];
 
 async function newPlayer(label) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 760 } });
   const page = await ctx.newPage();
+  page.setDefaultTimeout(90000); // render phần mềm (không GPU) chỉ ~3 khung hình/giây nên thao tác có thể chậm
   page.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
   page.on('console', (m) => m.type() === 'error' && !/WebGL|GPU stall|ReadPixels/i.test(m.text()) && errors.push(`${label}: ${m.text()}`));
   await page.goto(URL);

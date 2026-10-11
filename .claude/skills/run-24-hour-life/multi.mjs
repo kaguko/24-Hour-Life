@@ -13,8 +13,9 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
 const errors = [];
 
 async function newPlayer(label) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 760 } });
   const page = await ctx.newPage();
+  page.setDefaultTimeout(90000); // render phần mềm (không GPU) chỉ ~3 khung hình/giây nên thao tác có thể chậm
   page.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
   page.on('console', (m) => m.type() === 'error' && !/WebGL|GPU stall|ReadPixels/i.test(m.text()) && !(label === 'C' && /Failed to load resource/.test(m.text())) && errors.push(`${label}: ${m.text()}`));
   await page.goto(URL);
@@ -62,6 +63,7 @@ await c.getByTestId('lobby-error').waitFor({ timeout: 10000 });
 check('mã sai báo lỗi rõ ràng', /Không tìm thấy phòng/.test(await c.getByTestId('lobby-error').textContent()));
 
 // chat
+await a.getByTestId('dock-tab-chat').click(); // chat nằm trong tab của bảng hoạt động
 await a.getByTestId('chat-input').fill('xin chào Binh');
 await a.getByTestId('chat-input').press('Enter');
 await waitText(b, 'chat-log', /xin chào Binh/);
@@ -69,6 +71,7 @@ check('chat tới người kia', true);
 
 // hành vi chung: An rủ chạy bộ, Binh vào, An bắt đầu
 const socialBefore = await a.getByTestId('my-stats').textContent();
+await a.getByTestId('dock-tab-joint').click(); // quay lại tab hoạt động chung sau khi dùng chat
 await a.getByTestId('offer-run_together').click();
 await b.getByTestId('invite').waitFor({ timeout: 10000 });
 check('Binh nhận lời mời', /An rủ bạn/.test(await b.getByTestId('invite').textContent()));
@@ -83,7 +86,7 @@ await a.screenshot({ path: join(outDir, 'multi-3-A-after-joint.png') });
 
 // hành vi một mình: mở danh sách, chọn hành vi làm được đầu tiên; nhân vật đi tới địa điểm
 const posBefore = await a.evaluate(() => window.__city?.debugActors().find((x) => x.id)?.pos);
-await a.getByRole('button', { name: /Hành vi/ }).click();
+await a.getByTestId('dock-tab-solo').click();
 const firstEnabled = a.getByRole('button', { name: 'Chọn hành vi này' }).locator(':scope:not([disabled])').first();
 await firstEnabled.scrollIntoViewIfNeeded();
 const hoursBefore = await a.getByTestId('room-game').textContent();

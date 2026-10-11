@@ -161,6 +161,12 @@ Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, kh
 - [x] **Lời chửi che chữ** (`SWEARS`, mỗi con 4 câu riêng, ví dụ "Đ** má!", "Con m* nó"), mỗi câu kèm **bản lịch sự cùng ý**. Nút 🤬 / 😇 trong dock biểu cảm tắt chửi tục (lưu `localStorage`, mặc định bật). Test kiểm bản lịch sự không còn chữ tục và bản tục không có chữ nặng chưa che.
 - Chưa làm: thú không tương tác được và đụng không đổi chỉ số; chưa có thú trong chế độ chơi đơn (không có thành phố 3D).
 
+### ✅ THIẾT KẾ LẠI MÀN HÌNH MULTIPLAYER (ĐÃ HOÀN THÀNH)
+- [x] Trước đây cảnh 3D ở trên rồi hoạt động, danh sách người, chat xếp dọc bên dưới nên phải cuộn. Nay **một khung vừa màn hình** (`room-layout`): máy tính cao `100dvh - 7.5rem`, điện thoại `100dvh - 10rem`, và tất cả nằm trong **bảng hoạt động có tab** `RoomDock`: 🤝 Cùng nhau · 📋 Hành vi · 👥 Phòng · 💬 Chat (+ 🎯 Tôi chỉ ở điện thoại: chỉ số và nhiệm vụ, vì máy tính đã có cột trái trên cảnh).
+- [x] Máy tính: bảng nổi bên phải cảnh (`lg:absolute`, rộng 22rem), **thu gọn / mở lại** được (`dock-open`), dòng tin và dock biểu cảm của `CityStage` tự dời sang trái (`rightInset`) để khỏi bị che; dòng gợi ý góc dưới trái ẩn khi bảng mở. Điện thoại: bảng nằm ngay dưới cảnh, nội dung cuộn bên trong bảng, tab chỉ hiện chữ cho tab đang chọn. Bấm toà nhà trong thành phố tự mở tab Hành vi của nơi đó. Chat có số tin chưa đọc khi đang ở tab khác. Chế độ nhẹ (không 3D) dùng cùng bảng nằm dưới.
+- [x] Lưu ý kỹ thuật: tab Hành vi chỉ dựng 55 thẻ khi đang mở (nếu luôn dựng sẽ vẽ lại mỗi lần ai đó di chuyển); các tab khác dựng sẵn và chỉ ẩn nên ô chat và danh sách không mất trạng thái; lớp `.btn` đặt `display` riêng nên cần `!` (`lg:!hidden`, `max-lg:!hidden`) mới ẩn được nút theo màn hình.
+- [x] Script e2e cập nhật: `multi.mjs` bấm tab (`dock-tab-chat` / `dock-tab-joint` / `dock-tab-solo`), viewport cao 760, `setDefaultTimeout(90000)` vì trình duyệt headless render phần mềm chỉ ~3 khung hình/giây (đo: bản cũ 3,3 so với bản mới 3,7 fps, không thoái lui). multi 13/13, residents 13/13, playground 7/7.
+
 ### ✅ SỬA LỖI: Sụp dopamine chỉ do dopamine NHANH
 Trước đây luật qua đêm coi `dopamine ≥ 75` từ **bất kỳ nguồn nào** là "sụp dopamine nhanh", nên chơi toàn hành vi lành mạnh vẫn bị phạt oan và HUD báo "Nguy cơ sụp đổ". Nay `domain/dopamine.ts` (`summarizeFastDopamine`) chỉ tính dopamine thu được từ hành vi **nhanh** trong ngày (≥ 45 điểm hoặc ≥ 3.5 giờ); HUD và phòng 3D dùng cùng hàm này. Đã kiểm tra 6 kịch bản (kể cả ảnh chụp lỗi gốc) + trình duyệt; số liệu mô phỏng 5 chiến lược không đổi.
 

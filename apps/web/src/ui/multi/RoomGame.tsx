@@ -8,6 +8,7 @@ import { ActionGrid } from '../ActionGrid';
 import { MorningModal } from '../MorningModal';
 import { useNow, usePrivateState, useRoomSnapshot, useRoomStatus, useToasts } from './hooks';
 import { Notices, QuestRail, QuestStrip, RoomTopBar, StatRail, StatStrip, fmtMoney } from './RoomHud';
+import { RoomDock, type DockTab } from './RoomDock';
 import { MascotCard } from './MascotCard';
 
 const CityStage = lazy(() => import('./CityStage').then((m) => ({ default: m.CityStage })));
@@ -25,7 +26,10 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
   const priv = usePrivateState(conn);
   const now = useNow(500);
   const { toasts, push } = useToasts();
-  const [panel, setPanel] = useState<'joint' | 'solo'>('joint');
+  const [tab, setTab] = useState<DockTab>('joint');
+  const [dockOpen, setDockOpen] = useState(true);
+  /** Số tin chat đã đọc (để báo tin mới khi đang ở tab khác) */
+  const [chatSeen, setChatSeen] = useState(0);
   const [report, setReport] = useState<{ report: NightResultPrimitive; friends: string[] } | null>(null);
   const [invites, setInvites] = useState<InviteMessage[]>([]);
   const [focusLocation, setFocusLocation] = useState<string | null>(null);
@@ -124,6 +128,18 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
     [focusLocation]
   );
 
+  // Bấm toà nhà trong thành phố: mở ngay tab hành vi của nơi đó
+  useEffect(() => {
+    if (focusLocation) {
+      setTab('solo');
+      setDockOpen(true);
+    }
+  }, [focusLocation]);
+  // Đang xem chat thì coi như đã đọc hết
+  useEffect(() => {
+    if (tab === 'chat' && dockOpen) setChatSeen(snap.chat.length);
+  }, [tab, dockOpen, snap.chat.length]);
+
   const sendChat = () => {
     const t = chatText.trim();
     if (!t) return;
@@ -162,37 +178,212 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
     />
   );
   const notices = <Notices toasts={toasts} invites={invites} onJoin={conn.joinOffer} onDismiss={(id) => setInvites((l) => l.filter((x) => x.offerId !== id))} />;
-  const showSolo = panel === 'solo' || !!focusLocation;
+
+  // ── Nội dung từng tab của bảng hoạt động ──
+  const jointPanel = (
+    <section className="space-y-3 anim-rise">
+      <div>
+        <h3 className="text-sm font-extrabold text-white">Rủ bạn làm cùng nhau</h3>
+        <p className="text-[11px] text-[var(--ink-dim)]">Làm chung thì Kết nối tăng, nhưng rủ nhau buông thả cũng sụp nhanh hơn.</p>
+      </div>
+      {snap.offers.length > 0 && (
+        <ul className="space-y-1.5" data-testid="offers">
+          {snap.offers.map((o) => {
+            const def = jointActionDef(o.actionId);
+            const mine = o.members.includes(me.id);
+            const isHost = o.hostId === me.id;
+            return (
+              <li key={o.id} className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl bg-indigo-400/15 border border-indigo-300/40 text-xs text-white anim-pop">
+                <span className="flex-1 min-w-[10rem]">
+                  <b>{def?.title ?? o.actionId}</b> · {nameOf(o.hostId)} rủ · {o.members.length}/{o.maxPlayers} người (cần {o.minPlayers}): {o.members.map(nameOf).join(', ')}
+                </span>
+                {!mine && snap.phase === 'planning' && (
+                  <button type="button" onClick={() => conn.joinOffer(o.id)} className="btn btn-primary px-3 py-1">Vào</button>
+                )}
+                {isHost && (
+                  <button type="button" disabled={o.members.length < o.minPlayers} onClick={() => conn.startOffer()} data-testid="start-offer" className="btn btn-good px-3 py-1">
+                    Bắt đầu
+                  </button>
+                )}
+                {mine && (
+                  <button type="button" onClick={() => conn.leaveOffer()} className="btn btn-soft px-2.5 py-1">{isHost ? 'Hủy' : 'Rời'}</button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <div className="grid min-[420px]:grid-cols-2 lg:grid-cols-1 gap-2.5">
+        {JOINT_ACTIONS.map((a) => {
+          const lock = lockReasons[a.id];
+          const loc = locationDef(locationOf(a.id));
+          return (
+            <div
+              key={a.id}
+              className={`p-3 rounded-2xl border text-xs flex flex-col gap-1 transition-all ${
+                a.isTemptation ? 'bg-gradient-to-br from-fuchsia-500/20 to-transparent border-fuchsia-400/50' : 'bg-white/[0.06] border-white/12 hover:border-amber-300/50'
+              } ${lock ? 'opacity-60' : ''}`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl" aria-hidden>{loc.emoji}</span>
+                <div className="min-w-0">
+                  <div className="font-extrabold text-white text-[13px] leading-tight">{a.title}</div>
+                  <div className="text-[11px] text-[var(--ink-dim)]">
+                    {a.joint!.minPlayers}–{a.joint!.maxPlayers} người · {loc.name}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={!!lock}
+                onClick={() => conn.offerJoint(a.id)}
+                data-testid={`offer-${a.id}`}
+                title={lock}
+                className={`btn mt-1 w-full py-1.5 ${a.isTemptation ? '!bg-gradient-to-r !from-fuchsia-500 !to-pink-500 !text-white' : 'btn-primary'}`}
+              >
+                {lock ? lock : a.isTemptation ? 'Rủ bạn bè 😈' : 'Rủ bạn bè'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+
+  const soloPanel = (
+    <section className="space-y-2.5 anim-rise">
+      {focusLocation && (
+        <button type="button" onClick={() => setFocusLocation(null)} className="chip !bg-indigo-400/20 !border-indigo-300/40 hover:!bg-indigo-400/30">
+          {locationDef(focusLocation as never).emoji} {locationDef(focusLocation as never).name} ✕
+        </button>
+      )}
+      {/* 55 thẻ hành vi nặng: chỉ dựng khi đang xem tab này (nếu không sẽ vẽ lại mỗi lần ai đó di chuyển) */}
+      {tab === 'solo' && <ActionGrid compact actions={visibleActions} currentStats={me.stats} hoursRemaining={hoursRemaining} onSelectAction={conn.sendAction} lockReasons={lockReasons} />}
+    </section>
+  );
+
+  const roomPanel = (
+    <section className="space-y-2.5">
+      <h3 className="text-sm font-extrabold text-white flex items-center justify-between">
+        <span>👥 Trong phòng</span>
+        <span className="chip">{snap.players.length}</span>
+      </h3>
+      <ul className="space-y-1.5" data-testid="players">
+        {snap.players.map((p) => (
+          <li key={p.id} className={`flex items-center gap-2.5 text-xs px-2 py-1.5 rounded-xl ${p.id === me.id ? 'bg-amber-300/10 border border-amber-300/30' : 'bg-white/[0.04]'}`}>
+            <span className="relative shrink-0">
+              <img src={avatarUrl(p.avatar as AvatarId)} alt="" className="w-9 h-9 rounded-xl bg-white/10 p-0.5" />
+              {p.ready && <span className="absolute -bottom-1 -right-1 text-[11px]" title="Sẵn sàng">✅</span>}
+            </span>
+            <span className="flex-1 min-w-0">
+              <b className="text-white">{p.name}</b>
+              {p.id === me.id && <span className="text-amber-200"> (bạn)</span>}
+              <span className="block text-[10px] text-[var(--ink-dim)] truncate">
+                {locationDef(p.location as never).emoji} {locationDef(p.location as never).name} · Kết nối {Math.round(p.stats.social)}
+                {p.finished ? ' · đã xong ván' : ''}
+              </span>
+            </span>
+            {p.bot && <span title="Bot Balanced đang chơi thay">🤖</span>}
+            {!p.connected && !p.bot && <span title="Mất kết nối">📴</span>}
+            {p.id !== me.id && !p.finished && (
+              <button type="button" onClick={() => conn.nudge(p.id)} title="Gửi lời động viên (hồi chút ý chí)" className="btn btn-soft w-8 h-8 text-sm">
+                💪
+              </button>
+            )}
+          </li>
+        ))}
+        {others.length === 0 && (
+          <li className="text-[11px] text-[var(--ink-dim)] px-1">
+            Chia sẻ mã <b className="text-amber-200 font-mono tracking-widest">{snap.code}</b> cho bạn bè để họ vào cùng.
+          </li>
+        )}
+      </ul>
+    </section>
+  );
+
+  const chatPanel = (
+    <section className="space-y-2.5">
+      <h3 className="text-sm font-extrabold text-white">💬 Trò chuyện</h3>
+      <ul className="max-h-64 lg:max-h-[calc(100dvh-24rem)] overflow-y-auto scrollbar-thin space-y-1.5 text-xs" data-testid="chat-log">
+        {snap.chat.slice(-30).map((c, i) => (
+          <li key={`${c.at}-${i}`} className={`px-2.5 py-1.5 rounded-xl w-fit max-w-full ${c.playerId === snap.sessionId ? 'ml-auto bg-amber-300/20 text-amber-50' : 'bg-white/[0.08] text-white'}`}>
+            <b className="text-[10px] block opacity-70">{c.name}</b>
+            {c.text}
+          </li>
+        ))}
+        {snap.chat.length === 0 && <li className="text-[var(--ink-faint)]">Chưa có tin nhắn.</li>}
+      </ul>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          sendChat();
+        }}
+        className="flex gap-1.5"
+      >
+        <input value={chatText} onChange={(e) => setChatText(e.target.value)} maxLength={200} placeholder="Nhắn gì đó…" data-testid="chat-input" className="input-dark flex-1 min-w-0 px-3 py-2 text-xs" />
+        <button type="submit" className="btn btn-primary px-3.5 text-xs">Gửi</button>
+      </form>
+    </section>
+  );
+
+  // Điện thoại: chỉ số và nhiệm vụ nằm trong tab "Tôi" (màn hình rộng đã có cột bên trái cảnh)
+  const mePanel = (
+    <div className="space-y-2">
+      <StatStrip stats={me.stats} />
+      <QuestStrip goals={goals} npcQuest={npcQuest} groupQuest={groupQuest} />
+    </div>
+  );
+
+  const dock = (
+    <RoomDock
+      overlay={!lite}
+      open={dockOpen || lite}
+      onToggle={() => setDockOpen((v) => !v)}
+      tab={tab}
+      onTab={setTab}
+      counts={{ solo: visibleActions.length, room: snap.players.length, chatUnread: tab === 'chat' && dockOpen ? 0 : Math.max(0, snap.chat.length - chatSeen) }}
+      panels={{ me: mePanel, joint: jointPanel, solo: soloPanel, room: roomPanel, chat: chatPanel }}
+    />
+  );
 
   return (
     <div className="space-y-4" data-testid="room-game">
       {lite ? (
-        <section className="glass p-3 sm:p-4 space-y-3 anim-rise">
-          {topBar}
-          {notices}
-          <div data-testid="my-stats">
-            <StatStrip stats={me.stats} />
-          </div>
-          <MascotCard name={me.name} stats={me.stats} />
-          <p className="text-sm text-[var(--ink-dim)]">
-            <b className="text-white">Chế độ nhẹ:</b> không dựng cảnh 3D. Dùng danh sách hành vi bên dưới; mọi người trong phòng vẫn thấy bạn như bình thường.
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {LOCATIONS.map((l) => (
-              <div key={l.id} className="px-2.5 py-2 rounded-xl bg-white/[0.06] border border-white/10 text-xs text-white">
-                {l.emoji} {l.name}
-                <div className="text-[10px] text-[var(--ink-dim)]">{snap.players.filter((p) => p.location === l.id).map((p) => p.name).join(', ') || '—'}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : (
         <>
-          <Suspense fallback={<div className="h-[24rem] sm:h-[30rem] rounded-3xl skeleton" />}>
+          <section className="glass p-3 sm:p-4 space-y-3 anim-rise">
+            {topBar}
+            {notices}
+            <div data-testid="my-stats">
+              <StatStrip stats={me.stats} />
+            </div>
+            <MascotCard name={me.name} stats={me.stats} />
+            <p className="text-sm text-[var(--ink-dim)]">
+              <b className="text-white">Chế độ nhẹ:</b> không dựng cảnh 3D. Dùng bảng bên dưới; mọi người trong phòng vẫn thấy bạn như bình thường.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {LOCATIONS.map((l) => (
+                <div key={l.id} className="px-2.5 py-2 rounded-xl bg-white/[0.06] border border-white/10 text-xs text-white">
+                  {l.emoji} {l.name}
+                  <div className="text-[10px] text-[var(--ink-dim)]">{snap.players.filter((p) => p.location === l.id).map((p) => p.name).join(', ') || '—'}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+          {dock}
+        </>
+      ) : (
+        // Một khung duy nhất vừa màn hình: cảnh 3D ở trên, bảng hoạt động có tab ở dưới (điện thoại) hoặc nổi bên phải (máy tính)
+        <div
+          className="relative flex flex-col gap-2 h-[calc(100dvh-10rem)] min-h-[36rem] lg:block lg:h-[calc(100dvh-7.5rem)] lg:min-h-[38rem]"
+          data-testid="room-layout"
+        >
+          <Suspense fallback={<div className="flex-[1_1_44%] min-h-[15rem] lg:h-full rounded-3xl skeleton" />}>
             <CityStage
               conn={conn}
               snapshot={snap}
               quality="high"
+              className="flex-[1_1_44%] min-h-[15rem] lg:h-full lg:flex-none"
+              rightInset={dockOpen}
               onVisitLocation={setFocusLocation}
               questMarkers={questMarkers}
               hud={{
@@ -207,171 +398,9 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
               }}
             />
           </Suspense>
-          <div className="sm:hidden glass p-2.5">
-            <StatStrip stats={me.stats} />
-            <QuestStrip goals={goals} npcQuest={npcQuest} groupQuest={groupQuest} />
-          </div>
-        </>
-      )}
-
-      <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-3">
-          {/* Chuyển giữa làm cùng nhau / hành vi một mình */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex p-1 rounded-2xl bg-black/30 border border-white/10" role="group" aria-label="Loại hoạt động">
-              <button type="button" aria-pressed={!showSolo} onClick={() => { setPanel('joint'); setFocusLocation(null); }} className={`btn px-3.5 py-1.5 text-xs ${!showSolo ? 'btn-primary' : '!text-[var(--ink-dim)] hover:!text-white'}`}>
-                🤝 Làm cùng nhau
-              </button>
-              <button type="button" aria-pressed={showSolo} onClick={() => setPanel('solo')} className={`btn px-3.5 py-1.5 text-xs ${showSolo ? 'btn-primary' : '!text-[var(--ink-dim)] hover:!text-white'}`}>
-                📋 Hành vi ({visibleActions.length})
-              </button>
-            </div>
-            {focusLocation && (
-              <button type="button" onClick={() => setFocusLocation(null)} className="chip !bg-indigo-400/20 !border-indigo-300/40 hover:!bg-indigo-400/30">
-                {locationDef(focusLocation as never).emoji} {locationDef(focusLocation as never).name} ✕
-              </button>
-            )}
-          </div>
-
-          {showSolo ? (
-            <section className="anim-rise">
-              <ActionGrid actions={visibleActions} currentStats={me.stats} hoursRemaining={hoursRemaining} onSelectAction={conn.sendAction} lockReasons={lockReasons} />
-            </section>
-          ) : (
-            <section className="glass p-3 sm:p-4 space-y-3 anim-rise">
-              <div>
-                <h3 className="text-sm font-extrabold text-white">Rủ bạn làm cùng nhau</h3>
-                <p className="text-[11px] text-[var(--ink-dim)]">Làm chung thì Kết nối tăng — nhưng rủ nhau buông thả cũng sụp nhanh hơn.</p>
-              </div>
-              {snap.offers.length > 0 && (
-                <ul className="space-y-1.5" data-testid="offers">
-                  {snap.offers.map((o) => {
-                    const def = jointActionDef(o.actionId);
-                    const mine = o.members.includes(me.id);
-                    const isHost = o.hostId === me.id;
-                    return (
-                      <li key={o.id} className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl bg-indigo-400/15 border border-indigo-300/40 text-xs text-white anim-pop">
-                        <span className="flex-1 min-w-[10rem]">
-                          <b>{def?.title ?? o.actionId}</b> · {nameOf(o.hostId)} rủ · {o.members.length}/{o.maxPlayers} người (cần {o.minPlayers}): {o.members.map(nameOf).join(', ')}
-                        </span>
-                        {!mine && snap.phase === 'planning' && (
-                          <button type="button" onClick={() => conn.joinOffer(o.id)} className="btn btn-primary px-3 py-1">Vào</button>
-                        )}
-                        {isHost && (
-                          <button type="button" disabled={o.members.length < o.minPlayers} onClick={() => conn.startOffer()} data-testid="start-offer" className="btn btn-good px-3 py-1">
-                            Bắt đầu
-                          </button>
-                        )}
-                        {mine && (
-                          <button type="button" onClick={() => conn.leaveOffer()} className="btn btn-soft px-2.5 py-1">{isHost ? 'Hủy' : 'Rời'}</button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <div className="grid sm:grid-cols-2 gap-2.5">
-                {JOINT_ACTIONS.map((a) => {
-                  const lock = lockReasons[a.id];
-                  const loc = locationDef(locationOf(a.id));
-                  return (
-                    <div
-                      key={a.id}
-                      className={`p-3 rounded-2xl border text-xs flex flex-col gap-1 transition-all ${
-                        a.isTemptation ? 'bg-gradient-to-br from-fuchsia-500/20 to-transparent border-fuchsia-400/50' : 'bg-white/[0.06] border-white/12 hover:border-amber-300/50'
-                      } ${lock ? 'opacity-60' : ''}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl" aria-hidden>{loc.emoji}</span>
-                        <div className="min-w-0">
-                          <div className="font-extrabold text-white text-[13px] leading-tight">{a.title}</div>
-                          <div className="text-[11px] text-[var(--ink-dim)]">
-                            {a.joint!.minPlayers}–{a.joint!.maxPlayers} người · {loc.name}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={!!lock}
-                        onClick={() => conn.offerJoint(a.id)}
-                        data-testid={`offer-${a.id}`}
-                        title={lock}
-                        className={`btn mt-1 w-full py-1.5 ${a.isTemptation ? '!bg-gradient-to-r !from-fuchsia-500 !to-pink-500 !text-white' : 'btn-primary'}`}
-                      >
-                        {lock ? lock : a.isTemptation ? 'Rủ bạn bè 😈' : 'Rủ bạn bè'}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+          {dock}
         </div>
-
-        <aside className="space-y-4">
-          {/* Người trong phòng */}
-          <section className="glass p-3 sm:p-4 space-y-2.5">
-            <h3 className="text-sm font-extrabold text-white flex items-center justify-between">
-              <span>👥 Trong phòng</span>
-              <span className="chip">{snap.players.length}</span>
-            </h3>
-            <ul className="space-y-1.5" data-testid="players">
-              {snap.players.map((p) => (
-                <li key={p.id} className={`flex items-center gap-2.5 text-xs px-2 py-1.5 rounded-xl ${p.id === me.id ? 'bg-amber-300/10 border border-amber-300/30' : 'bg-white/[0.04]'}`}>
-                  <span className="relative shrink-0">
-                    <img src={avatarUrl(p.avatar as AvatarId)} alt="" className="w-9 h-9 rounded-xl bg-white/10 p-0.5" />
-                    {p.ready && <span className="absolute -bottom-1 -right-1 text-[11px]" title="Sẵn sàng">✅</span>}
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <b className="text-white">{p.name}</b>
-                    {p.id === me.id && <span className="text-amber-200"> (bạn)</span>}
-                    <span className="block text-[10px] text-[var(--ink-dim)] truncate">
-                      {locationDef(p.location as never).emoji} {locationDef(p.location as never).name} · Kết nối {Math.round(p.stats.social)}
-                      {p.finished ? ' · đã xong ván' : ''}
-                    </span>
-                  </span>
-                  {p.bot && <span title="Bot Balanced đang chơi thay">🤖</span>}
-                  {!p.connected && !p.bot && <span title="Mất kết nối">📴</span>}
-                  {p.id !== me.id && !p.finished && (
-                    <button type="button" onClick={() => conn.nudge(p.id)} title="Gửi lời động viên (hồi chút ý chí)" className="btn btn-soft w-8 h-8 text-sm">
-                      💪
-                    </button>
-                  )}
-                </li>
-              ))}
-              {others.length === 0 && (
-                <li className="text-[11px] text-[var(--ink-dim)] px-1">
-                  Chia sẻ mã <b className="text-amber-200 font-mono tracking-widest">{snap.code}</b> cho bạn bè để họ vào cùng.
-                </li>
-              )}
-            </ul>
-          </section>
-
-          {/* Chat */}
-          <section className="glass p-3 sm:p-4 space-y-2.5">
-            <h3 className="text-sm font-extrabold text-white">💬 Trò chuyện</h3>
-            <ul className="max-h-44 overflow-y-auto scrollbar-thin space-y-1.5 text-xs" data-testid="chat-log">
-              {snap.chat.slice(-30).map((c, i) => (
-                <li key={`${c.at}-${i}`} className={`px-2.5 py-1.5 rounded-xl w-fit max-w-full ${c.playerId === snap.sessionId ? 'ml-auto bg-amber-300/20 text-amber-50' : 'bg-white/[0.08] text-white'}`}>
-                  <b className="text-[10px] block opacity-70">{c.name}</b>
-                  {c.text}
-                </li>
-              ))}
-              {snap.chat.length === 0 && <li className="text-[var(--ink-faint)]">Chưa có tin nhắn.</li>}
-            </ul>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendChat();
-              }}
-              className="flex gap-1.5"
-            >
-              <input value={chatText} onChange={(e) => setChatText(e.target.value)} maxLength={200} placeholder="Nhắn gì đó…" data-testid="chat-input" className="input-dark flex-1 min-w-0 px-3 py-2 text-xs" />
-              <button type="submit" className="btn btn-primary px-3.5 text-xs">Gửi</button>
-            </form>
-          </section>
-        </aside>
-      </div>
+      )}
 
       {/* Đêm */}
       {snap.phase === 'night' && (
