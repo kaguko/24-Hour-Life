@@ -86,6 +86,40 @@ export interface WorldResidentInfo {
   state: ResidentState;
 }
 
+/** Thông tin một con thú đi bằng hai chân để dựng (tĩnh từ STROLLERS + vị trí / trạng thái từ server) */
+export interface WorldStrollerInfo {
+  id: string;
+  name: string;
+  kind: string;
+  emoji: string;
+  x: number;
+  z: number;
+  state: string;
+  speed: number;
+}
+
+interface StrollerActor {
+  id: string;
+  group: THREE.Group;
+  model: THREE.Group | null;
+  mixer: THREE.AnimationMixer | null;
+  clips: Map<string, THREE.AnimationClip>;
+  current: string | null;
+  action: THREE.AnimationAction | null;
+  label: CSS2DObject;
+  bubbleEl: HTMLDivElement;
+  bubbleTimer: number | null;
+  shadow: THREE.Mesh;
+  pos: Vec2;
+  target: Vec2;
+  yaw: number;
+  info: WorldStrollerInfo;
+  face: Vec2 | null;
+  faceUntil: number;
+  /** Clip diễn thêm khi bị đụng (lắc đầu...) */
+  burst: { clip: string; until: number } | null;
+}
+
 interface ResidentActor {
   id: string;
   group: THREE.Group;
@@ -115,6 +149,8 @@ const RESIDENT_IDLE_CLIP: Record<string, string> = { phong: 'holding-both', minh
 const RESIDENT_SPEED_BY_ID = new Map(RESIDENTS.map((r) => [r.id, r.speed]));
 
 const CHAR_HEIGHT = 1.6;
+/** Thú đi bằng hai chân cao chừng này (m): nhỏ hơn người nhưng nhìn rõ từ camera thành phố */
+const STROLLER_HEIGHT = 1.05;
 const LOCAL_SPEED = 5;
 const REMOTE_MAX_SPEED = 8;
 const MOVE_SEND_MS = 100;
@@ -173,6 +209,9 @@ export class CityRenderer {
   private readonly animals = new Map<string, AnimalActor>();
   private readonly animalCache = new Map<string, Promise<THREE.Group>>();
   private readonly residents = new Map<string, ResidentActor>();
+  /** Thú đi bằng hai chân đi tuần (chim cánh cụt, gà con, vẹt) */
+  private readonly strollers = new Map<string, StrollerActor>();
+  private readonly strollerCache = new Map<string, Promise<{ scene: THREE.Group; animations: THREE.AnimationClip[] }>>();
   private mascot: MascotActor | null = null;
   private selectedId: string | null = null;
   private readonly clock = new THREE.Clock();
@@ -768,6 +807,149 @@ export class CityRenderer {
     this.mascot?.bounce();
   }
 
+  // ---------- thú đi bằng hai chân ----------
+  /** Đồng bộ thú đi tuần từ snapshot của server; con mới thì dựng mô hình */
+  syncStrollers(list: WorldStrollerInfo[]): void {
+    for (const info of list) {
+      let a = this.strollers.get(info.id);
+      if (!a) {
+        a = this.makeStroller(info);
+        this.strollers.set(info.id, a);
+      }
+      a.info = info;
+      a.target = { x: info.x, z: info.z };
+    }
+  }
+
+  private loadStroller(kind: string): Promise<{ scene: THREE.Group; animations: THREE.AnimationClip[] }> {
+    let p = this.strollerCache.get(kind);
+    if (!p) {
+      p = this.loader.loadAsync(`/models/strollers/${kind}.glb`).then((g) => ({ scene: g.scene, animations: g.animations }));
+      this.strollerCache.set(kind, p);
+    }
+    return p;
+  }
+
+  private makeStroller(info: WorldStrollerInfo): StrollerActor {
+    const group = new THREE.Group();
+    group.position.set(info.x, 0, info.z);
+    const nameEl = document.createElement('div');
+    nameEl.className = 'px-2 py-0.5 rounded-full bg-amber-100/95 text-[11px] font-bold text-amber-900 shadow whitespace-nowrap border border-amber-300';
+    nameEl.textContent = `${info.emoji} ${info.name}`;
+    const bubbleEl = document.createElement('div');
+    bubbleEl.className = 'hidden max-w-[14rem] px-2.5 py-1 mb-1 rounded-xl bg-rose-50 text-[11px] font-bold text-rose-900 shadow-md border border-rose-300 leading-snug';
+    const wrap = document.createElement('div');
+    wrap.className = 'flex flex-col items-center';
+    wrap.append(bubbleEl, nameEl);
+    const label = new CSS2DObject(wrap);
+    label.position.set(0, STROLLER_HEIGHT + 0.35, 0);
+    group.add(label);
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.36, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.y = 0.03;
+    group.add(shadow);
+    this.scene.add(group);
+    const actor: StrollerActor = {
+      id: info.id,
+      group,
+      model: null,
+      mixer: null,
+      clips: new Map(),
+      current: null,
+      action: null,
+      label,
+      bubbleEl,
+      bubbleTimer: null,
+      shadow,
+      pos: { x: info.x, z: info.z },
+      target: { x: info.x, z: info.z },
+      yaw: Math.PI,
+      info,
+      face: null,
+      faceUntil: 0,
+      burst: null,
+    };
+    void this.loadStroller(info.kind).then((src) => {
+      if (this.disposed || !this.strollers.has(actor.id)) return;
+      const obj = src.scene.clone(true);
+      const box = new THREE.Box3().setFromObject(obj);
+      const s = STROLLER_HEIGHT / (box.max.y - box.min.y || 1);
+      obj.scale.setScalar(s);
+      obj.position.y = -box.min.y * s;
+      group.add(obj);
+      actor.model = obj;
+      actor.mixer = new THREE.AnimationMixer(obj);
+      actor.clips = new Map(src.animations.map((c) => [c.name, c]));
+    });
+    return actor;
+  }
+
+  private playStrollerClip(a: StrollerActor, name: string, timeScale = 1): void {
+    if (!a.mixer || a.current === name) return;
+    const clip = a.clips.get(name) ?? a.clips.get('idle');
+    if (!clip) return;
+    const next = a.mixer.clipAction(clip);
+    next.reset();
+    next.setLoop(THREE.LoopRepeat, Infinity);
+    next.timeScale = timeScale;
+    if (a.action) next.crossFadeFrom(a.action, 0.15, false);
+    next.play();
+    a.action = next;
+    a.current = name;
+  }
+
+  /** Vị trí hiện tại của một con thú đi tuần (dùng khi gỡ lỗi / e2e) */
+  strollerPosition(strollerId: string): Vec2 | null {
+    const a = this.strollers.get(strollerId);
+    return a ? { ...a.pos } : null;
+  }
+
+  /** Thú quay về phía người vừa đụng, lắc đầu và hiện câu chửi */
+  strollerReact(strollerId: string, line: string, towardsPlayerId?: string): void {
+    const a = this.strollers.get(strollerId);
+    if (!a) return;
+    const who = towardsPlayerId ? this.actors.get(towardsPlayerId) : undefined;
+    if (who) {
+      a.face = { ...who.pos };
+      a.faceUntil = performance.now() + 3200;
+    }
+    a.burst = { clip: 'gesture-negative', until: performance.now() + 2400 };
+    a.bubbleEl.textContent = line;
+    a.bubbleEl.classList.remove('hidden');
+    if (a.bubbleTimer) window.clearTimeout(a.bubbleTimer);
+    a.bubbleTimer = window.setTimeout(() => a.bubbleEl.classList.add('hidden'), Math.min(6500, 2800 + line.length * 40));
+  }
+
+  private updateStrollers(dt: number, now: number): void {
+    for (const a of this.strollers.values()) {
+      const dx = a.target.x - a.pos.x;
+      const dz = a.target.z - a.pos.z;
+      const d = Math.hypot(dx, dz);
+      const speed = a.info.speed * 1.25;
+      let moving = false;
+      if (d > 6) {
+        a.pos = { ...a.target };
+      } else if (d > 0.04) {
+        const step = Math.min(d, speed * dt);
+        a.pos = { x: a.pos.x + (dx / d) * step, z: a.pos.z + (dz / d) * step };
+        a.yaw = Math.atan2(dx, dz);
+        moving = true;
+      }
+      if (!moving && a.face && now < a.faceUntil) a.yaw = Math.atan2(a.face.x - a.pos.x, a.face.z - a.pos.z);
+      a.group.position.set(a.pos.x, 0, a.pos.z);
+      if (a.model) {
+        const cur = a.model.rotation.y;
+        const diff = Math.atan2(Math.sin(a.yaw - cur), Math.cos(a.yaw - cur));
+        a.model.rotation.y = cur + diff * Math.min(1, dt * 10);
+      }
+      if (a.burst && now > a.burst.until) a.burst = null;
+      if (a.burst) this.playStrollerClip(a, a.burst.clip, 1.6);
+      else if (moving) this.playStrollerClip(a, 'walk', 1.5);
+      else this.playStrollerClip(a, 'idle');
+      a.mixer?.update(dt);
+    }
+  }
+
   // ---------- cư dân thành phố (NPC) ----------
   /** Đồng bộ cư dân từ snapshot của server: vị trí đích và trạng thái. Cư dân mới thì dựng nhân vật. */
   syncResidents(list: WorldResidentInfo[]): void {
@@ -1031,6 +1213,7 @@ export class CityRenderer {
 
     this.updateAnimals(dt, now);
     this.updateResidents(dt, now);
+    this.updateStrollers(dt, now);
     this.mascot?.update(now);
 
     // camera bám người chơi cục bộ
@@ -1182,6 +1365,15 @@ export class CityRenderer {
       this.scene.remove(a.group);
     }
     this.residents.clear();
+    for (const a of this.strollers.values()) {
+      if (a.bubbleTimer) window.clearTimeout(a.bubbleTimer);
+      a.label.element.remove();
+      a.mixer?.stopAllAction();
+      a.shadow.geometry.dispose();
+      (a.shadow.material as THREE.Material).dispose();
+      this.scene.remove(a.group);
+    }
+    this.strollers.clear();
     this.mascot?.dispose();
     this.mascot = null;
     for (const s of this.signs.values()) {

@@ -12,6 +12,7 @@
 
 - **Cube Pets** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
   The animated pet dog in the 3D room (`public/models/pets/`).
+  The two-legged street strollers (penguin, chick, parrot) in the multiplayer city (`public/models/strollers/`).
 
 - **City Kit Roads** by [Kenney](https://www.kenney.nl) - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
   Road tiles (`road-straight`, `road-crossroad`) merged into the road mesh of `public/models/city.glb`.

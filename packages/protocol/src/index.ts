@@ -250,6 +250,54 @@ export const RESIDENTS: readonly ResidentDef[] = [
   { id: 'binh', name: 'Thầy Bình', avatar: 'male-c', emoji: '💪', role: 'Huấn luyện viên phòng gym', route: [{ x: 12.3, z: -1.6 }, { x: 12.3, z: 1.8 }], speed: 1.4, pauseMs: [6000, 11000], helpLabel: 'Đỡ tạ giúp thầy' },
   { id: 'nam', name: 'Cậu Nam', avatar: 'male-e', emoji: '🎸', role: 'Hát rong trong công viên', route: [{ x: 0, z: -5.8 }, { x: 0, z: -4.6 }], speed: 0.6, pauseMs: [12000, 22000], helpLabel: 'Vỗ tay và hát theo', treatLabel: 'Bỏ tiền vào hộp đàn', treatCost: 10 },
 ];
+/**
+ * Thú đi bằng hai chân đi tuần trên các đại lộ (mô hình Kenney Cube Pets: chim cánh cụt, gà con, vẹt).
+ * Không tương tác được, nhưng đi đụng phải là bị chửi (xem StrollerBumpMessage). Lộ trình đi lại trên hành lang
+ * thẳng của city_nav.json (có test).
+ */
+export const STROLLER_KINDS = ['penguin', 'chick', 'parrot'] as const;
+export type StrollerKind = (typeof STROLLER_KINDS)[number];
+/** idle: đứng; walk: đang đi; talk: đang đứng lại để chửi */
+export type StrollerState = 'idle' | 'walk' | 'talk';
+
+export interface StrollerDef {
+  id: string;
+  kind: StrollerKind;
+  name: string;
+  emoji: string;
+  /** Đi qua lại giữa các điểm (vòng tuần hoàn); điểm đầu là chỗ xuất phát */
+  route: ReadonlyArray<{ x: number; z: number }>;
+  /** Tốc độ đi (m/giây) */
+  speed: number;
+  /** Nghỉ ở mỗi điểm dừng trong khoảng này (ms) */
+  pauseMs: readonly [number, number];
+}
+
+export const STROLLERS: readonly StrollerDef[] = [
+  { id: 'cut-beo', kind: 'penguin', name: 'Cánh Cụt Cộc Tính', emoji: '🐧', route: [{ x: -22, z: -9.5 }, { x: 26, z: -9.5 }], speed: 1.1, pauseMs: [2500, 6000] },
+  { id: 'ga-nong', kind: 'chick', name: 'Gà Con Nóng Tính', emoji: '🐥', route: [{ x: 9.5, z: -22 }, { x: 9.5, z: 26 }], speed: 1.5, pauseMs: [1500, 4000] },
+  { id: 'ga-li', kind: 'chick', name: 'Gà Con Lì Đòn', emoji: '🐤', route: [{ x: -9.5, z: -26 }, { x: -9.5, z: 20 }], speed: 1.3, pauseMs: [2000, 5000] },
+  { id: 'vet-be', kind: 'parrot', name: 'Vẹt Bẻm Mép', emoji: '🦜', route: [{ x: -26, z: 9.5 }, { x: 20, z: 9.5 }], speed: 1.0, pauseMs: [3000, 7000] },
+];
+/** Người chơi và thú gần nhau hơn mức này (m) thì tính là đụng nhau */
+export const STROLLER_BUMP_RADIUS = 1.1;
+/** Mỗi cặp (thú, người) chỉ bị chửi tối đa mỗi chừng này ms một lần */
+export const STROLLER_BUMP_PAIR_COOLDOWN_MS = 6_000;
+/** Thú đứng lại chửi chừng này ms rồi mới đi tiếp */
+export const STROLLER_BUMP_STOP_MS = 2_600;
+
+/** Thú đi bằng hai chân chửi một người vì bị đụng phải (gửi cho cả phòng) */
+export interface StrollerBumpMessage {
+  strollerId: string;
+  strollerName: string;
+  byId: string;
+  byName: string;
+  /** Câu chửi (có che chữ, vd "đ** má") */
+  line: string;
+  /** Bản lịch sự của cùng một ý, cho người chơi tắt chế độ chửi tục */
+  cleanLine: string;
+}
+
 /** Phải đứng trong bán kính này mới nói chuyện được với cư dân */
 export const RESIDENT_REACH = 4.5;
 /** Cư dân đứng lại chừng này ms sau khi có người tương tác (không bỏ đi giữa câu chuyện) */

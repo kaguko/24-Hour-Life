@@ -9,6 +9,7 @@ import { LifeEngine, type PlayerSession } from './engine.js';
 import { JointBoard, type Offer } from './joint.js';
 import { AnimalBoard } from './playground.js';
 import { ResidentBoard } from './residents.js';
+import { StrollerBoard } from './strollers.js';
 import {
   CHAT_HISTORY,
   CHAT_MIN_INTERVAL_MS,
@@ -38,7 +39,7 @@ import {
   type Phase,
   type Timing,
 } from './protocol.js';
-import { AnimalSchema, ChatMessageSchema, LifeState, OfferSchema, PlayerSchema, ResidentSchema } from './schema.js';
+import { AnimalSchema, ChatMessageSchema, LifeState, OfferSchema, PlayerSchema, ResidentSchema, StrollerSchema } from './schema.js';
 
 /** Sinh mã 4 ký tự chưa có phòng nào dùng */
 async function uniqueRoomCode(): Promise<string> {
@@ -98,6 +99,9 @@ export class LifeRoom extends Room<{ state: LifeState }> {
   private residents!: ResidentBoard;
   private lastResidentAt = new Map<string, number>();
   private lastResidentTick = 0;
+  /** Thú đi bằng hai chân đi tuần và chửi người đụng phải */
+  private strollers!: StrollerBoard;
+  private lastStrollerTick = 0;
   private lastChatAt = new Map<string, number>();
   private started = false;
   private phaseTimer?: Delayed;
@@ -128,6 +132,7 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     this.board = new JointBoard(this.engine);
     this.animals = new AnimalBoard(this.engine.rngForLabel('animals', 0));
     this.residents = new ResidentBoard(this.engine.rngForLabel('residents', 0), Date.now());
+    this.strollers = new StrollerBoard(this.engine.rngForLabel('strollers', 0), Date.now());
     const state = new LifeState();
     state.code = this.roomId;
     state.phase = 'planning';
@@ -150,6 +155,24 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     }
     this.syncResidents();
     this.lastResidentTick = Date.now();
+    for (const st of this.strollers.strollers.values()) {
+      const s = new StrollerSchema();
+      s.id = st.def.id;
+      s.name = st.def.name;
+      this.state.strollers.set(s.id, s);
+    }
+    this.syncStrollers();
+    this.lastStrollerTick = Date.now();
+    // Kiểm tra thường hơn cư dân (4 lần/giây) để không bỏ lỡ lúc người chơi đi sượt qua
+    this.clock.setInterval(() => {
+      const now = Date.now();
+      const dt = Math.min(2000, now - this.lastStrollerTick);
+      this.lastStrollerTick = now;
+      this.strollers.tick(now, dt);
+      const targets = [...this.engine.players.values()].filter((p) => p.connected && !p.bot).map((p) => ({ id: p.id, name: p.name, x: p.x, z: p.z }));
+      for (const bump of this.strollers.bumps(targets, now)) this.broadcast('stroller_bump', bump);
+      this.syncStrollers();
+    }, 250);
     this.clock.setInterval(() => {
       if (this.animals.tick(Date.now()).length > 0) this.syncAnimals();
       const now = Date.now();
@@ -632,6 +655,17 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       s.x = a.x;
       s.z = a.z;
       s.mood = a.mood;
+    }
+  }
+
+  /** Ghi vị trí và trạng thái thú đi tuần vào state công khai */
+  private syncStrollers(): void {
+    for (const r of this.strollers.strollers.values()) {
+      const s = this.state.strollers.get(r.def.id);
+      if (!s) continue;
+      s.x = r.x;
+      s.z = r.z;
+      s.state = r.state;
     }
   }
 

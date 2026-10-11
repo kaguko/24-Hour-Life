@@ -155,6 +155,12 @@ Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, kh
 - Đã sửa trong lúc làm: người đang ở trong phòng không thấy mục tiêu tăng khi có người vào (tiến độ vẫn 0 nên không gửi lại); nay so cả nhãn mục tiêu. Có test hồi quy.
 - [ ] Còn lại cho nhiệm vụ chung: chưa lưu qua ván / khi server tắt (như các phần khác của phòng); chưa có nhiệm vụ chung riêng cho từng ngày.
 
+### ✅ THÚ ĐI BẰNG HAI CHÂN CHỬI KHI BỊ ĐỤNG (ĐÃ HOÀN THÀNH, multiplayer 3D)
+- [x] 4 con đi tuần qua lại trên các đại lộ (chim cánh cụt, 2 gà con, vẹt; mô hình Kenney Cube Pets có sẵn 2 chân + 8 hoạt hình, `public/models/strollers/`). `STROLLERS` trong protocol, `StrollerBoard` ở server (`apps/server/src/strollers.ts`, tick 4 lần/giây), schema `strollers`, lộ trình nằm trên các hành lang thẳng của `city_nav.json` (có test, giống cư dân).
+- [x] **Đụng phải thì chửi**: server so vị trí người chơi thật (không tính bot) với từng con, trong `STROLLER_BUMP_RADIUS` (1,1 m); con đó đứng lại chửi `STROLLER_BUMP_STOP_MS`, mỗi cặp (thú, người) có thời gian hồi 6 giây, nhiều người cùng đụng thì chỉ chửi người gần nhất. Gửi `stroller_bump` cho cả phòng, client hiện bong bóng, thú quay mặt và lắc đầu (`gesture-negative`).
+- [x] **Lời chửi che chữ** (`SWEARS`, mỗi con 4 câu riêng, ví dụ "Đ** má!", "Con m* nó"), mỗi câu kèm **bản lịch sự cùng ý**. Nút 🤬 / 😇 trong dock biểu cảm tắt chửi tục (lưu `localStorage`, mặc định bật). Test kiểm bản lịch sự không còn chữ tục và bản tục không có chữ nặng chưa che.
+- Chưa làm: thú không tương tác được và đụng không đổi chỉ số; chưa có thú trong chế độ chơi đơn (không có thành phố 3D).
+
 ### ✅ SỬA LỖI: Sụp dopamine chỉ do dopamine NHANH
 Trước đây luật qua đêm coi `dopamine ≥ 75` từ **bất kỳ nguồn nào** là "sụp dopamine nhanh", nên chơi toàn hành vi lành mạnh vẫn bị phạt oan và HUD báo "Nguy cơ sụp đổ". Nay `domain/dopamine.ts` (`summarizeFastDopamine`) chỉ tính dopamine thu được từ hành vi **nhanh** trong ngày (≥ 45 điểm hoặc ≥ 3.5 giờ); HUD và phòng 3D dùng cùng hàm này. Đã kiểm tra 6 kịch bản (kể cả ảnh chụp lỗi gốc) + trình duyệt; số liệu mô phỏng 5 chiến lược không đổi.
 

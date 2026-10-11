@@ -90,6 +90,20 @@ export const ResidentSchema = schema(
 );
 export type ResidentSchema = SchemaType<typeof ResidentSchema>;
 
+/** Thú đi bằng hai chân đi tuần. Vị trí và trạng thái do server quyết định; thông tin tĩnh nằm trong STROLLERS. */
+export const StrollerSchema = schema(
+  {
+    id: t.string(),
+    name: t.string(),
+    x: t.float32(),
+    z: t.float32(),
+    /** idle | walk | talk */
+    state: t.string(),
+  },
+  'Stroller'
+);
+export type StrollerSchema = SchemaType<typeof StrollerSchema>;
+
 export const LifeState = schema(
   {
     /** Mã phòng 4 ký tự (cũng là roomId) */
@@ -105,6 +119,7 @@ export const LifeState = schema(
     chat: t.array(ChatMessageSchema),
     animals: t.map(AnimalSchema),
     residents: t.map(ResidentSchema),
+    strollers: t.map(StrollerSchema),
   },
   'LifeState'
 );

@@ -28,6 +28,8 @@ import type {
   ResidentOp,
   ResidentResultMessage,
   ResidentState,
+  StrollerBumpMessage,
+  StrollerState,
 } from '@24h/protocol';
 import { ROOM_NAME } from '@24h/protocol';
 
@@ -92,6 +94,14 @@ export interface ResidentView {
   state: ResidentState;
 }
 
+export interface StrollerView {
+  id: string;
+  name: string;
+  x: number;
+  z: number;
+  state: StrollerState;
+}
+
 export interface RoomSnapshot {
   code: string;
   phase: Phase;
@@ -102,6 +112,7 @@ export interface RoomSnapshot {
   chat: ChatView[];
   animals: AnimalView[];
   residents: ResidentView[];
+  strollers: StrollerView[];
   sessionId: string;
   me: PlayerView | null;
 }
@@ -124,6 +135,7 @@ export interface ServerEvents {
   emote: EmoteMessage;
   emote_result: EmoteResultMessage;
   group_quest_done: GroupQuestDoneMessage;
+  stroller_bump: StrollerBumpMessage;
 }
 
 type Listener = () => void;
@@ -172,6 +184,8 @@ export function buildSnapshot(state: any, sessionId: string): RoomSnapshot {
   );
   const residents: ResidentView[] = [];
   state.residents?.forEach((r: any, id: string) => residents.push({ id, name: r.name ?? '', x: r.x ?? 0, z: r.z ?? 0, state: (r.state ?? 'idle') as ResidentState }));
+  const strollers: StrollerView[] = [];
+  state.strollers?.forEach((r: any, id: string) => strollers.push({ id, name: r.name ?? '', x: r.x ?? 0, z: r.z ?? 0, state: (r.state ?? 'idle') as StrollerState }));
   return {
     code: state.code ?? '',
     phase: (state.phase ?? 'planning') as Phase,
@@ -182,6 +196,7 @@ export function buildSnapshot(state: any, sessionId: string): RoomSnapshot {
     chat,
     animals,
     residents,
+    strollers,
     sessionId,
     me: players.find((p) => p.id === sessionId) ?? null,
   };
@@ -211,7 +226,7 @@ export class RoomConnection {
       this.setStatus('closed');
       clearSavedToken();
     });
-    for (const type of ['private_state', 'action_result', 'morning', 'invite', 'joint_result', 'nudge_result', 'nudged', 'animal_event', 'animal_result', 'resident_event', 'resident_result', 'emote', 'emote_result', 'group_quest_done'] as const) {
+    for (const type of ['private_state', 'action_result', 'morning', 'invite', 'joint_result', 'nudge_result', 'nudged', 'animal_event', 'animal_result', 'resident_event', 'resident_result', 'emote', 'emote_result', 'group_quest_done', 'stroller_bump'] as const) {
       room.onMessage(type, (payload: any) => {
         if (type === 'private_state') {
           this.priv = payload;

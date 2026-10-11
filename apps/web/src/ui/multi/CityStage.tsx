@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { locationOf } from '@24h/domain';
-import { ANIMAL_REACH, EMOTE_REACH, RESIDENTS, RESIDENT_REACH, TARGETED_EMOTES, animForAction, type AnimalOp, type EmoteKind, type ResidentOp } from '@24h/protocol';
+import { ANIMAL_REACH, EMOTE_REACH, RESIDENTS, RESIDENT_REACH, STROLLERS, TARGETED_EMOTES, animForAction, type AnimalOp, type EmoteKind, type ResidentOp } from '@24h/protocol';
 import type { RoomConnection, RoomSnapshot } from '../../net/room';
 import { audioAdapter } from '../../adapters/audioAdapter';
 import { avatarUrl, type AvatarId } from '../../lib/avatars';
@@ -8,6 +8,8 @@ import { CityRenderer } from '../../world/CityRenderer';
 import type { MascotStats } from '../../world/mascot';
 import { useMascotTalk } from './useMascot';
 import { EMOTE_EMOJI } from '../../world/animMap';
+
+const SWEAR_KEY = '24h_stroller_swear_v1';
 
 const EMOTE_LABEL: Record<EmoteKind, string> = { wave: 'Vẫy', highfive: 'Đập tay', hug: 'Ôm', dance: 'Nhảy', cheer: 'Hò reo' };
 const EMOTE_VERB: Record<EmoteKind, string> = { wave: 'vẫy tay chào', highfive: 'đập tay với', hug: 'ôm', dance: 'nhảy cùng', cheer: 'hò reo cùng' };
@@ -41,6 +43,26 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
   const placedRef = useRef(false);
   const visitRef = useRef(onVisitLocation);
   visitRef.current = onVisitLocation;
+
+  // Thú đi bằng hai chân chửi tục khi bị đụng; người chơi tắt được (lưu theo trình duyệt)
+  const [swear, setSwear] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(SWEAR_KEY) !== 'off';
+    } catch {
+      return true;
+    }
+  });
+  const swearRef = useRef(swear);
+  swearRef.current = swear;
+  const toggleSwear = () =>
+    setSwear((v) => {
+      try {
+        window.localStorage.setItem(SWEAR_KEY, v ? 'off' : 'on');
+      } catch {
+        // không lưu được thì chỉ áp dụng cho phiên này
+      }
+      return !v;
+    });
 
   // Dấu nhiệm vụ trên toà nhà (áp dụng khi cảnh đã dựng xong; đổi tiến độ thì cập nhật)
   useEffect(() => {
@@ -209,6 +231,12 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
       const def = RESIDENTS.find((r) => r.id === m.residentId);
       pushFeed(`${def?.emoji ?? '🧑'} ${m.byName} ${RESIDENT_VERB[m.op]} ${m.residentName}`);
     });
+    const offBump = conn.on('stroller_bump', (m) => {
+      const swear = swearRef.current;
+      rendererRef.current?.strollerReact(m.strollerId, swear ? m.line : m.cleanLine, m.byId);
+      const def = STROLLERS.find((s) => s.id === m.strollerId);
+      pushFeed(`${def?.emoji ?? '🐾'} ${m.strollerName} ${swear ? 'chửi' : 'mắng'} ${m.byName}`);
+    });
     const offResidentResult = conn.on('resident_result', (m) => {
       if (!m.ok && m.reason) pushFeed(`⚠️ ${m.reason}`);
       else if (m.gained) pushFeed(`✨ ${m.gained}`);
@@ -226,6 +254,7 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
     return () => {
       cancelled = true;
       offResident();
+      offBump();
       offResidentResult();
       offEmote();
       offEmoteResult();
@@ -257,6 +286,12 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
       snapshot.residents.flatMap((rv) => {
         const def = RESIDENTS.find((d) => d.id === rv.id);
         return def ? [{ id: rv.id, name: rv.name || def.name, avatar: def.avatar, emoji: def.emoji, x: rv.x, z: rv.z, state: rv.state }] : [];
+      })
+    );
+    r.syncStrollers(
+      snapshot.strollers.flatMap((sv) => {
+        const def = STROLLERS.find((d) => d.id === sv.id);
+        return def ? [{ id: sv.id, name: sv.name || def.name, kind: def.kind, emoji: def.emoji, x: sv.x, z: sv.z, state: sv.state, speed: def.speed }] : [];
       })
     );
     // Giờ trong ngày: 07:00 + số giờ đã dùng của chính mình
@@ -386,6 +421,17 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
       {/* Biểu cảm: dock kính ở góc phải dưới */}
       <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 flex flex-wrap justify-end items-center gap-1 max-w-[80%] px-1.5 py-1 rounded-2xl hud-glass" data-testid="emote-bar">
         {selected && <span className="chip !bg-amber-300/20 !border-amber-300/40 !text-amber-100">→ {selected.name}</span>}
+        <button
+          type="button"
+          onClick={toggleSwear}
+          aria-pressed={swear}
+          data-testid="swear-toggle"
+          title={swear ? 'Thú chửi tục khi bị đụng: đang bật (bấm để tắt)' : 'Thú chỉ mắng lịch sự: đang tắt chửi tục (bấm để bật)'}
+          className="btn btn-soft h-8 px-2 text-xs !rounded-xl hover:!bg-amber-300/25"
+        >
+          <span className="text-base leading-none">{swear ? '🤬' : '😇'}</span>
+          <span className="hidden md:inline">{swear ? 'Chửi tục' : 'Lịch sự'}</span>
+        </button>
         {(['wave', 'highfive', 'hug', 'dance', 'cheer'] as const).map((k) => (
           <button key={k} type="button" onClick={() => doEmote(k)} title={EMOTE_LABEL[k]} className="btn btn-soft h-8 px-2 text-xs !rounded-xl hover:!bg-amber-300/25">
             <span className="text-base leading-none">{EMOTE_EMOJI[k]}</span>
