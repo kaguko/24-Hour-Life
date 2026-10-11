@@ -5,7 +5,20 @@
  */
 import { ActionPrimitive } from './types.js';
 
-export type LocationId = 'home' | 'office' | 'school' | 'cafe' | 'gym' | 'park' | 'market' | 'bar';
+export type LocationId =
+  | 'home'
+  | 'office'
+  | 'school'
+  | 'cafe'
+  | 'gym'
+  | 'park'
+  | 'market'
+  | 'bar'
+  | 'clinic'
+  | 'cinema'
+  | 'night_market'
+  | 'riverside'
+  | 'temple';
 
 export interface LocationDef {
   id: LocationId;
@@ -27,6 +40,11 @@ export const LOCATIONS: LocationDef[] = [
   { id: 'park', name: 'Công viên', emoji: '🌳', tagline: 'Chạy bộ, đi dạo, chó mèo', distHome: 0.25, open: [5, 22] },
   { id: 'market', name: 'Chợ & siêu thị', emoji: '🛒', tagline: 'Mua sắm và đồ ăn vặt', distHome: 0.25, open: [7, 22] },
   { id: 'bar', name: 'Quán nhậu', emoji: '🍻', tagline: 'Tiệc tùng về đêm', distHome: 0.5, open: [17, 3] },
+  { id: 'clinic', name: 'Phòng khám', emoji: '🏥', tagline: 'Khám sức khỏe và trò chuyện với chuyên gia', distHome: 0.75, open: [7, 19] },
+  { id: 'cinema', name: 'Rạp phim', emoji: '🎬', tagline: 'Phim chiếu rạp và bắp rang', distHome: 0.75, open: [10, 24] },
+  { id: 'night_market', name: 'Chợ đêm', emoji: '🏮', tagline: 'Ăn vặt, dạo phố và đông người', distHome: 0.75, open: [17, 2] },
+  { id: 'riverside', name: 'Bờ sông', emoji: '🌉', tagline: 'Hóng gió, ngắm hoàng hôn, câu cá', distHome: 1, open: [5, 23] },
+  { id: 'temple', name: 'Chùa', emoji: '🙏', tagline: 'Yên tĩnh để thiền và nghĩ lại mọi thứ', distHome: 1, open: [5, 20] },
 ];
 
 export const LOCATION_IDS = LOCATIONS.map((l) => l.id);
@@ -66,6 +84,18 @@ export const ACTION_LOCATION: Record<string, LocationId> = {
   fast_food: 'market',
   // Quán nhậu
   beer_party: 'bar',
+  // Phòng khám
+  health_checkup: 'clinic',
+  counseling: 'clinic',
+  // Rạp phim
+  cinema_movie: 'cinema',
+  // Chợ đêm
+  night_market_stroll: 'night_market',
+  // Bờ sông
+  river_sunset_walk: 'riverside',
+  fishing: 'riverside',
+  // Chùa
+  temple_meditation: 'temple',
   // Hành vi chung (xem jointActions.ts)
   eat_together: 'market',
   run_together: 'park',

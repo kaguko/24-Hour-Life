@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionPrimitive,
   LOCATIONS,
@@ -26,17 +26,54 @@ interface CityMapProps {
   onTravel: (to: LocationId) => void;
 }
 
-/** Vị trí (%) của từng địa điểm trên bản đồ */
+/**
+ * Vị trí (%) của từng địa điểm trên THẾ GIỚI bản đồ. Thế giới lớn hơn khung nhìn: người chơi kéo để xem,
+ * camera tự bám theo nhân vật, nút "Toàn cảnh" thu cả thế giới vừa khung.
+ */
 const POS: Record<LocationId, [number, number]> = {
-  home: [52, 52],
-  school: [14, 22],
-  cafe: [38, 14],
-  office: [84, 20],
-  park: [14, 60],
-  gym: [32, 86],
-  market: [68, 84],
-  bar: [88, 58],
+  home: [50, 50],
+  cafe: [44, 26],
+  office: [70, 16],
+  clinic: [86, 30],
+  school: [20, 30],
+  temple: [6, 46],
+  park: [26, 58],
+  market: [38, 74],
+  cinema: [84, 52],
+  bar: [93, 66],
+  night_market: [72, 78],
+  gym: [14, 82],
+  riverside: [52, 88],
 };
+
+/** Khu vực: vùng tô màu nhẹ + nhãn trên thế giới (hình chữ nhật theo %) */
+const DISTRICTS: Array<{ name: string; emoji: string; x: number; y: number; w: number; h: number; tint: string }> = [
+  { name: 'Khu học đường', emoji: '📚', x: 2, y: 10, w: 28, h: 42, tint: 'rgba(255,236,170,0.30)' },
+  { name: 'Khu trung tâm', emoji: '🏙️', x: 36, y: 4, w: 61, h: 32, tint: 'rgba(190,215,255,0.30)' },
+  { name: 'Khu dân cư', emoji: '🏘️', x: 16, y: 42, w: 46, h: 40, tint: 'rgba(255,255,255,0.20)' },
+  { name: 'Khu giải trí', emoji: '🎪', x: 65, y: 40, w: 33, h: 46, tint: 'rgba(255,190,215,0.28)' },
+];
+
+/** Kích thước thế giới theo khung nhìn: rộng hơn khoảng 1/3 (điện thoại thì gấp đôi), cao hơn khung nhìn để có chỗ kéo */
+const worldSize = (vw: number, vh: number): [number, number] => {
+  const w = Math.max(vw * 1.35, 820);
+  return [w, Math.max(w / 1.6, vh * 1.5)];
+};
+
+/** Cây trang trí rải đều nhưng tránh các địa điểm (cố định theo hạt giống nên không nhấp nháy mỗi lần vẽ) */
+const TREES: Array<[number, number, string]> = (() => {
+  let seed = 24;
+  const rnd = () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296);
+  const out: Array<[number, number, string]> = [];
+  const spots = Object.values(POS);
+  for (let i = 0; i < 160 && out.length < 46; i++) {
+    const x = 2 + rnd() * 96;
+    const y = 3 + rnd() * 90;
+    if (spots.some(([px, py]) => Math.hypot(px - x, (py - y) * 0.7) < 9)) continue;
+    out.push([x, y, rnd() < 0.7 ? '🌳' : '🌲']);
+  }
+  return out;
+})();
 
 /** Mức tối của bản đồ theo giờ (0 = ban ngày, ~0.6 = đêm khuya) */
 const nightFactor = (clock: number) => {
@@ -50,10 +87,76 @@ const nightFactor = (clock: number) => {
 
 export const CityMap: React.FC<CityMapProps> = ({ location, avatarId, actions, plans, tags = {}, hoursRemaining, onSelectAction, onTravel }) => {
   const [selected, setSelected] = useState<LocationId | null>(null);
+  const viewRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState<[number, number]>([0, 0]);
+  const [overview, setOverview] = useState(false);
+  /** Vị trí kéo tay (px); null = camera tự bám theo nhân vật */
+  const [pan, setPan] = useState<[number, number] | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
+  const suppressClick = useRef(false);
   const clock = clockFromHoursRemaining(hoursRemaining);
   const dark = nightFactor(clock);
   const here = locationDef(location);
   const [px, py] = POS[location];
+
+  useLayoutEffect(() => {
+    const el = viewRef.current;
+    if (!el) return;
+    const measure = () => setView([el.clientWidth, el.clientHeight]);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Đổi địa điểm thì camera lại bám theo nhân vật
+  useEffect(() => setPan(null), [location]);
+
+  const [vw, vh] = view;
+  const [worldW, worldH] = useMemo(() => worldSize(vw || 1, vh || 1), [vw, vh]);
+  const scale = overview ? Math.min(vw / worldW, vh / worldH) || 1 : 1;
+  const W = worldW * scale;
+  const H = worldH * scale;
+  const clampAxis = (v: number, world: number, viewport: number) => (world <= viewport ? (viewport - world) / 2 : Math.min(0, Math.max(viewport - world, v)));
+  const follow: [number, number] = [vw / 2 - (px / 100) * W, vh / 2 - (py / 100) * H];
+  const [rawX, rawY] = overview ? [0, 0] : pan ?? follow;
+  /** Toàn cảnh trên màn hình hẹp: biểu tượng nhỏ gọn, bỏ dòng thời gian để khỏi đè lên nhau */
+  const compact = overview && W < 700;
+  const tx = clampAxis(rawX, W, vw);
+  const ty = clampAxis(rawY, H, vh);
+
+  /** Đưa một địa điểm vào giữa khung nhìn (dùng khi focus bằng bàn phím) */
+  const centerOn = (id: LocationId) => {
+    if (overview) return;
+    setPan([clampAxis(vw / 2 - (POS[id][0] / 100) * W, W, vw), clampAxis(vh / 2 - (POS[id][1] / 100) * H, H, vh)]);
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (overview || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    dragRef.current = { x: e.clientX, y: e.clientY, px: tx, py: ty, moved: false };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.moved && Math.hypot(dx, dy) > 6) {
+      d.moved = true;
+      setDragging(true);
+      // Chỉ bắt chuột khi thực sự kéo: bắt ngay lúc nhấn sẽ làm click không tới được nút địa điểm
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    if (d.moved) setPan([clampAxis(d.px + dx, W, vw), clampAxis(d.py + dy, H, vh)]);
+  };
+  const endDrag = () => {
+    if (dragRef.current?.moved) {
+      suppressClick.current = true;
+      setTimeout(() => (suppressClick.current = false), 0);
+    }
+    dragRef.current = null;
+    setDragging(false);
+  };
 
   const placeActions = selected ? actions.filter((a) => locationOf(a.id) === selected) : [];
   const selectedDef: LocationDef | null = selected ? locationDef(selected) : null;
@@ -132,11 +235,43 @@ export const CityMap: React.FC<CityMapProps> = ({ location, avatarId, actions, p
   return (
     <div className="space-y-2">
       <div
-        className="relative w-full h-[22rem] sm:h-[26rem] lg:h-[32rem] rounded-3xl overflow-hidden border-2 border-white/60 shadow-xl ring-1 ring-black/10 touch-manipulation select-none"
+        ref={viewRef}
+        className={`relative w-full h-[22rem] sm:h-[26rem] lg:h-[32rem] rounded-3xl overflow-hidden border-2 border-white/60 shadow-xl ring-1 ring-black/10 select-none touch-none ${overview ? '' : dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
         style={{ background: 'linear-gradient(160deg, #bfe9a8 0%, #9ed8a0 40%, #8cc9b0 100%)' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onScroll={(e) => {
+          e.currentTarget.scrollLeft = 0;
+          e.currentTarget.scrollTop = 0;
+        }}
       >
-        {/* Đường phố từ nhà */}
+        {/* Thế giới: lớn hơn khung nhìn, dịch chuyển theo camera */}
+        <div
+          className="absolute left-0 top-0"
+          style={{ width: W, height: H, transform: `translate3d(${tx}px, ${ty}px, 0)`, transition: dragging ? 'none' : 'transform 700ms ease-in-out' }}
+        >
+        {/* Khu vực */}
+        {DISTRICTS.map((d) => (
+          <div key={d.name} className="absolute rounded-[2.5rem] border border-white/40 pointer-events-none" style={{ left: `${d.x}%`, top: `${d.y}%`, width: `${d.w}%`, height: `${d.h}%`, background: d.tint }}>
+            <span className="absolute left-4 top-2 px-2 py-0.5 rounded-md bg-white/55 text-stone-700 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide">
+              {d.emoji} {d.name}
+            </span>
+          </div>
+        ))}
+
+        {/* Cây trang trí */}
+        {TREES.map(([x, y, e], i) => (
+          <span key={i} className="absolute -translate-x-1/2 -translate-y-1/2 text-lg opacity-60 pointer-events-none" style={{ left: `${x}%`, top: `${y}%` }} aria-hidden>
+            {e}
+          </span>
+        ))}
+
+        {/* Đường phố từ nhà + dòng sông */}
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
+          <path d="M -2 80 C 16 70, 30 98, 52 96 S 88 80, 102 88" fill="none" stroke="#7ec8e8" strokeWidth="34" strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity="0.85" />
+          <path d="M -2 80 C 16 70, 30 98, 52 96 S 88 80, 102 88" fill="none" stroke="#b9e6f5" strokeWidth="10" strokeLinecap="round" strokeDasharray="2 8" vectorEffect="non-scaling-stroke" opacity="0.7" />
           {LOCATIONS.filter((l) => l.id !== 'home').map((l) => (
             <line key={l.id} x1={POS.home[0]} y1={POS.home[1]} x2={POS[l.id][0]} y2={POS[l.id][1]} stroke="#f8f5e8" strokeWidth="1.6" strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity="0.9" />
           ))}
@@ -144,9 +279,6 @@ export const CityMap: React.FC<CityMapProps> = ({ location, avatarId, actions, p
             <line key={`d${l.id}`} x1={POS.home[0]} y1={POS.home[1]} x2={POS[l.id][0]} y2={POS[l.id][1]} stroke="#8d8d7a" strokeWidth="0.5" strokeDasharray="1.2 1.8" vectorEffect="non-scaling-stroke" opacity="0.6" />
           ))}
         </svg>
-
-        {/* Ban đêm */}
-        <div className="absolute inset-0 pointer-events-none transition-opacity duration-700" style={{ background: 'linear-gradient(180deg,#0b0b2e,#1a1a4a)', opacity: dark }} />
 
         {/* Địa điểm */}
         {LOCATIONS.map((l) => {
@@ -158,23 +290,29 @@ export const CityMap: React.FC<CityMapProps> = ({ location, avatarId, actions, p
           return (
             <button
               key={l.id}
-              onClick={() => setSelected((cur) => (cur === l.id ? null : l.id))}
+              onFocus={(e) => e.currentTarget.matches(':focus-visible') && centerOn(l.id)}
+              onClick={() => {
+                if (suppressClick.current) return;
+                setSelected((cur) => (cur === l.id ? null : l.id));
+              }}
               className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 group"
               style={{ left: `${x}%`, top: `${y}%` }}
               aria-label={`${l.name}${isHere ? ', bạn đang ở đây' : !open ? ', đóng cửa' : `, đi mất ${trip} giờ`}`}
               aria-pressed={isSel}
             >
               <span
-                className={`flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl text-2xl sm:text-3xl shadow-lg transition-transform group-hover:scale-110 ${
+                className={`flex items-center justify-center rounded-2xl shadow-lg transition-transform group-hover:scale-110 ${compact ? 'w-8 h-8 text-lg' : 'w-12 h-12 sm:w-14 sm:h-14 text-2xl sm:text-3xl'} ${
                   isSel ? 'ring-4 ring-amber-300 scale-110' : isHere ? 'ring-4 ring-white' : 'ring-2 ring-white/70'
                 } ${open ? 'bg-white' : 'bg-stone-300 grayscale'}`}
               >
                 {l.emoji}
               </span>
-              <span className="px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px] sm:text-[11px] font-semibold whitespace-nowrap">{l.name}</span>
-              <span className="text-[10px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] whitespace-nowrap">
-                {isHere ? '📍 Đang ở đây' : !open ? '🔒 Đóng cửa' : `🚶 ${trip}h`}
-              </span>
+              <span className={`px-1.5 py-0.5 rounded-md bg-black/60 text-white font-semibold whitespace-nowrap ${compact ? 'text-[8px]' : 'text-[10px] sm:text-[11px]'}`}>{l.name}</span>
+              {!compact && (
+                <span className="text-[10px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] whitespace-nowrap">
+                  {isHere ? '📍 Đang ở đây' : !open ? '🔒 Đóng cửa' : `🚶 ${trip}h`}
+                </span>
+              )}
             </button>
           );
         })}
@@ -186,6 +324,27 @@ export const CityMap: React.FC<CityMapProps> = ({ location, avatarId, actions, p
           className="absolute w-10 h-10 sm:w-12 sm:h-12 -translate-x-1/2 pointer-events-none drop-shadow-lg transition-all duration-700 ease-in-out animate-bounce motion-reduce:animate-none"
           style={{ left: `${px}%`, top: `calc(${py}% - 4.2rem)`, animationDuration: '1.6s' }}
         />
+        </div>
+
+        {/* Ban đêm (phủ cả khung nhìn) */}
+        <div className="absolute inset-0 pointer-events-none transition-opacity duration-700" style={{ background: 'linear-gradient(180deg,#0b0b2e,#1a1a4a)', opacity: dark }} />
+
+        {/* Điều khiển camera */}
+        <div className="absolute bottom-3 left-3 flex gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => setOverview((v) => !v)}
+            className="px-2.5 py-1.5 rounded-lg bg-black/60 hover:bg-black/75 text-white text-[11px] font-semibold backdrop-blur-xs"
+            aria-pressed={overview}
+          >
+            {overview ? '🔎 Phóng to' : '🗺️ Toàn cảnh'}
+          </button>
+          {!overview && pan && (
+            <button type="button" onClick={() => setPan(null)} className="px-2.5 py-1.5 rounded-lg bg-black/60 hover:bg-black/75 text-white text-[11px] font-semibold backdrop-blur-xs">
+              📍 Về chỗ tôi
+            </button>
+          )}
+        </div>
 
         {/* Thanh trạng thái */}
         <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/55 text-white text-[11px] font-semibold backdrop-blur-xs pointer-events-none">
@@ -193,8 +352,8 @@ export const CityMap: React.FC<CityMapProps> = ({ location, avatarId, actions, p
         </span>
 
         {!selected && (
-          <span className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-black/55 text-white text-[11px] backdrop-blur-xs pointer-events-none whitespace-nowrap">
-            👆 Chạm một địa điểm · đi đường tốn giờ, mỗi nơi có giờ mở cửa
+          <span className="absolute bottom-3 right-3 hidden sm:block px-2.5 py-1 rounded-lg bg-black/55 text-white text-[11px] backdrop-blur-xs pointer-events-none whitespace-nowrap">
+            👆 Chạm một địa điểm · kéo để xem thêm · đi đường tốn giờ
           </span>
         )}
 

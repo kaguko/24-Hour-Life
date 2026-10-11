@@ -76,7 +76,9 @@ nav = {
     "walk": ["".join("0" if blocked[j][i] else "1" for i in range(W)) for j in range(W)],
     "doors": {k: {"x": round(v["x"], 2), "z": round(v["z"], 2), "facing": v["facing"]} for k, v in doors.items()},
     # LocationId của domain -> cửa
-    "locations": {k: k for k in ("home", "office", "school", "cafe", "gym", "park", "market", "bar")},
+    # Địa điểm mới của bản đồ chơi đơn chưa có toà nhà 3D: tạm dùng cửa toà nhà gần nhất (cinema -> arcade...)
+    "locations": {**{k: k for k in ("home", "office", "school", "cafe", "gym", "park", "market", "bar")},
+                  "clinic": "office", "cinema": "arcade", "night_market": "market", "riverside": "park", "temple": "park"},
     "spawn": {"x": round(spawn["x"], 2), "z": round(spawn["z"], 2)},
 }
 out = ROOT / "apps/web/public/models/city_nav.json"

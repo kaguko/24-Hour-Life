@@ -68,6 +68,12 @@ export const ACTION_SKILL: Record<string, { skill: SkillId; xp: number }> = {
   hobby_craft: { skill: 'craft', xp: 2 },
   sell_old_stuff: { skill: 'craft', xp: 1 },
   side_project: { skill: 'craft', xp: 5 },
+
+  temple_meditation: { skill: 'mind', xp: 2 },
+  fishing: { skill: 'mind', xp: 1 },
+  river_sunset_walk: { skill: 'body', xp: 1 },
+  counseling: { skill: 'heart', xp: 2 },
+  night_market_stroll: { skill: 'heart', xp: 1 },
 };
 
 export type SkillXp = Record<SkillId, number>;

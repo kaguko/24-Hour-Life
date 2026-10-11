@@ -34,13 +34,13 @@ interface EndingText {
 }
 
 const THEME_ACTIONS: Record<Exclude<Theme, 'rest' | 'dog' | 'balanced' | 'generic'>, string[]> = {
-  scroll: ['scroll_social', 'binge_gaming', 'caffeine_spike', 'drama_news', 'binge_series', 'late_night_snack', 'intrusion_phone', 'intrusion_game'],
-  shopper: ['impulse_shopping', 'fast_food', 'lottery_ticket', 'intrusion_snack', 'intrusion_sale'],
+  scroll: ['scroll_social', 'binge_gaming', 'caffeine_spike', 'drama_news', 'binge_series', 'late_night_snack', 'intrusion_phone', 'intrusion_game', 'cinema_movie'],
+  shopper: ['impulse_shopping', 'fast_food', 'lottery_ticket', 'intrusion_snack', 'intrusion_sale', 'night_market_stroll'],
   party: ['beer_party'],
   hustle: ['work_focused', 'work_overtime', 'part_time_shift', 'freelance_gig', 'sell_old_stuff', 'side_project'],
   scholar: ['study_deep', 'learn_skill', 'learn_soft_skills', 'online_course', 'read_book', 'deep_research'],
-  athlete: ['exercise', 'short_walk', 'meditate_breathe', 'cook_tyrosine', 'gym_session', 'morning_stretch', 'cold_shower', 'sunset_walk', 'marathon_training'],
-  social: ['deep_talk', 'call_family', 'pet_bonding', 'text_old_friend', 'cafe_friends', 'board_game_night', 'date_night', 'volunteer', 'public_speaking'],
+  athlete: ['exercise', 'short_walk', 'meditate_breathe', 'cook_tyrosine', 'gym_session', 'morning_stretch', 'cold_shower', 'sunset_walk', 'marathon_training', 'river_sunset_walk', 'fishing', 'temple_meditation', 'health_checkup'],
+  social: ['deep_talk', 'call_family', 'pet_bonding', 'text_old_friend', 'cafe_friends', 'board_game_night', 'date_night', 'volunteer', 'public_speaking', 'counseling'],
 };
 
 const ENDINGS: Record<string, EndingText> = {
