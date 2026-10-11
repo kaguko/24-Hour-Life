@@ -19,6 +19,8 @@ import { BIG_EVENT_ACTION_ID, BIG_EVENT_HOURS } from './bigEventAction.js';
 import { pickGoalIds } from './goals.js';
 import { pickTraitIds, traitIntrusionMult } from './traits.js';
 import { cravingLevel } from './craving.js';
+import { dueStoryEvent, isStoryEventId, pickStoryIds, resolveStoryChoice } from './story.js';
+import type { StoryLog } from './story.js';
 import type { DayGrade } from './dayRecap.js';
 import type { Rng } from './rng.js';
 
@@ -45,6 +47,9 @@ export interface PlayerState {
   intrusionsToday: number;
   /** Tính cách của ván này (xem traits.ts) */
   traitIds: string[];
+  /** Các mạch truyện của ván này và nhật ký lựa chọn (xem story.ts) */
+  storyIds: string[];
+  storyLog: StoryLog;
 }
 
 /** Cám dỗ đang xâm nhập: round tăng mỗi lần chiều theo, dừng lại càng khó */
@@ -56,7 +61,7 @@ export interface IntrusionState {
   note: string | null;
 }
 
-export function newPlayerState(goalIds: string[], bigEvent: BigEventState, traitIds: string[] = []): PlayerState {
+export function newPlayerState(goalIds: string[], bigEvent: BigEventState, traitIds: string[] = [], storyIds: string[] = []): PlayerState {
   return {
     day: 1,
     hoursUsed: 0,
@@ -72,14 +77,17 @@ export function newPlayerState(goalIds: string[], bigEvent: BigEventState, trait
     bigEvent,
     intrusionsToday: 0,
     traitIds,
+    storyIds,
+    storyLog: [],
   };
 }
 
-/** Ván mới: bốc mục tiêu, sự kiện lớn rồi tính cách (thứ tự gọi rng cố định) */
+/** Ván mới: bốc mục tiêu, sự kiện lớn, tính cách rồi mạch truyện (thứ tự gọi rng cố định) */
 export function createPlayerState(rng: Rng): PlayerState {
   const goalIds = pickGoalIds(rng);
   const bigEvent = pickBigEvent(rng);
-  return newPlayerState(goalIds, bigEvent, pickTraitIds(rng));
+  const traitIds = pickTraitIds(rng);
+  return newPlayerState(goalIds, bigEvent, traitIds, pickStoryIds(rng));
 }
 
 export const hoursLeftOf = (state: PlayerState): number => Math.max(0, DAY_HOURS - state.hoursUsed);
@@ -169,7 +177,9 @@ export function rollDayEvents(state: PlayerState, ctx: DayEventContext, rng: Rng
   let event: EventPrimitive | null = null;
 
   if (!ctx.hasActiveEvent && !ctx.blocked) {
-    if (ctx.traveled && rng() < 0.3) event = rollPlaceEvent('road', day, rng);
+    // Chương truyện đến hạn được ưu tiên hơn sự kiện ngẫu nhiên (không dùng rng)
+    event = dueStoryEvent(state.storyIds, state.storyLog, day, hoursUsed);
+    if (!event && ctx.traveled && rng() < 0.3) event = rollPlaceEvent('road', day, rng);
     if (!event && ctx.realActionId && ctx.endLocation !== 'home' && rng() < 0.2) event = rollPlaceEvent(ctx.endLocation, day, rng);
     if (!event && hoursUsed >= 8 && hoursUsed <= 18 && rng() < 0.35) event = rollDomainEvent(day, rng);
   }
@@ -247,6 +257,11 @@ export function advanceDay(state: PlayerState): { state: PlayerState; collapsed:
 
 /** Chọn một lựa chọn của sự kiện đang hiện */
 export function applyEventChoice(state: PlayerState, eventId: string, choiceId: string): PlayerState {
+  if (isStoryEventId(eventId)) {
+    const res = resolveStoryChoice(eventId, choiceId, state.stats, state.storyLog, state.day);
+    if (!res) return state;
+    return { ...state, stats: res.newStats, hoursUsed: Math.min(DAY_HOURS, state.hoursUsed + res.timeHours), storyLog: res.log };
+  }
   const res = resolveDomainChoice(eventId, choiceId, state.stats);
   return { ...state, stats: res.newStats, hoursUsed: Math.min(DAY_HOURS, state.hoursUsed + res.timeHours) };
 }

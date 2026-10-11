@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { EventPrimitive, EventChoicePrimitive, PlayerStatsPrimitive, ReactionKind, memeEvent, STAT_EMOJI } from '@24h/domain';
+import { EventPrimitive, EventChoicePrimitive, PlayerStatsPrimitive, ReactionKind, isStoryEventId, storylineById, memeEvent, STAT_EMOJI } from '@24h/domain';
 import { Sticker } from './Sticker';
 import { Clock, ArrowRight } from 'lucide-react';
 
@@ -34,8 +34,10 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onResolveChoice }
 
   // Sự kiện gắn với địa điểm / trên đường có nhãn riêng
   const place = event.places?.[0];
-  const kicker = place === 'road' ? 'Trên đường' : place ? 'Tại đây' : 'Bất ngờ!';
-  const meme = memeEvent(event.id, event.title);
+  const kicker = isStoryEventId(event.id) ? 'Cốt truyện' : place === 'road' ? 'Trên đường' : place ? 'Tại đây' : 'Bất ngờ!';
+  const meme = isStoryEventId(event.id)
+    ? { e: storylineById(event.id.split(':')[1])?.emoji ?? '📖', line: event.title }
+    : memeEvent(event.id, event.title);
   const chosen = event.choices.find((c) => c.id === selectedChoiceId) ?? null;
 
   return (

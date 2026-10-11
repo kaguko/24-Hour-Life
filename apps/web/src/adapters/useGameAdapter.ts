@@ -16,6 +16,8 @@ import {
   DayGrade,
   isGoalId,
   isTraitId,
+  isStoryId,
+  buildStoryEvent,
   GOAL_COUNT_PER_RUN,
   LocationId,
   isLocationId,
@@ -57,7 +59,7 @@ export function useGameAdapter() {
     gameRef.current = next;
     setGame(next);
   }, []);
-  const { day, hoursUsed, stats, sleepDebt, actionsTodayIds, history, dayStartStats, dayGrades, goalIds, location, finished, bigEvent, traitIds } = game;
+  const { day, hoursUsed, stats, sleepDebt, actionsTodayIds, history, dayStartStats, dayGrades, goalIds, location, finished, bigEvent, traitIds, storyIds, storyLog } = game;
 
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [avatarId, setAvatarId] = useState<AvatarId>(DEFAULT_AVATAR);
@@ -94,6 +96,11 @@ export function useGameAdapter() {
       if (savedGoals.length === GOAL_COUNT_PER_RUN) next.goalIds = savedGoals;
       // Ván cũ chưa có tính cách: giữ nguyên luật cũ thay vì bốc giữa chừng
       next.traitIds = (saved.traitIds ?? []).filter(isTraitId);
+      next.storyIds = (saved.storyIds ?? []).filter(isStoryId);
+      // Chỉ giữ các mục nhật ký còn dựng lại được (chống dữ liệu lưu hỏng)
+      next.storyLog = (saved.storyLog ?? []).filter(
+        (e) => e && typeof e.beat === 'string' && typeof e.day === 'number' && typeof e.choice === 'string' && isStoryId(e.beat.split(':')[0]) && !!buildStoryEvent(e.beat, [])
+      );
       if (isLocationId(saved.location)) next.location = saved.location;
       if (saved.bigEvent && isBigEventId(saved.bigEvent.id) && typeof saved.bigEvent.difficulty === 'number') {
         next.bigEvent = { id: saved.bigEvent.id, difficulty: saved.bigEvent.difficulty, result: saved.bigEvent.result as BigEventState['result'] };
@@ -119,10 +126,12 @@ export function useGameAdapter() {
       dayGrades,
       goalIds,
       traitIds,
+      storyIds,
+      storyLog,
       location,
       bigEvent,
     });
-  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds, traitIds, location, bigEvent]);
+  }, [day, hoursUsed, stats, sleepDebt, actionsTodayIds, soundEnabled, history, finished, avatarId, dayStartStats, dayGrades, goalIds, traitIds, storyIds, storyLog, location, bigEvent]);
 
   const hoursRemaining = hoursLeftOf(game);
 
@@ -373,6 +382,8 @@ export function useGameAdapter() {
     actionsTodayIds,
     goalIds,
     traitIds,
+    storyIds,
+    storyLog,
     finished,
     location,
     travelTo,

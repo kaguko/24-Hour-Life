@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { EndingPrimitive, JourneyPrimitive, PlayerStatsPrimitive, GoalResultPrimitive } from '@24h/domain';
+import { EndingPrimitive, JourneyPrimitive, PlayerStatsPrimitive, GoalResultPrimitive, StoryEpiloguePrimitive } from '@24h/domain';
 import { stationOf } from '../lib/roomStations';
 import type { EndingStageHandle } from './EndingStage';
 import { JOURNEY_SERIES, WEEKDAY_SHORT } from '../lib/journeyColors';
@@ -13,6 +13,7 @@ interface EndingModalProps {
   ending: EndingPrimitive;
   journey: JourneyPrimitive;
   goals?: GoalResultPrimitive[];
+  epilogues?: StoryEpiloguePrimitive[];
   bigEvent?: { emoji: string; title: string; tier: string; score: number };
   stats: PlayerStatsPrimitive;
   avatarId: AvatarId;
@@ -31,7 +32,7 @@ const OUTCOME_LABEL: Record<EndingPrimitive['outcome'], string> = {
   burnout: 'Gục ngã vì kiệt quệ',
 };
 
-export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals = [], bigEvent, stats, avatarId, onRestart, onShare, onCopy }) => {
+export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals = [], epilogues = [], bigEvent, stats, avatarId, onRestart, onShare, onCopy }) => {
   const pal = ENDING_PALETTES[ending.palette];
   const [reflection, setReflection] = useState<'less' | 'same' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -225,6 +226,17 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals
                       {g.state === 'done' ? '✅' : '❌'} {g.emoji} {g.title}
                     </span>
                     <span className="text-stone-400 tabular-nums shrink-0">{g.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {epilogues.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-stone-500">Chuyện đời bạn</div>
+                {epilogues.map((e) => (
+                  <div key={e.id} className="text-[11px] bg-violet-50 border border-violet-200 rounded-lg px-2.5 py-1.5">
+                    <div className="font-semibold text-violet-900">{e.emoji} {e.title}: {e.headline}</div>
+                    <p className="text-violet-800/90">{e.text}</p>
                   </div>
                 ))}
               </div>

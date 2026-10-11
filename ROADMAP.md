@@ -122,6 +122,13 @@ Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, kh
 - [x] Mô phỏng: `sim.ts <id> <runs> traits` bốc tính cách ngẫu nhiên mỗi ván. 1000 ván: Chaser 0%, Workaholic ~4%, Sleeper ~1%, Party ~91%, Balanced 100% sống: cân bằng giữ nguyên.
 - [ ] Giai đoạn 2: chuỗi cốt truyện nhiều ngày & mục tiêu dài hạn. Giai đoạn 3: nhà & nội thất (đồ tạo bằng TRELLIS.2 → Blender → GLB).
 
+### ✅ CHIỀU SÂU GIAI ĐOẠN 2: MẠCH TRUYỆN NHIỀU NGÀY (ĐÃ HOÀN THÀNH)
+- [x] **`domain/story.ts`**: 4 mạch × 3 chương (Người bạn cũ, Dự án riêng, Cơ thể lên tiếng, Chủ trọ), mỗi ván bốc 2 mạch (`pickStoryIds`). Chương sau đổi nội dung và lựa chọn theo nhật ký `PlayerState.storyLog`; chương 3 rẽ nhánh thành 3 kết cục/mạch, mỗi kết cục có phần kết riêng. Chương xuất hiện như một `EventPrimitive` có id `story:<beatId>`.
+- [x] Lịch: tối đa 1 chương/ngày, chỉ khi đã làm ≥3h trong ngày, ưu tiên hơn sự kiện ngẫu nhiên (`rollDayEvents` → `dueStoryEvent`, không dùng rng). Chương `minDay` 2/4/6 nên đủ 3 chương trong 7 ngày kể cả khi bị lệch ngày.
+- [x] Giao diện: `StoryPanel` (tiến độ chương), nhãn "Cốt truyện" + emoji mạch trên `EventModal`, mục "Chuyện đời bạn" (phần kết các mạch) ở `EndingModal`.
+- [x] Test duyệt toàn bộ đường đi của từng mạch (mọi chương dựng được, mọi kết cục tới được và có phần kết) + chạy trọn 7 ngày với lựa chọn ngẫu nhiên. Ván lưu cũ không có `storyIds` thì không có truyện.
+- [ ] Chưa làm: mạch truyện đổi tiền phòng thật (hiện chỉ là chi một lần), cần Giai đoạn 3 (nhà); kết cục chính chưa phân nhánh theo truyện.
+
 ### ✅ SỬA LỖI: Sụp dopamine chỉ do dopamine NHANH
 Trước đây luật qua đêm coi `dopamine ≥ 75` từ **bất kỳ nguồn nào** là "sụp dopamine nhanh", nên chơi toàn hành vi lành mạnh vẫn bị phạt oan và HUD báo "Nguy cơ sụp đổ". Nay `domain/dopamine.ts` (`summarizeFastDopamine`) chỉ tính dopamine thu được từ hành vi **nhanh** trong ngày (≥ 45 điểm hoặc ≥ 3.5 giờ); HUD và phòng 3D dùng cùng hàm này. Đã kiểm tra 6 kịch bản (kể cả ảnh chụp lỗi gốc) + trình duyệt; số liệu mô phỏng 5 chiến lược không đổi.
 

@@ -12,6 +12,7 @@ export * from './availability.js';
 export * from './progression.js';
 export * from './traits.js';
 export * from './craving.js';
+export * from './story.js';
 export * from './goals.js';
 export * from './map.js';
 export * from './planner.js';

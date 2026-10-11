@@ -15,11 +15,14 @@ import {
   habitTag,
   evaluateGoals,
   cravingActionIds,
+  storyProgress,
+  storyEpilogues,
   DOMAIN_ACTIONS,
 } from '@24h/domain';
 import { SkillsPanel } from './ui/SkillsPanel';
 import { GoalsPanel } from './ui/GoalsPanel';
 import { TraitsPanel } from './ui/TraitsPanel';
+import { StoryPanel } from './ui/StoryPanel';
 import { CityMap } from './ui/CityMap';
 import { FeedPanel } from './ui/FeedPanel';
 import { IntrusionModal } from './ui/IntrusionModal';
@@ -82,6 +85,8 @@ export default function App() {
     history,
     goalIds,
     traitIds,
+    storyIds,
+    storyLog,
     finished,
     location,
     travelTo,
@@ -154,6 +159,9 @@ export default function App() {
     () => cravingActionIds(history, actionsToday.map((a) => a.id)).map((id) => DOMAIN_ACTIONS.find((a) => a.id === id)?.title.split('(')[0].trim() ?? id),
     [history, actionsToday]
   );
+
+  const storyProgressList = useMemo(() => storyProgress(storyIds, storyLog), [storyIds, storyLog]);
+  const epilogues = useMemo(() => storyEpilogues(storyIds, storyLog), [storyIds, storyLog]);
 
   const doneGoalsRef = useRef<Set<string> | null>(null);
   const goalKeyRef = useRef('');
@@ -317,6 +325,8 @@ export default function App() {
 
                 <TraitsPanel traitIds={traitIds} cravings={cravings} />
 
+                <StoryPanel stories={storyProgressList} day={day} />
+
                 <GoalsPanel goals={goals} />
 
                 {/* Visual 24h Time Track */}
@@ -448,6 +458,7 @@ export default function App() {
           ending={ending}
           journey={journey}
           goals={goals}
+          epilogues={epilogues}
           bigEvent={
             bigEvent.result
               ? { emoji: bigEventDef(bigEvent.id).emoji, title: bigEventDef(bigEvent.id).title, tier: bigEvent.result.tier, score: bigEvent.result.score }

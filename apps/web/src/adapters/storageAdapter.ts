@@ -26,6 +26,9 @@ export interface SerializedGameState {
   goalIds?: string[];
   /** Tính cách của ván này (ván cũ không có) */
   traitIds?: string[];
+  /** Mạch truyện của ván và nhật ký lựa chọn (ván cũ không có) */
+  storyIds?: string[];
+  storyLog?: Array<{ beat: string; day: number; choice: string }>;
   /** Địa điểm hiện tại của nhân vật */
   location?: string;
   /** Sự kiện lớn của tuần: loại, độ khó ẩn, kết quả (nếu đã diễn ra) */
