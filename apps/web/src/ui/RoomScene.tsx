@@ -262,7 +262,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
     // Đồ nội thất Kenney Furniture Kit: gốc ở góc mô hình, nên căn giữa và thu nhỏ cho hợp nhân vật
     const FURNITURE_SCALE = 0.75;
     const addFurniture = async (name: string, x: number, z: number, rotY: number, station?: StationId, y = 0, scale = FURNITURE_SCALE) => {
-      const inner = await getModel(`/models/furniture/${name}.glb`);
+      const inner = await getModel(`/models/${name.includes('/') ? name : `furniture/${name}`}.glb`);
       const box = new THREE.Box3().setFromObject(inner);
       const c = box.getCenter(new THREE.Vector3());
       inner.position.set(-c.x, -box.min.y, -c.z);
@@ -667,7 +667,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
           addProp('basketball-game', -2.0, 1.2, Math.PI / 2, 'basketball'),
           // Góc sinh hoạt
           addFurniture('rugRound', 0, 0.35, 0),
-          addFurniture('bedSingle', 1.2, 1.55, Math.PI / 2, 'bed'),
+          addFurniture('generated/bedTrellis', 1.2, 1.55, Math.PI / 2, 'bed'),
           addFurniture('desk', -0.6, 1.55, 0, 'desk'),
           addFurniture('computerScreen', -0.6, 1.5, 0, 'desk', 0.285).then((m) => { screenMats = m; }),
           addFurniture('chairDesk', -0.6, 1.88, Math.PI, 'desk'),

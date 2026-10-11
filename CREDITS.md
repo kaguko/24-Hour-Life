@@ -21,6 +21,8 @@
   `public/models/room_home.glb` is assembled in Blender from the Kenney Furniture Kit models above plus original walls/window.
   Character models and animations in the city are the Kenney Mini Characters (no new character art was made).
 
+- **AI-generated 3D (TRELLIS.2)**: `public/models/generated/bedTrellis.glb` was generated from a Kenney Furniture Kit bed image with [TRELLIS.2](https://github.com/microsoft/TRELLIS.2) (Microsoft, MIT License), then decimated to 4k faces and re-exported in Blender.
+
 - **Draco decoder** (`public/draco/`): Google Draco, Apache License 2.0, copied from three.js (`examples/jsm/libs/draco`). Used to decode compressed GLB files.
 
 - **Reaction stickers** (`public/stickers/`): original blob-mascot illustrations generated with Canva AI, background removed and white outline added locally. 5 so far (cooked, lockedin, rizz, win, loss).
