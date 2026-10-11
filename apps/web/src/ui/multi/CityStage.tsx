@@ -212,6 +212,11 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
     const offResidentResult = conn.on('resident_result', (m) => {
       if (!m.ok && m.reason) pushFeed(`⚠️ ${m.reason}`);
       else if (m.gained) pushFeed(`✨ ${m.gained}`);
+      if (m.ok && m.quest) {
+        const icon = m.quest.kind === 'complete' ? '🎁' : m.quest.kind === 'busy' ? '⏳' : '📜';
+        pushFeed(`${icon} ${m.quest.text}`);
+        if (m.quest.kind === 'complete' && m.quest.reward) pushFeed(`✨ ${m.quest.reward}`);
+      }
       if (m.ok && typeof m.level === 'number') {
         const lv = m.level;
         setLevels((l) => ({ ...l, [m.residentId]: lv }));

@@ -11,10 +11,17 @@ import {
   JOINT_ACTIONS,
   JOINT_ACTION_IDS,
   hoursLeftOf,
+  npcQuestForGiver,
+  npcQuestOf,
+  npcQuestView,
+  objectiveMet,
   offerPressure,
   planAction,
+  rewardText,
   type DomainStrategy,
   type NightResultPrimitive,
+  type NpcQuestState,
+  type NpcQuestViewPrimitive,
   type PlayerState,
   type Rng,
 } from '@24h/domain';
@@ -50,6 +57,9 @@ export interface PlayerSession {
   playPairs: Set<string>;
   /** Số lượt thưởng từ cư dân thành phố trong ngày `playDay` */
   residentCount: number;
+  /** Việc cư dân nhờ đang làm (mỗi lần một việc) và những việc đã trả xong trong ván này */
+  npcQuest: NpcQuestState | null;
+  npcQuestsDone: string[];
 }
 
 /** Chơi với con vật / bạn bè chỉ nhích chỉ số nhẹ, tối đa chừng này lần mỗi ngày */
@@ -103,6 +113,8 @@ export class LifeEngine {
       playCount: 0,
       playPairs: new Set(),
       residentCount: 0,
+      npcQuest: null,
+      npcQuestsDone: [],
     };
     this.players.set(id, session);
     return session;
@@ -296,6 +308,51 @@ export class LifeEngine {
     const names: Record<string, string> = { mental: 'Tinh thần', social: 'Kết nối', willpower: 'Ý chí', money: 'Tiền' };
     const part = ([k, v]: [string, number | undefined]) => `${names[k]} ${v! > 0 ? '+' : ''}${v}${k === 'money' ? 'k' : ''}`;
     return { ok: true, gained: entries.map(part).join(', ') };
+  }
+
+  /** Chốt tiến độ việc nhờ đang làm (mục tiêu ghé nơi phải chốt ngay khi thấy, vì người chơi có thể rời đi sau đó) */
+  refreshNpcQuest(id: string): void {
+    const p = this.players.get(id);
+    const q = p?.npcQuest;
+    if (!p || !q || q.met) return;
+    const def = npcQuestOf(q.id);
+    if (!def) return;
+    const location = p.state.location;
+    if (def.objective.kind === 'visit' && q.waitLeave && location !== def.objective.place) q.waitLeave = false;
+    const allActionIds = [...p.state.history.flat(), ...p.state.actionsTodayIds];
+    if (objectiveMet(def, q, { location, allActionIds })) q.met = true;
+  }
+
+  npcQuestViewOf(id: string): NpcQuestViewPrimitive | null {
+    const q = this.players.get(id)?.npcQuest;
+    return q ? npcQuestView(q) : null;
+  }
+
+  /**
+   * Nói chuyện với một cư dân: giao việc nếu chưa có việc nào, nhắc nếu chưa làm xong, nhận thưởng nếu đã xong.
+   * Trả null khi cư dân này không có việc nào cho bạn lúc này (đã làm xong việc của họ).
+   */
+  questTalk(id: string, giverId: string): { kind: 'offer' | 'reminder' | 'complete' | 'busy'; text: string; reward?: string; completed?: boolean } | null {
+    const p = this.players.get(id);
+    const def = npcQuestForGiver(giverId);
+    if (!p || p.state.finished || !def) return null;
+    this.refreshNpcQuest(id);
+    const active = p.npcQuest;
+    if (active && active.id === def.id) {
+      if (!active.met) return { kind: 'reminder', text: def.reminder };
+      p.state = { ...p.state, stats: applyStatDeltas(p.state.stats, def.reward) };
+      p.npcQuest = null;
+      p.npcQuestsDone = [...p.npcQuestsDone, def.id];
+      return { kind: 'complete', text: def.thanks, reward: rewardText(def.reward), completed: true };
+    }
+    if (active) {
+      const other = npcQuestOf(active.id);
+      return { kind: 'busy', text: `${def.giverName}: “Bạn đang giúp ${other?.giverName ?? 'người khác'} rồi. Xong việc đó thì quay lại nhé.”` };
+    }
+    if (p.npcQuestsDone.includes(def.id)) return null;
+    const waitLeave = def.objective.kind === 'visit' && p.state.location === def.objective.place;
+    p.npcQuest = { id: def.id, acceptedCount: p.state.history.flat().length + p.state.actionsTodayIds.length, met: false, waitLeave };
+    return { kind: 'offer', text: def.ask };
   }
 
   /** Hôm nay `supporterId` đã động viên `victimId` chưa (tính là "ở bên cạnh" khi bạn gặp chuyện) */

@@ -1,4 +1,4 @@
-import type { GoalResultPrimitive, NightResultPrimitive } from '@24h/domain';
+import type { GoalResultPrimitive, NightResultPrimitive, NpcQuestViewPrimitive } from '@24h/domain';
 
 /** Hợp đồng giữa client và server: tên message, giới hạn, dạng payload. */
 
@@ -162,6 +162,8 @@ export interface PrivateStateMessage {
   dayGrades: string[];
   /** Nhiệm vụ (mục tiêu) của người này và tiến độ hiện tại, do server tính bằng domain */
   goals: GoalResultPrimitive[];
+  /** Việc cư dân nhờ đang làm (null = không có việc nào) */
+  npcQuest: NpcQuestViewPrimitive | null;
 }
 
 /** Con vật ngoài phố (mô hình dựng bằng Blender: public/models/animals/<kind>.glb) */
@@ -265,6 +267,8 @@ export interface ResidentResultMessage {
   reason?: string;
   gained?: string | null;
   level?: number;
+  /** Khi nói chuyện: cư dân giao việc, nhắc việc, nhận việc đã xong, hoặc báo bạn đang bận việc khác */
+  quest?: { kind: 'offer' | 'reminder' | 'complete' | 'busy'; text: string; reward?: string };
 }
 
 /** Con vật phản ứng với một người (gửi cho cả phòng để mọi người cùng thấy) */

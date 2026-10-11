@@ -253,10 +253,13 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       if (!granted.ok) return reply({ ok: false, residentId, reason: granted.reason });
       this.lastResidentAt.set(client.sessionId, now);
       res.commit(granted.gained !== null);
+      // Nói chuyện còn là lúc nhận / nhắc / trả việc nhờ (độc lập với lượt thưởng trò chuyện trong ngày)
+      const quest = m.op === 'talk' ? this.engine.questTalk(client.sessionId, residentId) : null;
+      if (quest?.completed) res.level = this.residents.addBond(client.sessionId, residentId, 3);
       this.syncSession(client.sessionId);
       this.syncResidents();
       this.pushPrivate(client.sessionId);
-      reply({ ok: true, residentId, gained: granted.gained, level: res.level });
+      reply({ ok: true, residentId, gained: granted.gained, level: res.level, ...(quest ? { quest: { kind: quest.kind, text: quest.text, reward: quest.reward } } : {}) });
       const def = this.residents.residents.get(residentId)!.def;
       const event: ResidentEventMessage = { residentId, residentName: def.name, byId: session.id, byName: session.name, op: m.op, line: res.line, level: res.level };
       this.broadcast('resident_event', event);
@@ -563,7 +566,9 @@ export class LifeRoom extends Room<{ state: LifeState }> {
     const client = this.clients.getById(id);
     const session = this.engine.players.get(id);
     if (!client || !session) return;
+    this.engine.refreshNpcQuest(id);
     const message: PrivateStateMessage = {
+      npcQuest: this.engine.npcQuestViewOf(id),
       actionsToday: [...session.state.actionsTodayIds],
       locks: this.engine.locksFor(id),
       sleepDebt: session.state.sleepDebt,

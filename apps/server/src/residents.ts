@@ -150,6 +150,14 @@ export class ResidentBoard {
     }
   }
 
+  /** Cộng độ thân quen (thưởng khi trả việc nhờ) */
+  addBond(sessionId: string, residentId: string, points: number): number {
+    const key = `${sessionId}|${residentId}`;
+    const next = (this.bond.get(key) ?? 0) + points;
+    this.bond.set(key, next);
+    return levelOf(next);
+  }
+
   levelFor(sessionId: string, residentId: string): number {
     return levelOf(this.bond.get(`${sessionId}|${residentId}`) ?? 0);
   }

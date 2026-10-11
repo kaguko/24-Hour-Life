@@ -50,10 +50,14 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
 
   const me = snap.me;
   const goals = priv?.goals ?? [];
+  const npcQuest = priv?.npcQuest ?? null;
   // Dấu 🎯 trên toà nhà: chỉ nhiệm vụ còn đang làm dở và có nơi gợi ý
   const questMarkers = useMemo(
-    () => goals.filter((g) => g.state === 'progress').flatMap((g) => g.places.map((p) => ({ locationId: p, text: `${g.emoji} ${g.label}` }))),
-    [JSON.stringify(goals.map((g) => [g.id, g.state, g.label]))]
+    () => [
+      ...goals.filter((g) => g.state === 'progress').flatMap((g) => g.places.map((p) => ({ locationId: p, text: `${g.emoji} ${g.label}` }))),
+      ...(npcQuest ? npcQuest.places.map((p) => ({ locationId: p, text: `${npcQuest.giverEmoji} ${npcQuest.title}` })) : []),
+    ],
+    [JSON.stringify(goals.map((g) => [g.id, g.state, g.label])), npcQuest?.id, npcQuest?.status]
   );
   const others = snap.players.filter((p) => p.id !== snap.sessionId);
   const nameOf = (id: string) => snap.players.find((p) => p.id === id)?.name ?? 'Ai đó';
@@ -194,7 +198,7 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
                 left: (
                   <>
                     <StatRail stats={me.stats} />
-                    <QuestRail goals={goals} />
+                    <QuestRail goals={goals} npcQuest={npcQuest} />
                   </>
                 ),
               }}
@@ -202,7 +206,7 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
           </Suspense>
           <div className="sm:hidden glass p-2.5">
             <StatStrip stats={me.stats} />
-            <QuestStrip goals={goals} />
+            <QuestStrip goals={goals} npcQuest={npcQuest} />
           </div>
         </>
       )}

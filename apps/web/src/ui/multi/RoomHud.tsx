@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { InviteMessage } from '@24h/protocol';
-import { jointActionDef, locationDef, type GoalResultPrimitive, type LocationId } from '@24h/domain';
+import { jointActionDef, locationDef, type GoalResultPrimitive, type LocationId, type NpcQuestViewPrimitive } from '@24h/domain';
 import type { PlayerView, RoomSnapshot } from '../../net/room';
 import type { Toast } from './hooks';
 
@@ -101,9 +101,9 @@ const placeHint = (g: GoalResultPrimitive) =>
  * Nhiệm vụ của mình ngay trên cảnh 3D (cột trái, máy tính): thu gọn được. Nơi cần đến cũng được đánh dấu 🎯 trên toà nhà,
  * nên không phải cuộn xuống đâu cả để biết đi đâu.
  */
-export const QuestRail: React.FC<{ goals: GoalResultPrimitive[] }> = ({ goals }) => {
+export const QuestRail: React.FC<{ goals: GoalResultPrimitive[]; npcQuest?: NpcQuestViewPrimitive | null }> = ({ goals, npcQuest = null }) => {
   const [open, setOpen] = useState(true);
-  if (goals.length === 0) return null;
+  if (goals.length === 0 && !npcQuest) return null;
   const done = goals.filter((g) => g.state === 'done').length;
   return (
     <div className="hud-glass rounded-2xl w-[10.5rem] mt-2 anim-rise" data-testid="quest-rail">
@@ -113,11 +113,12 @@ export const QuestRail: React.FC<{ goals: GoalResultPrimitive[] }> = ({ goals })
         aria-expanded={open}
         className="w-full flex items-center justify-between gap-1 px-2.5 py-1.5 text-[11px] font-bold text-white"
       >
-        <span>🎯 Nhiệm vụ {done}/{goals.length}</span>
+        <span>🎯 Nhiệm vụ {done}/{goals.length}{npcQuest ? ' · 1 việc nhờ' : ''}</span>
         <span aria-hidden className="text-[10px] opacity-70">{open ? '▾' : '▸'}</span>
       </button>
       {open && (
         <ul className="px-2.5 pb-2 space-y-2">
+          {npcQuest && <NpcQuestRow quest={npcQuest} />}
           {goals.map((g) => {
             const t = questTone(g);
             const hint = placeHint(g);
@@ -141,11 +142,37 @@ export const QuestRail: React.FC<{ goals: GoalResultPrimitive[] }> = ({ goals })
   );
 };
 
+/** Việc cư dân nhờ: nổi bật hơn mục tiêu tuần vì là việc làm được ngay hôm nay */
+const NpcQuestRow: React.FC<{ quest: NpcQuestViewPrimitive }> = ({ quest }) => {
+  const ready = quest.status === 'ready';
+  const hint = quest.places.length > 0 ? quest.places.map((p) => `${locationDef(p as LocationId).emoji} ${locationDef(p as LocationId).name}`).join(', ') : null;
+  return (
+    <li className={`rounded-lg px-1.5 py-1 border ${ready ? 'bg-emerald-400/15 border-emerald-300/40' : 'bg-amber-300/10 border-amber-200/30'}`} data-testid="npc-quest" title={`${quest.giverName} nhờ: ${quest.title}`}>
+      <div className="flex items-center gap-1 text-[11px] font-semibold text-white leading-tight">
+        <span aria-hidden>{ready ? '✅' : quest.giverEmoji}</span>
+        <span className="truncate">{quest.title}</span>
+      </div>
+      <div className="mt-0.5 text-[10px] text-[var(--ink-dim)] leading-tight">{quest.objective}</div>
+      {hint && <div className="text-[10px] text-amber-200/90 leading-tight">🎯 {hint}</div>}
+      <div className="text-[10px] text-emerald-200/90 leading-tight">🎁 {quest.reward}</div>
+    </li>
+  );
+};
+
 /** Dải nhiệm vụ gọn dưới cảnh (điện thoại) */
-export const QuestStrip: React.FC<{ goals: GoalResultPrimitive[] }> = ({ goals }) => {
-  if (goals.length === 0) return null;
+export const QuestStrip: React.FC<{ goals: GoalResultPrimitive[]; npcQuest?: NpcQuestViewPrimitive | null }> = ({ goals, npcQuest = null }) => {
+  if (goals.length === 0 && !npcQuest) return null;
   return (
     <div className="grid grid-cols-2 gap-1.5 mt-1.5" data-testid="quest-strip">
+      {npcQuest && (
+        <div className={`col-span-2 rounded-xl border px-2 py-1 ${npcQuest.status === 'ready' ? 'bg-emerald-400/15 border-emerald-300/40' : 'bg-amber-300/10 border-amber-200/30'}`} data-testid="npc-quest-strip">
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-white leading-tight">
+            <span aria-hidden>{npcQuest.status === 'ready' ? '✅' : npcQuest.giverEmoji}</span>
+            <span className="truncate">{npcQuest.title}</span>
+          </div>
+          <div className="text-[10px] text-[var(--ink-dim)] truncate">{npcQuest.objective}</div>
+        </div>
+      )}
       {goals.map((g) => {
         const t = questTone(g);
         return (

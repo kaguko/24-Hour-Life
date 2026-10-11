@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { ColyseusTestServer } from '@colyseus/testing';
-import { mulberry32 } from '@24h/domain';
+import { NPC_QUESTS, mulberry32 } from '@24h/domain';
 import { LifeEngine, MAX_RESIDENT_REWARDS_PER_DAY, RESIDENT_MONEY_FLOOR } from './engine.js';
 import { ResidentBoard } from './residents.js';
 import { RESIDENTS, RESIDENT_BUSY_MS, RESIDENT_LEVEL_AT, RESIDENT_REACH, ROOM_NAME, type ResidentEventMessage, type ResidentResultMessage } from './protocol.js';
@@ -233,4 +233,107 @@ test('phòng: đứng cạnh cư dân thì nói chuyện được, cả phòng n
   assert.equal(resA[3].ok, true);
   assert.equal(resA[3].gained, null);
   assert.equal(pa.mental, mentalAfter);
+});
+
+// ───────── Việc nhờ của cư dân (nhiệm vụ riêng, xem packages/domain/src/npcQuests.ts) ─────────
+
+test('việc nhờ: mọi cư dân có đúng một việc, người giao có thật', () => {
+  assert.deepEqual(NPC_QUESTS.map((q) => q.giverId).sort(), RESIDENTS.map((r) => r.id).sort());
+  for (const q of NPC_QUESTS) assert.equal(q.giverName, def(q.giverId).name, `${q.id}: tên người giao phải khớp cư dân`);
+});
+
+function questPlayer() {
+  const engine = new LifeEngine('quest-seed');
+  engine.addPlayer('p1', 'An', 0);
+  return { engine, p: engine.players.get('p1')! };
+}
+
+test('việc nhờ: nhận, nhắc, làm, trả việc; thưởng đúng, không giao lại việc đã trả', () => {
+  const { engine, p } = questPlayer();
+  assert.equal(engine.questTalk('p1', 'hung')!.kind, 'offer');
+  assert.equal(p.npcQuest?.id, 'q_hung_run');
+  assert.equal(engine.npcQuestViewOf('p1')?.status, 'active');
+  assert.equal(engine.questTalk('p1', 'hung')!.kind, 'reminder', 'chưa làm thì nhắc');
+
+  p.state = { ...p.state, actionsTodayIds: [...p.state.actionsTodayIds, 'exercise'] };
+  engine.refreshNpcQuest('p1');
+  assert.equal(engine.npcQuestViewOf('p1')?.status, 'ready');
+
+  const before = p.state.stats.willpower;
+  const done = engine.questTalk('p1', 'hung')!;
+  assert.equal(done.kind, 'complete');
+  assert.equal(done.completed, true);
+  assert.equal(p.state.stats.willpower, Math.min(100, before + 6), 'ý chí +6 (trần 100)');
+  assert.equal(p.npcQuest, null);
+  assert.deepEqual(p.npcQuestsDone, ['q_hung_run']);
+  assert.equal(engine.questTalk('p1', 'hung'), null, 'việc đã trả thì không giao lại');
+});
+
+test('việc nhờ: chỉ giữ một việc một lúc, cư dân khác báo bạn đang bận', () => {
+  const { engine, p } = questPlayer();
+  engine.questTalk('p1', 'hung');
+  const busy = engine.questTalk('p1', 'lan')!;
+  assert.equal(busy.kind, 'busy');
+  assert.ok(busy.text.includes('Anh Hùng'));
+  assert.equal(p.npcQuest?.id, 'q_hung_run', 'việc cũ vẫn giữ');
+  assert.equal(engine.questTalk('p1', 'khong-co'), null);
+});
+
+test('việc nhờ ghé nơi: chốt ngay khi tới nơi dù rời đi sau; nhận việc ngay tại nơi đó thì phải đi rồi quay lại', () => {
+  const first = questPlayer();
+  first.engine.questTalk('p1', 'ba-tu');
+  first.p.state = { ...first.p.state, location: 'market' };
+  first.engine.refreshNpcQuest('p1');
+  first.p.state = { ...first.p.state, location: 'home' };
+  first.engine.refreshNpcQuest('p1');
+  assert.equal(first.engine.npcQuestViewOf('p1')?.status, 'ready', 'đã chốt dù đã rời chợ');
+
+  const second = questPlayer();
+  second.p.state = { ...second.p.state, location: 'market' };
+  second.engine.questTalk('p1', 'ba-tu');
+  second.engine.refreshNpcQuest('p1');
+  assert.equal(second.engine.npcQuestViewOf('p1')?.status, 'active', 'đang ở chợ lúc nhận thì chưa tính');
+  second.p.state = { ...second.p.state, location: 'park' };
+  second.engine.refreshNpcQuest('p1');
+  second.p.state = { ...second.p.state, location: 'market' };
+  second.engine.refreshNpcQuest('p1');
+  assert.equal(second.engine.npcQuestViewOf('p1')?.status, 'ready');
+});
+
+test('việc nhờ: riêng từng người, ván đã kết thúc thì không nhận', () => {
+  const engine = new LifeEngine('quest-seed-2');
+  engine.addPlayer('a', 'An', 0);
+  engine.addPlayer('b', 'Binh', 0);
+  engine.questTalk('a', 'hung');
+  assert.equal(engine.players.get('b')!.npcQuest, null, 'người khác không bị ảnh hưởng');
+  assert.equal(engine.questTalk('b', 'hung')!.kind, 'offer');
+  const b = engine.players.get('b')!;
+  b.state = { ...b.state, finished: true };
+  assert.equal(engine.questTalk('b', 'lan'), null);
+});
+
+test('phòng: nói chuyện nhận việc nhờ, private_state mang npcQuest', { timeout: 20000 }, async () => {
+  const room = await colyseus.createRoom(ROOM_NAME);
+  const a = await colyseus.sdk.joinById(room.roomId, { name: 'An' });
+  await waitUntil(() => room.state.players.size === 1);
+  const states = inbox<any>(a, 'private_state');
+  const results = inbox<ResidentResultMessage>(a, 'resident_result');
+  await waitUntil(() => states.length >= 1);
+  assert.equal(states[0].npcQuest, null);
+
+  const pa = room.state.players.get(a.sessionId)!;
+  const spot = room.state.residents.get('ba-tu')!;
+  for (let i = 0; i < 40 && Math.hypot(pa.x - spot.x, pa.z - spot.z) > 2; i++) {
+    a.send('move', { x: spot.x + 1, z: spot.z });
+    await sleep(120);
+  }
+  a.send('resident', { residentId: 'ba-tu', op: 'talk' });
+  await waitUntil(() => results.length === 1);
+  assert.equal(results[0].ok, true);
+  assert.equal(results[0].quest?.kind, 'offer');
+  await waitUntil(() => states.some((s) => s.npcQuest?.id === 'q_batu_market'));
+  const last = states[states.length - 1];
+  assert.equal(last.npcQuest.status, 'active');
+  assert.equal(last.npcQuest.giverName, 'Bà Tư');
+  assert.ok(last.npcQuest.places.includes('market'));
 });
