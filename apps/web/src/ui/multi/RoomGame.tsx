@@ -51,13 +51,15 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
   const me = snap.me;
   const goals = priv?.goals ?? [];
   const npcQuest = priv?.npcQuest ?? null;
+  const groupQuest = priv?.groupQuest ?? null;
   // Dấu 🎯 trên toà nhà: chỉ nhiệm vụ còn đang làm dở và có nơi gợi ý
   const questMarkers = useMemo(
     () => [
       ...goals.filter((g) => g.state === 'progress').flatMap((g) => g.places.map((p) => ({ locationId: p, text: `${g.emoji} ${g.label}` }))),
       ...(npcQuest ? npcQuest.places.map((p) => ({ locationId: p, text: `${npcQuest.giverEmoji} ${npcQuest.title}` })) : []),
+      ...(groupQuest && !groupQuest.done ? groupQuest.places.map((p) => ({ locationId: p, text: `👥 ${groupQuest.label}` })) : []),
     ],
-    [JSON.stringify(goals.map((g) => [g.id, g.state, g.label])), npcQuest?.id, npcQuest?.status]
+    [JSON.stringify(goals.map((g) => [g.id, g.state, g.label])), npcQuest?.id, npcQuest?.status, groupQuest?.id, groupQuest?.label, groupQuest?.done]
   );
   const others = snap.players.filter((p) => p.id !== snap.sessionId);
   const nameOf = (id: string) => snap.players.find((p) => p.id === id)?.name ?? 'Ai đó';
@@ -65,6 +67,7 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
   // Message từ server -> thông báo / báo cáo / lời mời
   useEffect(() => {
     const offs = [
+      conn.on('group_quest_done', (m) => push(`${m.emoji} ${m.title} hoàn thành! ${m.line} (${m.reward})`, 'good')),
       conn.on('action_result', (m) => {
         if (!m.ok) {
           push(m.reason ?? 'Không làm được.', 'bad');
@@ -198,7 +201,7 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
                 left: (
                   <>
                     <StatRail stats={me.stats} />
-                    <QuestRail goals={goals} npcQuest={npcQuest} />
+                    <QuestRail goals={goals} npcQuest={npcQuest} groupQuest={groupQuest} />
                   </>
                 ),
               }}
@@ -206,7 +209,7 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
           </Suspense>
           <div className="sm:hidden glass p-2.5">
             <StatStrip stats={me.stats} />
-            <QuestStrip goals={goals} npcQuest={npcQuest} />
+            <QuestStrip goals={goals} npcQuest={npcQuest} groupQuest={groupQuest} />
           </div>
         </>
       )}

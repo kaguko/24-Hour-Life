@@ -15,6 +15,7 @@ import type {
   EmoteMessage,
   EmoteResultMessage,
   ClientMessages,
+  GroupQuestDoneMessage,
   InviteMessage,
   JointResultMessage,
   JoinOptions,
@@ -122,6 +123,7 @@ export interface ServerEvents {
   resident_result: ResidentResultMessage;
   emote: EmoteMessage;
   emote_result: EmoteResultMessage;
+  group_quest_done: GroupQuestDoneMessage;
 }
 
 type Listener = () => void;
@@ -209,7 +211,7 @@ export class RoomConnection {
       this.setStatus('closed');
       clearSavedToken();
     });
-    for (const type of ['private_state', 'action_result', 'morning', 'invite', 'joint_result', 'nudge_result', 'nudged', 'animal_event', 'animal_result', 'resident_event', 'resident_result', 'emote', 'emote_result'] as const) {
+    for (const type of ['private_state', 'action_result', 'morning', 'invite', 'joint_result', 'nudge_result', 'nudged', 'animal_event', 'animal_result', 'resident_event', 'resident_result', 'emote', 'emote_result', 'group_quest_done'] as const) {
       room.onMessage(type, (payload: any) => {
         if (type === 'private_state') {
           this.priv = payload;

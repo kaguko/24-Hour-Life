@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { CloseCode, Room, ServerError, matchMaker, type AuthContext, type Client, type Delayed } from '@colyseus/core';
-import { LAST_DAY, applyGroupEvent, evaluateGoals, evaluateLifeStatus, jointActionDef, rollGroupEvent } from '@24h/domain';
+import { LAST_DAY, applyGroupEvent, evaluateGoals, evaluateLifeStatus, groupQuestRewardText, jointActionDef, rollGroupEvent } from '@24h/domain';
 import { AVATAR_IDS, animForAction, isAvatarId } from '@24h/protocol';
 import { generateRoomCode } from './code.js';
 import { sanitizeText } from './chat.js';
@@ -33,6 +33,7 @@ import {
   type JointResultMessage,
   type MorningReportMessage,
   type NudgeResultMessage,
+  type GroupQuestDoneMessage,
   type PrivateStateMessage,
   type Phase,
   type Timing,
@@ -561,14 +562,48 @@ export class LifeRoom extends Room<{ state: LifeState }> {
 
   // ---- Vòng đời ngày ----
 
-  /** Gửi trạng thái riêng (hành vi đã làm, khóa, nợ ngủ) cho đúng người này nếu đang kết nối */
+  /** Dấu vết lần gửi nhiệm vụ chung gần nhất (tổng đóng góp + nhãn mục tiêu): đổi thì gửi lại cho cả phòng, kể cả khi có người vào làm mục tiêu tăng */
+  private lastGroupSig = '';
+
+  private groupSig(): string {
+    const v = this.engine.groupQuestView();
+    return `${this.engine.groupQuestTotal()}|${v.label}|${v.done}`;
+  }
+
+  /**
+   * Gửi trạng thái riêng cho người này và cập nhật nhiệm vụ chung: tiến độ đổi thì gửi lại cho cả phòng,
+   * đạt mục tiêu thì thưởng mọi người một lần và báo cả phòng.
+   */
   private pushPrivate(id: string): void {
+    this.engine.updateGroupContributions();
+    const completed = this.engine.checkGroupQuestDone();
+    this.sendPrivate(id);
+    if (completed) {
+      const rewarded = this.engine.applyGroupQuestReward();
+      for (const rid of rewarded) this.syncSession(rid);
+      const def = this.engine.groupQuest.def;
+      const done: GroupQuestDoneMessage = { title: def.title, emoji: def.emoji, reward: groupQuestRewardText(def.reward), line: def.doneLine };
+      this.broadcast('group_quest_done', done);
+      this.lastGroupSig = this.groupSig();
+      for (const other of this.engine.players.keys()) if (other !== id) this.sendPrivate(other);
+      return;
+    }
+    const sig = this.groupSig();
+    if (sig !== this.lastGroupSig) {
+      this.lastGroupSig = sig;
+      for (const other of this.engine.players.keys()) if (other !== id) this.sendPrivate(other);
+    }
+  }
+
+  /** Gửi trạng thái riêng (hành vi đã làm, khóa, nợ ngủ, nhiệm vụ) cho đúng người này nếu đang kết nối */
+  private sendPrivate(id: string): void {
     const client = this.clients.getById(id);
     const session = this.engine.players.get(id);
     if (!client || !session) return;
     this.engine.refreshNpcQuest(id);
     const message: PrivateStateMessage = {
       npcQuest: this.engine.npcQuestViewOf(id),
+      groupQuest: this.engine.groupQuestView(),
       actionsToday: [...session.state.actionsTodayIds],
       locks: this.engine.locksFor(id),
       sleepDebt: session.state.sleepDebt,

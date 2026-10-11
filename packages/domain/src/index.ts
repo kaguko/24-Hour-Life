@@ -15,6 +15,7 @@ export * from './craving.js';
 export * from './story.js';
 export * from './shop.js';
 export * from './npcQuests.js';
+export * from './groupQuests.js';
 export * from './goals.js';
 export * from './map.js';
 export * from './planner.js';

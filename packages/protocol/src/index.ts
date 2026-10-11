@@ -1,4 +1,4 @@
-import type { GoalResultPrimitive, NightResultPrimitive, NpcQuestViewPrimitive } from '@24h/domain';
+import type { GoalResultPrimitive, GroupQuestViewPrimitive, NightResultPrimitive, NpcQuestViewPrimitive } from '@24h/domain';
 
 /** Hợp đồng giữa client và server: tên message, giới hạn, dạng payload. */
 
@@ -164,6 +164,16 @@ export interface PrivateStateMessage {
   goals: GoalResultPrimitive[];
   /** Việc cư dân nhờ đang làm (null = không có việc nào) */
   npcQuest: NpcQuestViewPrimitive | null;
+  /** Nhiệm vụ chung của cả phòng và tiến độ chung (cùng nội dung cho mọi người) */
+  groupQuest: GroupQuestViewPrimitive | null;
+}
+
+/** Cả phòng vừa hoàn thành nhiệm vụ chung (gửi cho mọi người) */
+export interface GroupQuestDoneMessage {
+  title: string;
+  emoji: string;
+  reward: string;
+  line: string;
 }
 
 /** Con vật ngoài phố (mô hình dựng bằng Blender: public/models/animals/<kind>.glb) */

@@ -10,15 +10,20 @@ import {
   encourage,
   JOINT_ACTIONS,
   JOINT_ACTION_IDS,
+  groupQuestContribution,
+  groupQuestView,
   hoursLeftOf,
   npcQuestForGiver,
   npcQuestOf,
   npcQuestView,
   objectiveMet,
   offerPressure,
+  pickGroupQuest,
   planAction,
   rewardText,
   type DomainStrategy,
+  type GroupQuestDef,
+  type GroupQuestViewPrimitive,
   type NightResultPrimitive,
   type NpcQuestState,
   type NpcQuestViewPrimitive,
@@ -89,7 +94,12 @@ const BOT_MAX_STEPS_PER_DAY = 64;
 export class LifeEngine {
   readonly players = new Map<string, PlayerSession>();
 
-  constructor(private readonly roomSeed: string) {}
+  /** Nhiệm vụ chung của phòng: đóng góp cao nhất của từng người (rời phòng hay thành bot cũng không làm tụt) */
+  readonly groupQuest: { def: GroupQuestDef; done: boolean; best: Map<string, { name: string; amount: number }> };
+
+  constructor(private readonly roomSeed: string) {
+    this.groupQuest = { def: pickGroupQuest(rngFor(roomSeed, 'group-quest', 0)), done: false, best: new Map() };
+  }
 
   addPlayer(id: string, name: string, now: number): PlayerSession {
     const rng = rngFor(this.roomSeed, id, 1);
@@ -353,6 +363,53 @@ export class LifeEngine {
     const waitLeave = def.objective.kind === 'visit' && p.state.location === def.objective.place;
     p.npcQuest = { id: def.id, acceptedCount: p.state.history.flat().length + p.state.actionsTodayIds.length, met: false, waitLeave };
     return { kind: 'offer', text: def.ask };
+  }
+
+  /** Cập nhật đóng góp nhiệm vụ chung của mọi người chơi thật (bot không đóng góp); chỉ ghi nhận giá trị cao nhất */
+  updateGroupContributions(): void {
+    const g = this.groupQuest;
+    for (const p of this.players.values()) {
+      const prev = g.best.get(p.id);
+      if (p.bot) {
+        if (!prev) g.best.set(p.id, { name: p.name, amount: 0 });
+        continue;
+      }
+      const amount = groupQuestContribution(g.def, [...p.state.history.flat(), ...p.state.actionsTodayIds]);
+      g.best.set(p.id, { name: p.name, amount: Math.max(prev?.amount ?? 0, amount) });
+    }
+  }
+
+  groupQuestTotal(): number {
+    let total = 0;
+    for (const e of this.groupQuest.best.values()) total += e.amount;
+    return Math.round(total * 100) / 100;
+  }
+
+  groupQuestView(): GroupQuestViewPrimitive {
+    const g = this.groupQuest;
+    return groupQuestView(g.def, [...g.best.values()], this.players.size, g.done);
+  }
+
+  /** Chốt hoàn thành (chỉ trả true đúng một lần) khi tổng đóng góp đạt mục tiêu */
+  checkGroupQuestDone(): boolean {
+    const g = this.groupQuest;
+    if (g.done) return false;
+    this.updateGroupContributions();
+    if (!groupQuestView(g.def, [...g.best.values()], this.players.size, false).done) return false;
+    g.done = true;
+    return true;
+  }
+
+  /** Thưởng cho mọi người chơi thật còn đang chơi; trả danh sách id đã nhận */
+  applyGroupQuestReward(): string[] {
+    const r = this.groupQuest.def.reward;
+    const rewarded: string[] = [];
+    for (const p of this.players.values()) {
+      if (p.bot || p.state.finished) continue;
+      p.state = { ...p.state, stats: applyStatDeltas(p.state.stats, r) };
+      rewarded.push(p.id);
+    }
+    return rewarded;
   }
 
   /** Hôm nay `supporterId` đã động viên `victimId` chưa (tính là "ở bên cạnh" khi bạn gặp chuyện) */
