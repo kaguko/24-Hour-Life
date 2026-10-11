@@ -7,6 +7,7 @@ import { PlayerStatsPrimitive } from './types.js';
 import type { Rng } from './rng.js';
 import { DOMAIN_ACTIONS } from './actions.js';
 import { computeSkillXp } from './progression.js';
+import type { LocationId } from './map.js';
 
 export type GoalState = 'progress' | 'done' | 'failed';
 
@@ -30,6 +31,8 @@ export interface GoalResultPrimitive {
   /** Dòng tiến độ ngắn, vd "7.5/12 giờ" */
   label: string;
   state: GoalState;
+  /** Những nơi có thể tiến gần mục tiêu này (để đánh dấu trên bản đồ); rỗng = làm ở đâu cũng được */
+  places: LocationId[];
 }
 
 interface GoalDef {
@@ -37,6 +40,8 @@ interface GoalDef {
   emoji: string;
   title: string;
   description: string;
+  /** Nơi tiến gần mục tiêu (để đánh dấu trên bản đồ) */
+  places?: LocationId[];
   evaluate: (ctx: GoalContext, all: string[]) => { progress: number; label: string; state?: GoalState };
 }
 
@@ -54,6 +59,7 @@ const GOALS: GoalDef[] = [
     emoji: '📝',
     title: 'Kỳ thi cuối tuần',
     description: 'Dành 12 giờ ôn bài trong tuần (học chuyên môn, đọc sách, khóa online).',
+    places: ['school'],
     evaluate: (_c, all) => {
       const h = hoursOf(all, (id) => EXAM_IDS.includes(id));
       return { progress: clamp01(h / 12), label: `${h}/12 giờ` };
@@ -71,6 +77,7 @@ const GOALS: GoalDef[] = [
     emoji: '💪',
     title: 'Thể hình mới',
     description: 'Luyện Thể lực tới cấp 2 trong tuần.',
+    places: ['gym', 'park'],
     evaluate: (_c, all) => {
       const xp = computeSkillXp([], all).body;
       return { progress: clamp01(xp / 12), label: `${Math.min(xp, 12)}/12 XP` };
@@ -81,6 +88,7 @@ const GOALS: GoalDef[] = [
     emoji: '🤝',
     title: 'Gắn kết',
     description: 'Luyện Giao tiếp tới cấp 2: dành thời gian thật cho người xung quanh.',
+    places: ['cafe'],
     evaluate: (_c, all) => {
       const xp = computeSkillXp([], all).heart;
       return { progress: clamp01(xp / 12), label: `${Math.min(xp, 12)}/12 XP` };
@@ -91,6 +99,7 @@ const GOALS: GoalDef[] = [
     emoji: '🛠️',
     title: 'Thăng tiến',
     description: 'Luyện Nghề nghiệp tới cấp 2 để mở khóa việc lương cao.',
+    places: ['office'],
     evaluate: (_c, all) => {
       const xp = computeSkillXp([], all).craft;
       return { progress: clamp01(xp / 12), label: `${Math.min(xp, 12)}/12 XP` };
@@ -126,6 +135,7 @@ const GOALS: GoalDef[] = [
     emoji: '🧘',
     title: 'Bình tâm',
     description: 'Kết thúc tuần với Tinh thần ≥ 85 và Ý chí ≥ 75.',
+    places: ['temple', 'riverside', 'park'],
     evaluate: (c) => {
       const ok = c.stats.mental >= 85 && c.stats.willpower >= 75;
       const p = (clamp01(c.stats.mental / 85) + clamp01(c.stats.willpower / 75)) / 2;
@@ -156,6 +166,6 @@ export function evaluateGoals(goalIds: string[], ctx: GoalContext): GoalResultPr
     .map((g) => {
       const r = g.evaluate(ctx, all);
       const state: GoalState = r.state ?? (r.progress >= 1 ? 'done' : 'progress');
-      return { id: g.id, emoji: g.emoji, title: g.title, description: g.description, progress: r.progress, label: r.label, state };
+      return { id: g.id, emoji: g.emoji, title: g.title, description: g.description, progress: r.progress, label: r.label, state, places: g.places ?? [] };
     });
 }

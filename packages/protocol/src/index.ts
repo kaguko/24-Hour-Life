@@ -1,4 +1,4 @@
-import type { NightResultPrimitive } from '@24h/domain';
+import type { GoalResultPrimitive, NightResultPrimitive } from '@24h/domain';
 
 /** Hợp đồng giữa client và server: tên message, giới hạn, dạng payload. */
 
@@ -160,6 +160,8 @@ export interface PrivateStateMessage {
   sleepDebt: number;
   /** Hạng các ngày đã qua */
   dayGrades: string[];
+  /** Nhiệm vụ (mục tiêu) của người này và tiến độ hiện tại, do server tính bằng domain */
+  goals: GoalResultPrimitive[];
 }
 
 /** Con vật ngoài phố (mô hình dựng bằng Blender: public/models/animals/<kind>.glb) */

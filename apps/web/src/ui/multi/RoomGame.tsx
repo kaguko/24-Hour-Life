@@ -7,7 +7,7 @@ import type { PlayerView, RoomConnection } from '../../net/room';
 import { ActionGrid } from '../ActionGrid';
 import { MorningModal } from '../MorningModal';
 import { useNow, usePrivateState, useRoomSnapshot, useRoomStatus, useToasts } from './hooks';
-import { Notices, RoomTopBar, StatRail, StatStrip, fmtMoney } from './RoomHud';
+import { Notices, QuestRail, QuestStrip, RoomTopBar, StatRail, StatStrip, fmtMoney } from './RoomHud';
 import { MascotCard } from './MascotCard';
 
 const CityStage = lazy(() => import('./CityStage').then((m) => ({ default: m.CityStage })));
@@ -49,6 +49,12 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
   }, [clockHour]);
 
   const me = snap.me;
+  const goals = priv?.goals ?? [];
+  // Dấu 🎯 trên toà nhà: chỉ nhiệm vụ còn đang làm dở và có nơi gợi ý
+  const questMarkers = useMemo(
+    () => goals.filter((g) => g.state === 'progress').flatMap((g) => g.places.map((p) => ({ locationId: p, text: `${g.emoji} ${g.label}` }))),
+    [JSON.stringify(goals.map((g) => [g.id, g.state, g.label]))]
+  );
   const others = snap.players.filter((p) => p.id !== snap.sessionId);
   const nameOf = (id: string) => snap.players.find((p) => p.id === id)?.name ?? 'Ai đó';
 
@@ -176,10 +182,27 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
       ) : (
         <>
           <Suspense fallback={<div className="h-[24rem] sm:h-[30rem] rounded-3xl skeleton" />}>
-            <CityStage conn={conn} snapshot={snap} quality="high" onVisitLocation={setFocusLocation} hud={{ top: topBar, center: notices, left: <StatRail stats={me.stats} /> }} />
+            <CityStage
+              conn={conn}
+              snapshot={snap}
+              quality="high"
+              onVisitLocation={setFocusLocation}
+              questMarkers={questMarkers}
+              hud={{
+                top: topBar,
+                center: notices,
+                left: (
+                  <>
+                    <StatRail stats={me.stats} />
+                    <QuestRail goals={goals} />
+                  </>
+                ),
+              }}
+            />
           </Suspense>
           <div className="sm:hidden glass p-2.5">
             <StatStrip stats={me.stats} />
+            <QuestStrip goals={goals} />
           </div>
         </>
       )}

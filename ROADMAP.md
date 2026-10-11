@@ -147,6 +147,11 @@ Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, kh
 - [x] **Nội dung cho địa điểm mới**: 6 sự kiện theo địa điểm (`placeEvents.ts`: lời dặn của bác sĩ, combo bắp nước, gánh hàng rong chợ đêm, người câu cá bắt chuyện, gió sông, tiếng chuông chùa) và 2 mạch truyện mới (`fisher` Bác Tư câu cá 🎣, `quiet` Một buổi chiều yên tĩnh 🙏) nâng tổng lên 6 mạch (mỗi ván bốc 2). Test duyệt mọi đường đi của cả 6 mạch.
 - [ ] Chưa làm: mở rộng thành phố **3D** (multiplayer) với toà nhà mới; việc này cần dựng lại `city.glb` + `city_details.glb` bằng Blender chạy nền (lưu ý `build_city.py` xoá mọi object trong file Blender đang mở, không chạy qua MCP trên file đang dùng).
 
+### ✅ NHIỆM VỤ TRÊN BẢN ĐỒ MULTIPLAYER, BƯỚC 1 (ĐÃ HOÀN THÀNH)
+- [x] Server đã giữ `PlayerState` đầy đủ của domain (có `goalIds`), nên `private_state` nay kèm `goals: GoalResultPrimitive[]` do `evaluateGoals` tính ngay trên server (`LifeRoom.pushPrivate`). Mỗi mục tiêu có `places` (nơi tiến gần mục tiêu; rỗng = làm ở đâu cũng được).
+- [x] Client: `QuestRail` (cột trái trên cảnh 3D, thu gọn được, hiện nơi cần đến), `QuestStrip` (điện thoại, ngay dưới dải chỉ số, không phải cuộn), và dấu **🎯 trên cửa toà nhà** (`CityRenderer.setQuestMarkers`, DOM label phía trên bảng hiệu; nhiều nhiệm vụ cùng một nơi thì nối lại). Địa điểm mới không có toà nhà 3D dùng cửa tạm (xem `city_nav.json` → `locations`).
+- [ ] Tiếp theo: nhiệm vụ do NPC cư dân giao (bước 2), nhiệm vụ cả nhóm có thanh tiến độ chung (bước 3). Cần xem `residents.ts` và hành vi chung (`jointActions.ts`) để gắn vào.
+
 ### ✅ SỬA LỖI: Sụp dopamine chỉ do dopamine NHANH
 Trước đây luật qua đêm coi `dopamine ≥ 75` từ **bất kỳ nguồn nào** là "sụp dopamine nhanh", nên chơi toàn hành vi lành mạnh vẫn bị phạt oan và HUD báo "Nguy cơ sụp đổ". Nay `domain/dopamine.ts` (`summarizeFastDopamine`) chỉ tính dopamine thu được từ hành vi **nhanh** trong ngày (≥ 45 điểm hoặc ≥ 3.5 giờ); HUD và phòng 3D dùng cùng hàm này. Đã kiểm tra 6 kịch bản (kể cả ảnh chụp lỗi gốc) + trình duyệt; số liệu mô phỏng 5 chiến lược không đổi.
 

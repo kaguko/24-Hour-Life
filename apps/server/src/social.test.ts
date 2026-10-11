@@ -151,6 +151,27 @@ test('private_state: hành vi đã làm và lý do khóa do server tính, gửi 
   await a.leave();
 });
 
+test('private_state kèm nhiệm vụ: 2 mục tiêu có tiến độ và nơi gợi ý, cập nhật theo hành vi', { timeout: 20000 }, async () => {
+  const room = await colyseus.createRoom(ROOM_NAME);
+  const a = await colyseus.sdk.joinById(room.roomId, { name: 'An' });
+  const states: any[] = [];
+  a.onMessage('private_state', (m: any) => states.push(m));
+  await waitUntil(() => states.length >= 1, 3000, 'private_state đầu tiên');
+  const goals = states[0].goals;
+  assert.equal(goals.length, 2, 'mỗi người có 2 nhiệm vụ');
+  assert.equal(new Set(goals.map((g: any) => g.id)).size, 2);
+  for (const g of goals) {
+    assert.ok(g.title && g.label && typeof g.progress === 'number' && g.progress >= 0 && g.progress <= 1, JSON.stringify(g));
+    assert.ok(['progress', 'done', 'failed'].includes(g.state));
+    assert.ok(Array.isArray(g.places), 'places phải là mảng (có thể rỗng)');
+  }
+  // Làm việc ở công ty hoặc ngủ đều gửi lại trạng thái mới; nhiệm vụ luôn đi kèm
+  a.send('action', { actionId: 'sleep_nap' });
+  await waitUntil(() => states.length >= 2, 3000, 'private_state sau hành động');
+  assert.equal(states[states.length - 1].goals.length, 2);
+  await a.leave();
+});
+
 test('báo cáo sáng có "bạn bè hôm qua": ai đi cùng ai, ai động viên, ai đang chật vật; không xếp hạng', { timeout: 30000 }, async () => {
   const { room, a, b } = await twoPlayers();
   const morningA = inbox<any>(a, 'morning');

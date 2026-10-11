@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { InviteMessage } from '@24h/protocol';
-import { jointActionDef } from '@24h/domain';
+import { jointActionDef, locationDef, type GoalResultPrimitive, type LocationId } from '@24h/domain';
 import type { PlayerView, RoomSnapshot } from '../../net/room';
 import type { Toast } from './hooks';
 
@@ -89,6 +89,81 @@ export const StatRail: React.FC<{ stats: PlayerView['stats'] }> = ({ stats }) =>
     ))}
   </div>
 );
+
+/** Màu / biểu tượng theo trạng thái nhiệm vụ */
+const questTone = (g: GoalResultPrimitive) =>
+  g.state === 'done' ? { bar: 'linear-gradient(90deg,#6ee7b7,#34d399)', mark: '✅' } : g.state === 'failed' ? { bar: 'linear-gradient(90deg,#fda4af,#fb7185)', mark: '❌' } : { bar: 'linear-gradient(90deg,#fcd34d,#f59e0b)', mark: g.emoji };
+
+const placeHint = (g: GoalResultPrimitive) =>
+  g.state === 'progress' && g.places.length > 0 ? g.places.map((p) => `${locationDef(p as LocationId).emoji} ${locationDef(p as LocationId).name}`).join(', ') : null;
+
+/**
+ * Nhiệm vụ của mình ngay trên cảnh 3D (cột trái, máy tính): thu gọn được. Nơi cần đến cũng được đánh dấu 🎯 trên toà nhà,
+ * nên không phải cuộn xuống đâu cả để biết đi đâu.
+ */
+export const QuestRail: React.FC<{ goals: GoalResultPrimitive[] }> = ({ goals }) => {
+  const [open, setOpen] = useState(true);
+  if (goals.length === 0) return null;
+  const done = goals.filter((g) => g.state === 'done').length;
+  return (
+    <div className="hud-glass rounded-2xl w-[10.5rem] mt-2 anim-rise" data-testid="quest-rail">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-1 px-2.5 py-1.5 text-[11px] font-bold text-white"
+      >
+        <span>🎯 Nhiệm vụ {done}/{goals.length}</span>
+        <span aria-hidden className="text-[10px] opacity-70">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
+        <ul className="px-2.5 pb-2 space-y-2">
+          {goals.map((g) => {
+            const t = questTone(g);
+            const hint = placeHint(g);
+            return (
+              <li key={g.id} title={g.description}>
+                <div className="flex items-center gap-1 text-[11px] font-semibold text-white leading-tight">
+                  <span aria-hidden>{t.mark}</span>
+                  <span className="truncate">{g.title}</span>
+                </div>
+                <div className="mt-0.5 h-1.5 rounded-full bg-black/35 overflow-hidden">
+                  <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${Math.max(4, Math.round(g.progress * 100))}%`, background: t.bar }} />
+                </div>
+                <div className="mt-0.5 text-[10px] text-[var(--ink-dim)] leading-tight">{g.label}</div>
+                {hint && <div className="text-[10px] text-amber-200/90 leading-tight">🎯 {hint}</div>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+/** Dải nhiệm vụ gọn dưới cảnh (điện thoại) */
+export const QuestStrip: React.FC<{ goals: GoalResultPrimitive[] }> = ({ goals }) => {
+  if (goals.length === 0) return null;
+  return (
+    <div className="grid grid-cols-2 gap-1.5 mt-1.5" data-testid="quest-strip">
+      {goals.map((g) => {
+        const t = questTone(g);
+        return (
+          <div key={g.id} className="rounded-xl bg-black/25 border border-white/10 px-2 py-1" title={g.description}>
+            <div className="flex items-center gap-1 text-[11px] font-semibold text-white leading-tight">
+              <span aria-hidden>{t.mark}</span>
+              <span className="truncate">{g.title}</span>
+            </div>
+            <div className="mt-0.5 h-1 rounded-full bg-black/35 overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${Math.max(4, Math.round(g.progress * 100))}%`, background: t.bar }} />
+            </div>
+            <div className="mt-0.5 text-[10px] text-[var(--ink-dim)] truncate">{g.label}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 /** Dải chỉ số dưới cảnh (điện thoại) */
 export const StatStrip: React.FC<{ stats: PlayerView['stats'] }> = ({ stats }) => (

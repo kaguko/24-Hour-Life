@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { CloseCode, Room, ServerError, matchMaker, type AuthContext, type Client, type Delayed } from '@colyseus/core';
-import { LAST_DAY, applyGroupEvent, evaluateLifeStatus, jointActionDef, rollGroupEvent } from '@24h/domain';
+import { LAST_DAY, applyGroupEvent, evaluateGoals, evaluateLifeStatus, jointActionDef, rollGroupEvent } from '@24h/domain';
 import { AVATAR_IDS, animForAction, isAvatarId } from '@24h/protocol';
 import { generateRoomCode } from './code.js';
 import { sanitizeText } from './chat.js';
@@ -568,6 +568,12 @@ export class LifeRoom extends Room<{ state: LifeState }> {
       locks: this.engine.locksFor(id),
       sleepDebt: session.state.sleepDebt,
       dayGrades: [...session.state.dayGrades],
+      goals: evaluateGoals(session.state.goalIds, {
+        history: session.state.history,
+        todayIds: session.state.actionsTodayIds,
+        stats: session.state.stats,
+        final: session.state.finished,
+      }),
     };
     client.send('private_state', message);
   }

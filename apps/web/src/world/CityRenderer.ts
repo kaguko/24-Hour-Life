@@ -202,6 +202,9 @@ export class CityRenderer {
   private readonly buildingFade = new Map<string, { root: THREE.Object3D; mats: THREE.Material[]; opacity: number }>();
   /** Bảng hiệu trên cửa mỗi toà nhà: ai đang ở bên trong */
   private readonly signs = new Map<string, { label: CSS2DObject; el: HTMLDivElement; text: string }>();
+  /** Dấu nhiệm vụ nổi phía trên bảng hiệu của từng toà nhà */
+  private readonly questMarks = new Map<string, { label: CSS2DObject; el: HTMLDivElement; text: string }>();
+  private pendingMarkers: Array<{ locationId: string; text: string }> = [];
   /** Người chơi cục bộ đang ở trong toà nhà nào (đến cửa rồi làm hành vi), cho tới khi đi tiếp */
   private localInside: string | null = null;
   private resizeObserver: ResizeObserver;
@@ -298,6 +301,38 @@ export class CityRenderer {
       label.position.set(door.x, 3.4, door.z);
       this.scene.add(label);
       this.signs.set(key, { label, el, text: '' });
+
+      const q = document.createElement('div');
+      q.className = 'hidden max-w-[13rem] px-2 py-0.5 rounded-full bg-amber-300/95 text-stone-900 text-[11px] font-bold leading-snug shadow-md text-center pointer-events-none';
+      const qLabel = new CSS2DObject(q);
+      qLabel.position.set(door.x, 4.6, door.z);
+      this.scene.add(qLabel);
+      this.questMarks.set(key, { label: qLabel, el: q, text: '' });
+    }
+    this.setQuestMarkers(this.pendingMarkers);
+  }
+
+  /**
+   * Đặt dấu nhiệm vụ lên toà nhà: mỗi mục là một LocationId và dòng chữ ngắn (vd "📝 3/12 giờ").
+   * Gọi trước khi thành phố dựng xong cũng được: sẽ áp dụng ngay khi có cửa. Nhiều mục cùng một nơi thì nối lại.
+   */
+  setQuestMarkers(list: Array<{ locationId: string; text: string }>): void {
+    this.pendingMarkers = list;
+    if (!this.nav) return;
+    const byDoor = new Map<string, string[]>();
+    for (const m of list) {
+      const key = this.nav.data.locations[m.locationId];
+      if (!key) continue;
+      const texts = byDoor.get(key) ?? [];
+      if (!texts.includes(m.text)) texts.push(m.text);
+      byDoor.set(key, texts);
+    }
+    for (const [key, mark] of this.questMarks) {
+      const text = byDoor.get(key)?.join(' · ') ?? '';
+      if (text === mark.text) continue;
+      mark.text = text;
+      mark.el.textContent = text ? `🎯 ${text}` : '';
+      mark.el.classList.toggle('hidden', !text);
     }
   }
 
@@ -1154,6 +1189,11 @@ export class CityRenderer {
       s.el.remove();
     }
     this.signs.clear();
+    for (const q of this.questMarks.values()) {
+      this.scene.remove(q.label);
+      q.el.remove();
+    }
+    this.questMarks.clear();
     this.scene.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh) {

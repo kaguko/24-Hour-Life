@@ -28,10 +28,12 @@ interface CityStageProps {
   onVisitLocation?: (locationId: string) => void;
   /** Lớp HUD phủ lên cảnh: thanh trên, thông báo ở giữa, cột chỉ số bên trái (máy tính) */
   hud?: { top?: React.ReactNode; center?: React.ReactNode; left?: React.ReactNode };
+  /** Dấu nhiệm vụ đặt lên toà nhà: LocationId + dòng chữ ngắn */
+  questMarkers?: Array<{ locationId: string; text: string }>;
 }
 
 /** Cảnh thành phố 3D: dựng người chơi từ snapshot, đi bộ theo lưới, phát hoạt hình theo hành vi server xác nhận. */
-export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, onVisitLocation, hud }) => {
+export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, onVisitLocation, hud, questMarkers }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<CityRenderer | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -39,6 +41,11 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
   const placedRef = useRef(false);
   const visitRef = useRef(onVisitLocation);
   visitRef.current = onVisitLocation;
+
+  // Dấu nhiệm vụ trên toà nhà (áp dụng khi cảnh đã dựng xong; đổi tiến độ thì cập nhật)
+  useEffect(() => {
+    if (state === 'ready') rendererRef.current?.setQuestMarkers(questMarkers ?? []);
+  }, [questMarkers, state]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeAnimalId, setActiveAnimalId] = useState<string | null>(null);
   const [activeResidentId, setActiveResidentId] = useState<string | null>(null);
