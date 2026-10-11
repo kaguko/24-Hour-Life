@@ -71,7 +71,7 @@ export const FeedPanel: React.FC<FeedPanelProps> = ({
   const lastMeme = last ? memeAction(last.id, last.title) : null;
 
   return (
-    <div className="rounded-3xl bg-[#18132f] text-[#e6defd] border border-amber-200/15 p-3 sm:p-4 space-y-3 font-nocturne">
+    <div className="rounded-3xl bg-[#18132f] text-[#e6defd] border border-amber-200/15 p-3 sm:p-4 space-y-3 font-nocturne land:max-h-[calc(100dvh-6.5rem)] land:overflow-y-auto land:overscroll-contain scrollbar-thin">
       {/* HUD icon */}
       <div className="grid grid-cols-5 gap-1.5" aria-label="Chỉ số">
         {HUD.map(({ key, bar }) => (

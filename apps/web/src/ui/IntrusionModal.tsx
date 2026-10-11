@@ -25,7 +25,7 @@ export const IntrusionModal: React.FC<IntrusionModalProps> = ({ def, round, chun
   const costPct = Math.min(100, cost);
 
   return (
-    <div role="alertdialog" aria-modal="true" aria-label="Cám dỗ xâm nhập" className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#0b0817]/85 backdrop-blur-md font-nocturne">
+    <div role="alertdialog" aria-modal="true" aria-label="Cám dỗ xâm nhập" className="fixed inset-0 z-[60] flex items-center justify-center p-4 land:p-2 overflow-y-auto bg-[#0b0817]/85 backdrop-blur-md font-nocturne">
       <div aria-hidden className="pointer-events-none absolute inset-0 animate-pulse" style={{ background: 'radial-gradient(circle at 50% 40%, rgba(236,72,153,0.22), transparent 60%)' }} />
       <div
         className="relative w-full max-w-md rounded-[1.75rem] bg-[#18132f] border border-pink-400/40 p-6 text-center animate-in zoom-in-95 duration-200"

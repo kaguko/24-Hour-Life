@@ -236,7 +236,7 @@ export const CityMap: React.FC<CityMapProps> = ({ location, avatarId, actions, p
     <div className="space-y-2">
       <div
         ref={viewRef}
-        className={`relative w-full h-[22rem] sm:h-[26rem] lg:h-[32rem] rounded-3xl overflow-hidden border-2 border-white/60 shadow-xl ring-1 ring-black/10 select-none touch-none ${overview ? '' : dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`relative w-full h-[22rem] sm:h-[26rem] lg:h-[32rem] land:h-[calc(100dvh-6.5rem)] land:rounded-2xl rounded-3xl overflow-hidden border-2 border-white/60 shadow-xl ring-1 ring-black/10 select-none touch-none ${overview ? '' : dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
         style={{ background: 'linear-gradient(160deg, #bfe9a8 0%, #9ed8a0 40%, #8cc9b0 100%)' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -359,7 +359,7 @@ export const CityMap: React.FC<CityMapProps> = ({ location, avatarId, actions, p
 
         {/* Màn hình rộng: bảng nằm đè lên bản đồ */}
         {panel && (
-          <div className="hidden sm:block absolute z-10 right-3 top-3 bottom-3 w-80 rounded-2xl bg-white/95 backdrop-blur-sm shadow-2xl border border-stone-200 p-3 overflow-y-auto">
+          <div className="hidden sm:block absolute z-10 right-3 top-3 bottom-3 w-80 land:right-2 land:top-10 land:bottom-2 land:w-60 rounded-2xl bg-white/95 backdrop-blur-sm shadow-2xl border border-stone-200 p-3 overflow-y-auto">
             {panel}
           </div>
         )}

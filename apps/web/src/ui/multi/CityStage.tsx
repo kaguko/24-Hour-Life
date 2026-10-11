@@ -357,13 +357,13 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
       {hud?.top && <div className="absolute inset-x-0 top-0 p-2 sm:p-3 pointer-events-none">{hud.top}</div>}
       {hud?.center && <div className="absolute inset-x-0 top-[5.4rem] sm:top-[5.1rem] px-2 flex justify-center pointer-events-none">{hud.center}</div>}
       {hud?.left && (
-        <div className="absolute left-2 sm:left-3 top-[5.6rem] hidden sm:block pointer-events-none">
+        <div className="absolute left-2 sm:left-3 top-[5.6rem] hidden sm:block land:!hidden pointer-events-none">
           <div className="pointer-events-auto">{hud.left}</div>
         </div>
       )}
 
       {/* Dòng sự kiện nhanh (ai vừa làm gì) */}
-      <div className={`absolute right-2 sm:right-3 ${rightInset ? 'lg:right-[23.75rem]' : ''} top-[6.6rem] sm:top-[5.6rem] flex flex-col items-end gap-1 max-w-[52%] pointer-events-none`} aria-live="polite">
+      <div className={`absolute right-2 sm:right-3 ${rightInset ? 'lg:right-[23.75rem] land:!right-2' : ''} top-[6.6rem] sm:top-[5.6rem] land:!top-[4.6rem] flex flex-col items-end gap-1 max-w-[52%] pointer-events-none`} aria-live="polite">
         {feed.map((f) => (
           <div key={f.id} className="px-2.5 py-1 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-[11px] font-semibold text-white shadow-lg anim-rise">
             {f.text}
@@ -423,7 +423,7 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
       )}
 
       {/* Biểu cảm: dock kính ở góc phải dưới */}
-      <div className={`absolute right-2 sm:right-3 ${rightInset ? 'lg:right-[23.75rem]' : ''} bottom-2 sm:bottom-3 flex flex-wrap justify-end items-center gap-1 max-w-[80%] px-1.5 py-1 rounded-2xl hud-glass`} data-testid="emote-bar">
+      <div className={`absolute right-2 sm:right-3 ${rightInset ? 'lg:right-[23.75rem] land:!right-2' : ''} bottom-2 sm:bottom-3 flex flex-wrap justify-end items-center gap-1 max-w-[80%] px-1.5 py-1 rounded-2xl hud-glass`} data-testid="emote-bar">
         {selected && <span className="chip !bg-amber-300/20 !border-amber-300/40 !text-amber-100">→ {selected.name}</span>}
         <button
           type="button"
@@ -445,7 +445,7 @@ export const CityStage: React.FC<CityStageProps> = ({ conn, snapshot, quality, o
       </div>
 
       {hintVisible && (
-        <div className={`hidden sm:block ${rightInset ? 'lg:hidden' : ''} absolute left-3 bottom-3 px-2.5 py-1.5 rounded-xl hud-glass text-[11px] text-[var(--ink-dim)] pointer-events-none max-w-[42%] anim-rise`}>
+        <div className={`hidden sm:block land:!hidden ${rightInset ? 'lg:hidden' : ''} absolute left-3 bottom-3 px-2.5 py-1.5 rounded-xl hud-glass text-[11px] text-[var(--ink-dim)] pointer-events-none max-w-[42%] anim-rise`}>
           Bấm đường để đi · bấm toà nhà, cư dân, thú cưng hay Blob để tương tác · kéo để xoay
         </div>
       )}

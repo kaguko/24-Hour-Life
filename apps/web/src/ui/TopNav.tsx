@@ -44,7 +44,7 @@ export const TopNav: React.FC<TopNavProps> = ({ currentTab, onTabChange, day, av
   return (
     <>
     <header className="w-full sticky top-0 z-40 border-b border-white/10 bg-[#0b0a1f]/80 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-3">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 land:h-11 flex items-center gap-3">
         {/* Thương hiệu + ngày */}
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="relative shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/40 to-pink-500/30 ring-1 ring-white/20 flex items-center justify-center shadow-[0_0_18px_-4px_rgba(139,92,246,.8)]">
@@ -83,7 +83,7 @@ export const TopNav: React.FC<TopNavProps> = ({ currentTab, onTabChange, day, av
         <nav
           aria-label="Chế độ chơi"
           className="fixed bottom-0 inset-x-0 z-40 grid grid-cols-4 gap-1 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-[#0b0a1f]/92 backdrop-blur-xl border-t border-white/10
-                   sm:bottom-auto sm:top-[9px] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:inline-flex sm:gap-1 sm:p-1 sm:rounded-2xl sm:bg-[#171436]/85 sm:border sm:border-white/12 sm:shadow-lg"
+                   sm:bottom-auto sm:top-[9px] land:!top-[5px] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:inline-flex sm:gap-1 sm:p-1 sm:rounded-2xl sm:bg-[#171436]/85 sm:border sm:border-white/12 sm:shadow-lg"
         >
           {TABS.map(({ id, icon: Icon, short, label, testId }) => {
             const active = currentTab === id;
@@ -93,7 +93,7 @@ export const TopNav: React.FC<TopNavProps> = ({ currentTab, onTabChange, day, av
                 onClick={() => onTabChange(id)}
                 data-testid={testId}
                 aria-current={active ? 'page' : undefined}
-                className={`relative flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-2 sm:px-3 lg:px-3.5 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all ${
+                className={`relative flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-2 sm:px-3 lg:px-3.5 py-1.5 sm:py-2 land:!py-1 rounded-xl text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all ${
                   active ? 'text-white sm:bg-gradient-to-br sm:from-violet-500/80 sm:to-fuchsia-500/70 sm:shadow-[0_6px_18px_-6px_rgba(139,92,246,.9)]' : 'text-[var(--ink-dim)] hover:text-white sm:hover:bg-white/8'
                 }`}
               >

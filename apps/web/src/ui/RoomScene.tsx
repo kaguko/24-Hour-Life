@@ -1053,7 +1053,7 @@ const RoomScene: React.FC<RoomSceneProps> = ({
   return (
     <div className="space-y-2">
     <div
-      className="relative w-full h-[19rem] sm:h-80 lg:h-[32rem] rounded-3xl overflow-hidden border-2 border-white/60 shadow-xl ring-1 ring-black/10 bg-indigo-950 touch-manipulation"
+      className="relative w-full h-[19rem] sm:h-80 lg:h-[32rem] land:h-[calc(100dvh-6.5rem)] land:rounded-2xl rounded-3xl overflow-hidden border-2 border-white/60 shadow-xl ring-1 ring-black/10 bg-indigo-950 touch-manipulation"
       aria-label="Căn phòng của bạn: bấm vào đồ vật hoặc nhân vật để chọn hành vi"
     >
       <div ref={mountRef} className="absolute inset-0" />

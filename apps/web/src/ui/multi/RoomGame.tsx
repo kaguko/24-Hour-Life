@@ -347,7 +347,7 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
   );
 
   return (
-    <div className="space-y-4" data-testid="room-game">
+    <div className="space-y-4 land:space-y-0" data-testid="room-game">
       {lite ? (
         <>
           <section className="glass p-3 sm:p-4 space-y-3 anim-rise">
@@ -374,7 +374,7 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
       ) : (
         // Một khung duy nhất vừa màn hình: cảnh 3D ở trên, bảng hoạt động có tab ở dưới (điện thoại) hoặc nổi bên phải (máy tính)
         <div
-          className="relative flex flex-col gap-2 h-[calc(100dvh-10rem)] min-h-[36rem] lg:block lg:h-[calc(100dvh-7.5rem)] lg:min-h-[38rem]"
+          className="relative flex flex-col gap-2 h-[calc(100dvh-10rem)] min-h-[36rem] lg:block lg:h-[calc(100dvh-7.5rem)] lg:min-h-[38rem] land:!flex land:!flex-row land:!h-[calc(100dvh-4rem)] land:!min-h-0"
           data-testid="room-layout"
         >
           <Suspense fallback={<div className="flex-[1_1_44%] min-h-[15rem] lg:h-full rounded-3xl skeleton" />}>
@@ -382,7 +382,7 @@ export const RoomGame: React.FC<RoomGameProps> = ({ conn, lite, onToggleLite, on
               conn={conn}
               snapshot={snap}
               quality="high"
-              className="flex-[1_1_44%] min-h-[15rem] lg:h-full lg:flex-none"
+              className="flex-[1_1_44%] min-h-[15rem] lg:h-full lg:flex-none land:!h-full land:!min-h-0 land:!flex-[1_1_58%] land:min-w-0"
               rightInset={dockOpen}
               onVisitLocation={setFocusLocation}
               questMarkers={questMarkers}

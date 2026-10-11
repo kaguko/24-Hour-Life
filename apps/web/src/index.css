@@ -29,6 +29,17 @@
   }
 }
 
+/* Điện thoại xoay ngang: màn hình rất thấp (<= 500px) nhưng rộng. Dùng `land:` để dàn game thành 2 cột, không cuộn cả trang. */
+@custom-variant land (@media (orientation: landscape) and (max-height: 500px));
+
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Tránh tai thỏ / thanh điều hướng cử chỉ ở hai bên khi xoay ngang */
+  #root {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
 @theme {
   --font-display: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --font-label: "Space Grotesk Variable", ui-sans-serif, system-ui, sans-serif;

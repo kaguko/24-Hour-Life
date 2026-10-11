@@ -218,7 +218,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto p-3 pb-24 sm:p-6 sm:pb-8 space-y-5">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto p-3 pb-24 sm:p-6 sm:pb-8 space-y-5 land:!p-2 land:!pb-2 land:space-y-2">
         {currentTab === 'game' && (
           <>
             {/* Game Over Banner nếu sụp đổ */}
@@ -256,9 +256,10 @@ export default function App() {
             )}
 
             {/* Bố cục game: phòng 3D là màn hình chính; thời gian bên dưới; chi tiết mở khi cần */}
-            <div className="space-y-4">
+            {/* Xoay ngang (land:): cột trái = cảnh luôn nhìn thấy, cột phải = bảng cuộn riêng; cả trang không cuộn */}
+            <div className="space-y-4 land:space-y-0 land:grid land:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] land:gap-2 land:items-start">
                 {/* Căn phòng 3D: bấm đồ vật để hành động */}
-                <div className="space-y-2">
+                <div className="space-y-2 land:space-y-1.5">
                   <div className="flex items-center gap-1.5">
                     {([
                       ['feed', '🔥 Feed'],
@@ -305,7 +306,7 @@ export default function App() {
                       onTravel={travelTo}
                     />
                   ) : (
-                  <Suspense fallback={<div className="h-[19rem] sm:h-80 lg:h-[30rem] rounded-2xl bg-indigo-950/90 animate-pulse" />}>
+                  <Suspense fallback={<div className="h-[19rem] sm:h-80 lg:h-[30rem] land:h-[calc(100dvh-6.5rem)] rounded-2xl bg-indigo-950/90 animate-pulse" />}>
                     <RoomScene
                       avatarId={avatarId}
                       stats={stats}
@@ -326,6 +327,7 @@ export default function App() {
                   )}
                 </div>
 
+                <div className="space-y-4 land:space-y-2 land:max-h-[calc(100dvh-3.5rem)] land:overflow-y-auto land:overscroll-contain land:pr-1 scrollbar-thin">
                 <BigEventPanel state={bigEvent} day={day} hoursUsed={hoursUsed} prep={bigPrep} rumor={bigRumor} />
 
                 <TraitsPanel traitIds={traitIds} cravings={cravings} />
@@ -397,6 +399,7 @@ export default function App() {
                     habitTags={habitTags}
                   />
                 )}
+                </div>
             </div>
           </>
         )}
