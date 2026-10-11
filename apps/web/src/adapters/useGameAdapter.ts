@@ -142,7 +142,7 @@ export function useGameAdapter() {
   const lifeStatus = useMemo(() => evaluateLifeStatus(stats), [stats]);
 
   // Kết cục chỉ có ý nghĩa khi ván đã kết thúc
-  const ending = useMemo(() => (finished ? evaluateEnding(history, stats) : null), [finished, history, stats]);
+  const ending = useMemo(() => (finished ? evaluateEnding(history, stats, storyIds, storyLog) : null), [finished, history, stats, storyIds, storyLog]);
   const journey = useMemo(() => (finished ? buildJourney(history) : null), [finished, history]);
 
   const actionsToday = useMemo(() => {

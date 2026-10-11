@@ -161,6 +161,10 @@ export interface EndingPrimitive {
   outcome: 'survived' | 'bankrupt' | 'burnout';
   daysSurvived: number;
   score: number;
+  /** Điểm cộng từ các mạch truyện đã khép lại (đã tính trong `score`); không có truyện = bỏ trống */
+  storyBonus?: number;
+  /** Danh hiệu phụ rút ra từ cách bạn khép các mạch truyện */
+  badge?: { emoji: string; title: string; tagline: string };
 }
 
 export interface JourneyDayPrimitive {

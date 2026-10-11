@@ -27,17 +27,19 @@ export function processOvernightCycle(
   dayNumber: number,
   /** Chỉ số lúc bắt đầu ngày (để tổng kết thay đổi cả ngày); không có thì dùng chỉ số cuối ngày */
   dayStartStats: PlayerStatsPrimitive | undefined,
-  rng: Rng
+  rng: Rng,
+  /** Tiền trọ đêm nay (nghìn VNĐ); mạch truyện Chủ trọ có thể đổi mức này */
+  rentPerDay: number = DAILY_RENT_COST
 ): NightResultPrimitive {
   const notes: string[] = [];
   const revealedMechanics: string[] = [];
   // Mỗi hậu quả trong đêm ghi lại chủ đề triết lý và "sức nặng" (tổng mức đổi chỉ số, dấu + là tốt)
   const drivers: Array<{ theme: PhilosophicalQuote['theme']; weight: number }> = [];
   const deltas: Partial<PlayerStatsPrimitive> = {
-    money: -DAILY_RENT_COST,
+    money: -rentPerDay,
   };
 
-  notes.push(`Trừ tiền phòng trọ và chi phí sinh hoạt cố định: -${DAILY_RENT_COST}k VNĐ`);
+  notes.push(`Trừ tiền phòng trọ và chi phí sinh hoạt cố định: -${rentPerDay}k VNĐ`);
 
   const actionsToday = actionIdsToday
     .map((id) => DOMAIN_ACTIONS.find((a) => a.id === id))
@@ -204,7 +206,7 @@ export function processOvernightCycle(
   }
 
   // 6. Áp lực nợ nần
-  if (currentStats.money - DAILY_RENT_COST < 0) {
+  if (currentStats.money - rentPerDay < 0) {
     notes.push('Áp lực nợ nần: Tiền trong tài khoản về âm, bạn lo lắng không yên.');
     deltas.mental = (deltas.mental ?? 0) - 15;
     deltas.willpower = (deltas.willpower ?? 0) - 12;
@@ -223,7 +225,7 @@ export function processOvernightCycle(
 
   return {
     dayCompleted: dayNumber,
-    rentPaid: DAILY_RENT_COST,
+    rentPaid: rentPerDay,
     sleepHours,
     sleepDebtChange: sleepDiff,
     newSleepDebt,

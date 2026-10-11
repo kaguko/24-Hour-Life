@@ -168,3 +168,91 @@ test('storyEpilogues: mạch chưa chơi / chưa xong / đã xong nói rõ từn
   assert.equal(eps2[0].finished, true);
   assert.equal(eps2[0].headline, STORYLINES[0].epilogues.warm.title);
 });
+
+// ───────── Tiền phòng thật, danh hiệu và điểm cộng ─────────
+import { storyBadge, storyRentDelta, storyScoreBonus } from './story.js';
+import { DAILY_RENT_COST } from './stats.js';
+import { endDay } from './gameState.js';
+import { evaluateEnding } from './ending.js';
+
+const entry = (beat: string, day: number, choice: string) => ({ beat, day, choice });
+
+test('storyRentDelta: tăng giá, nửa mức, chuyển phòng, và đúng ngày có hiệu lực', () => {
+  assert.equal(storyRentDelta([], 5), 0);
+  const raise = [entry('landlord:1', 2, 'accept')];
+  assert.equal(storyRentDelta(raise, 1), 0, 'chưa tới ngày');
+  assert.equal(storyRentDelta(raise, 2), 18, 'có hiệu lực ngay đêm đó');
+  assert.equal(storyRentDelta([entry('landlord:1', 2, 'negotiate'), entry('landlord:2', 4, 'nodeal')], 5), 18);
+  assert.equal(storyRentDelta([entry('landlord:1', 2, 'negotiate'), entry('landlord:2', 4, 'prepay')], 3), 18, 'trước khi chốt vẫn tăng đủ');
+  assert.equal(storyRentDelta([entry('landlord:1', 2, 'negotiate'), entry('landlord:2', 4, 'prepay')], 4), 9);
+  assert.equal(storyRentDelta([entry('landlord:1', 2, 'search'), entry('landlord:2', 4, 'movein')], 6), -12);
+  assert.equal(storyRentDelta([entry('landlord:1', 2, 'search'), entry('landlord:2', 4, 'stay')], 6), 18);
+  assert.equal(storyRentDelta([entry('friend:1', 2, 'meet')], 6), 0, 'mạch khác không đổi tiền phòng');
+});
+
+test('endDay: tiền trọ đêm đó đúng theo truyện, mặc định như cũ', () => {
+  const base = { ...newPlayerState([], { id: BIG_EVENT_IDS[0], difficulty: 1 }), stats: { ...INITIAL_STATS }, actionsTodayIds: ['sleep_deep'] };
+  const plain = endDay(base, mulberry32(1)).night;
+  assert.equal(plain.rentPaid, DAILY_RENT_COST);
+  const raised = endDay({ ...base, day: 3, storyLog: [entry('landlord:1', 2, 'accept')] }, mulberry32(1)).night;
+  assert.equal(raised.rentPaid, DAILY_RENT_COST + 18);
+  const moved = endDay({ ...base, day: 6, storyLog: [entry('landlord:1', 2, 'search'), entry('landlord:2', 4, 'movein')] }, mulberry32(1)).night;
+  assert.equal(moved.rentPaid, DAILY_RENT_COST - 12);
+  assert.ok(raised.newStats.money < plain.newStats.money);
+});
+
+test('mọi phần kết đều có sắc thái; mỗi mạch có kết cục tốt và xấu', () => {
+  for (const line of STORYLINES) {
+    const tones = Object.values(line.epilogues).map((e) => e.tone);
+    assert.ok(tones.every((t) => ['good', 'mixed', 'bad'].includes(t)));
+    assert.ok(tones.includes('good'), `${line.id} cần có kết cục tốt`);
+  }
+  // Mạch có kết cục xấu rõ ràng trừ mạch Chủ trọ (chỉ tiền, không có "buồn")
+  for (const id of ['friend', 'project', 'health']) {
+    assert.ok(Object.values(STORYLINES.find((s) => s.id === id)!.epilogues).some((e) => e.tone === 'bad'), id);
+  }
+});
+
+const allGood: StoryLog = [
+  entry('friend:1', 2, 'meet'), entry('friend:2', 4, 'lend'), entry('friend:3', 6, 'dinner'),
+  entry('project:1', 3, 'start'), entry('project:2', 5, 'push'), entry('project:3', 7, 'share'),
+];
+const allBad: StoryLog = [
+  entry('friend:1', 2, 'ignore'), entry('friend:2', 4, 'scroll'), entry('friend:3', 6, 'distract'),
+  entry('project:1', 3, 'drop'), entry('project:2', 5, 'closetab'), entry('project:3', 7, 'closefolder'),
+];
+
+test('storyScoreBonus và storyBadge', () => {
+  const ids = ['friend', 'project'];
+  assert.equal(storyScoreBonus(ids, allGood), 8);
+  assert.equal(storyScoreBonus(ids, allBad), 0);
+  assert.equal(storyScoreBonus(ids, []), 0);
+  assert.equal(storyScoreBonus([], []), 0);
+  assert.equal(storyBadge(ids, allGood)?.title, 'Trọn Vẹn Từng Chương');
+  assert.equal(storyBadge(ids, allBad)?.title, 'Những Cánh Cửa Chưa Mở');
+  assert.equal(storyBadge(ids, [])?.title, 'Bận Đến Mức Quên Sống');
+  assert.equal(storyBadge([], []), null, 'không có mạch nào thì không có danh hiệu');
+  const mixed = [...allGood.slice(0, 3), ...allBad.slice(3)];
+  assert.equal(storyBadge(ids, mixed), null);
+  const partial = allGood.slice(0, 2);
+  assert.equal(storyBadge(ids, partial), null, 'dang dở thì không có danh hiệu đẹp');
+  assert.equal(storyScoreBonus(ids, partial), 0, 'mạch dang dở không có điểm');
+});
+
+test('evaluateEnding: có truyện thì cộng điểm (tối đa 100) và gắn danh hiệu, không có truyện thì như cũ', () => {
+  const history = [['work_focused', 'sleep_deep'], ['study_deep', 'sleep_deep']];
+  const stats = { ...INITIAL_STATS };
+  const old = evaluateEnding(history, stats);
+  assert.equal(old.badge, undefined);
+  assert.equal(old.storyBonus, undefined);
+  assert.deepEqual(evaluateEnding(history, stats, [], []), old);
+
+  const withStory = evaluateEnding(history, stats, ['friend', 'project'], allGood);
+  assert.equal(withStory.storyBonus, 8);
+  assert.equal(withStory.score, Math.min(100, old.score + 8));
+  assert.equal(withStory.badge?.emoji, '🌟');
+  assert.equal(withStory.id, old.id, 'kết cục chính không đổi');
+
+  const capped = evaluateEnding(history, { ...stats, energy: 100, mental: 100, willpower: 100, social: 100, money: 5000 }, ['friend', 'project'], allGood);
+  assert.ok(capped.score <= 100);
+});

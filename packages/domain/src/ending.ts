@@ -1,6 +1,8 @@
 import { PlayerStatsPrimitive, EndingPrimitive, EndingPalette } from './types.js';
 import { evaluateLifeStatus } from './stats.js';
 import { DOMAIN_ACTIONS } from './actions.js';
+import { storyBadge, storyScoreBonus } from './story.js';
+import type { StoryLog } from './story.js';
 
 /**
  * Hệ kết cục: kiểu chơi chiếm ưu thế (theme) x kết quả (sống sót / gục ngã).
@@ -313,7 +315,13 @@ function pickTheme(t: HistoryTotals, thriving: boolean): Theme {
 /**
  * Xác định kết cục sau khi ván kết thúc (sống hết 7 ngày hoặc sụp đổ giữa chừng).
  */
-export function evaluateEnding(history: string[][], finalStats: PlayerStatsPrimitive): EndingPrimitive {
+export function evaluateEnding(
+  history: string[][],
+  finalStats: PlayerStatsPrimitive,
+  /** Mạch truyện của ván và nhật ký lựa chọn: cho điểm cộng và danh hiệu phụ (bỏ trống = như trước) */
+  storyIds: string[] = [],
+  storyLog: StoryLog = []
+): EndingPrimitive {
   const t = summarizeHistory(history);
   const status = evaluateLifeStatus(finalStats).status;
   const collapsed = status === 'bankrupt' || status === 'burnout';
@@ -326,12 +334,16 @@ export function evaluateEnding(history: string[][], finalStats: PlayerStatsPrimi
   if (!ENDINGS[key]) key = `generic_${tier}`;
 
   const daysSurvived = t.daysPlayed;
+  const storyBonus = storyScoreBonus(storyIds, storyLog);
+  const badge = storyBadge(storyIds, storyLog);
   return {
     id: key,
     ...ENDINGS[key],
     outcome: collapsed ? status : 'survived',
     daysSurvived,
-    score: computeLifeScore(daysSurvived, finalStats),
+    score: Math.min(100, computeLifeScore(daysSurvived, finalStats) + storyBonus),
+    ...(storyIds.length > 0 ? { storyBonus } : {}),
+    ...(badge ? { badge } : {}),
   };
 }
 

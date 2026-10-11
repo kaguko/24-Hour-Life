@@ -30,9 +30,12 @@ interface Beat {
   build: (log: StoryLog) => BeatView;
 }
 
+export type StoryTone = 'good' | 'mixed' | 'bad';
+
 export interface StoryEpilogue {
   title: string;
   text: string;
+  tone: StoryTone;
 }
 
 export interface Storyline {
@@ -77,9 +80,9 @@ const FRIEND: Storyline = {
   blurb: 'Một tin nhắn sau nhiều năm im lặng.',
   outcome: friendOutcome,
   epilogues: {
-    warm: { title: 'Giữ được một người bạn thật', text: 'Bạn đã có mặt đúng lúc Minh cần. Có những mối quan hệ chỉ cần một tin nhắn trả lời kịp thời để sống tiếp thêm nhiều năm.' },
-    distant: { title: 'Cánh cửa vẫn còn hé', text: 'Bạn và Minh chưa thân lại như xưa, nhưng cánh cửa vẫn còn mở. Chỉ cần một cuộc gọi nữa.' },
-    lost: { title: 'Những tin nhắn không được trả lời', text: 'Bạn và Minh mất liên lạc, không có cuộc cãi vã nào, chỉ là những tin nhắn không bao giờ được trả lời.' },
+    warm: { tone: 'good', title: 'Giữ được một người bạn thật', text: 'Bạn đã có mặt đúng lúc Minh cần. Có những mối quan hệ chỉ cần một tin nhắn trả lời kịp thời để sống tiếp thêm nhiều năm.' },
+    distant: { tone: 'mixed', title: 'Cánh cửa vẫn còn hé', text: 'Bạn và Minh chưa thân lại như xưa, nhưng cánh cửa vẫn còn mở. Chỉ cần một cuộc gọi nữa.' },
+    lost: { tone: 'bad', title: 'Những tin nhắn không được trả lời', text: 'Bạn và Minh mất liên lạc, không có cuộc cãi vã nào, chỉ là những tin nhắn không bao giờ được trả lời.' },
   },
   beats: [
     {
@@ -184,9 +187,9 @@ const PROJECT: Storyline = {
   blurb: 'Một ý tưởng nảy ra trong lúc tắm.',
   outcome: projectOutcome,
   epilogues: {
-    launched: { title: 'Bấm nút xuất bản', text: 'Sản phẩm của bạn đã có người dùng thật, dù chỉ vài chục người. Khác biệt giữa "có ý tưởng" và "đã làm" nằm ở những buổi tối khó chịu nhất.' },
-    prototype: { title: 'Một bản thử nằm trong máy', text: 'Bạn có một bản thử chạy được, dù chưa ai biết. Nó chưa phải thành công, nhưng đã là một thứ thật.' },
-    shelved: { title: 'Thư mục "Ý tưởng"', text: 'Ý tưởng không thất bại, nó chỉ chưa bao giờ được thử. Những dự án chết yểu thường chết vì chưa từng bắt đầu.' },
+    launched: { tone: 'good', title: 'Bấm nút xuất bản', text: 'Sản phẩm của bạn đã có người dùng thật, dù chỉ vài chục người. Khác biệt giữa "có ý tưởng" và "đã làm" nằm ở những buổi tối khó chịu nhất.' },
+    prototype: { tone: 'mixed', title: 'Một bản thử nằm trong máy', text: 'Bạn có một bản thử chạy được, dù chưa ai biết. Nó chưa phải thành công, nhưng đã là một thứ thật.' },
+    shelved: { tone: 'bad', title: 'Thư mục "Ý tưởng"', text: 'Ý tưởng không thất bại, nó chỉ chưa bao giờ được thử. Những dự án chết yểu thường chết vì chưa từng bắt đầu.' },
   },
   beats: [
     {
@@ -291,9 +294,9 @@ const HEALTH: Storyline = {
   blurb: 'Một cơn đau đầu âm ỉ sau mắt.',
   outcome: healthOutcome,
   epilogues: {
-    healthy: { title: 'Cơ thể được lắng nghe', text: 'Bạn dừng lại khi cơ thể mới thì thầm, nên nó không phải hét lên. Chăm sóc sớm luôn rẻ hơn chữa muộn.' },
-    warning: { title: 'Lời nhắc đã được ghi nhận', text: 'Bạn đã nhận ra các dấu hiệu, dù chưa thay đổi hết. Cơ thể kiên nhẫn, nhưng không vô hạn.' },
-    crash: { title: 'Khi cơ thể phải hét lên', text: 'Cơ thể nhắc bạn ba lần và bạn bỏ qua cả ba. Lần thứ tư không còn là lời nhắc nữa.' },
+    healthy: { tone: 'good', title: 'Cơ thể được lắng nghe', text: 'Bạn dừng lại khi cơ thể mới thì thầm, nên nó không phải hét lên. Chăm sóc sớm luôn rẻ hơn chữa muộn.' },
+    warning: { tone: 'mixed', title: 'Lời nhắc đã được ghi nhận', text: 'Bạn đã nhận ra các dấu hiệu, dù chưa thay đổi hết. Cơ thể kiên nhẫn, nhưng không vô hạn.' },
+    crash: { tone: 'bad', title: 'Khi cơ thể phải hét lên', text: 'Cơ thể nhắc bạn ba lần và bạn bỏ qua cả ba. Lần thứ tư không còn là lời nhắc nữa.' },
   },
   beats: [
     {
@@ -373,6 +376,11 @@ const HEALTH: Storyline = {
 
 // ───────────────────────── 4. Chủ trọ ─────────────────────────
 
+/** Mức đổi tiền phòng mỗi ngày (nghìn VNĐ) so với tiền trọ gốc */
+const LANDLORD_RAISE = 18;
+const LANDLORD_RAISE_HALF = 9;
+const LANDLORD_MOVE_SAVE = 12;
+
 const landlordOutcome = (log: StoryLog): string => {
   if (chose(log, 'landlord:2', 'prepay')) return 'deal';
   if (chose(log, 'landlord:2', 'movein')) return 'moved';
@@ -386,9 +394,9 @@ const LANDLORD: Storyline = {
   blurb: 'Tờ giấy dán trước cửa phòng.',
   outcome: landlordOutcome,
   epilogues: {
-    deal: { title: 'Một thỏa thuận công bằng', text: 'Bạn dám hỏi, và người ta dám nhượng bộ. Có những khoản tiết kiệm chỉ cần một cuộc nói chuyện nghiêm túc.' },
-    moved: { title: 'Một căn phòng mới', text: 'Bạn đã đổi chỗ ở để đổi nhịp sống. Không phải thay đổi nào cũng dễ, nhưng buổi sáng ở nơi mới có nắng.' },
-    steady: { title: 'Con số lớn hơn trên hóa đơn', text: 'Mọi thứ vẫn như cũ, chỉ có tiền phòng là lớn hơn. Bạn bắt đầu nhìn từng khoản chi kỹ hơn.' },
+    deal: { tone: 'good', title: 'Một thỏa thuận công bằng', text: 'Bạn dám hỏi, và người ta dám nhượng bộ. Có những khoản tiết kiệm chỉ cần một cuộc nói chuyện nghiêm túc.' },
+    moved: { tone: 'good', title: 'Một căn phòng mới', text: 'Bạn đã đổi chỗ ở để đổi nhịp sống. Không phải thay đổi nào cũng dễ, nhưng buổi sáng ở nơi mới có nắng.' },
+    steady: { tone: 'mixed', title: 'Con số lớn hơn trên hóa đơn', text: 'Mọi thứ vẫn như cũ, chỉ có tiền phòng là lớn hơn. Bạn bắt đầu nhìn từng khoản chi kỹ hơn.' },
   },
   beats: [
     {
@@ -396,7 +404,7 @@ const LANDLORD: Storyline = {
       minDay: 2,
       build: () => ({
         title: 'Thông báo tăng tiền phòng',
-        description: 'Chủ trọ dán một tờ giấy trước cửa: từ tuần sau tăng tiền phòng 15%.',
+        description: `Chủ trọ dán một tờ giấy trước cửa: từ hôm nay tăng tiền phòng 15% (thêm ${LANDLORD_RAISE}k mỗi ngày).`,
         choices: [
           c('accept', 'Chấp nhận, ghi nhớ chi tiêu (0h)', 0, { mental: -3, willpower: -2 }, 'Bạn chụp tờ giấy lại, tự hứa sẽ để ý chi tiêu kỹ hơn.'),
           c('negotiate', 'Gặp chủ trọ thương lượng (1h)', 1, { social: 6, mental: -2, willpower: -4, energy: -3 }, 'Chủ trọ không hứa gì, nhưng lắng nghe đến hết câu.'),
@@ -411,7 +419,7 @@ const LANDLORD: Storyline = {
         if (chose(log, 'landlord:1', 'negotiate')) {
           return {
             title: 'Chủ trọ đưa điều kiện',
-            description: 'Chủ trọ đồng ý giảm một nửa mức tăng nếu bạn đóng trước một tuần tiền phòng.',
+            description: `Chủ trọ đồng ý giảm một nửa mức tăng (chỉ còn thêm ${LANDLORD_RAISE_HALF}k mỗi ngày) nếu bạn đóng trước một tuần tiền phòng.`,
             choices: [
               c('prepay', 'Đóng trước (0.25h, -600k)', 0.25, { money: -600, mental: 3 }, 'Bạn đưa tiền, chủ trọ ghi vào sổ và gật đầu. Hai bên cùng nhẹ nhõm.'),
               c('nodeal', 'Giữ nguyên, không đóng trước (0h)', 0, { mental: -2 }, 'Bạn thấy chưa cần cam kết. Mức tăng giữ nguyên như ban đầu.'),
@@ -421,7 +429,7 @@ const LANDLORD: Storyline = {
         if (chose(log, 'landlord:1', 'search')) {
           return {
             title: 'Phòng mới trông ổn nhưng xa',
-            description: 'Phòng mới rẻ hơn 10% nhưng xa chỗ làm thêm 25 phút mỗi chiều.',
+            description: `Phòng mới rẻ hơn tiền phòng cũ 10% (bớt ${LANDLORD_MOVE_SAVE}k mỗi ngày) nhưng xa chỗ làm thêm 25 phút mỗi chiều.`,
             choices: [
               c('movein', 'Chuyển qua (3h, -300k)', 3, { money: -300, energy: -15, mental: -5, willpower: -5 }, 'Cả buổi chiều khuân đồ. Cuối ngày căn phòng mới vẫn còn mùi sơn.'),
               c('stay', 'Ở lại và chịu tăng giá (0h)', 0, { mental: -3 }, 'Bạn quyết định ở lại. Quen với một nơi đôi khi đáng giá hơn một ưu đãi.'),
@@ -475,6 +483,21 @@ const LANDLORD: Storyline = {
     },
   ],
 };
+
+/**
+ * Mức đổi tiền trọ mỗi ngày (nghìn VNĐ, có thể âm) vào đêm của `day`, suy ra từ nhật ký mạch Chủ trọ:
+ * thông báo tăng giá có hiệu lực ngay hôm đó; đóng trước tiền phòng thì chỉ còn nửa mức tăng; chuyển phòng thì rẻ hơn gốc.
+ */
+export function storyRentDelta(log: StoryLog, day: number): number {
+  let delta = 0;
+  for (const e of log) {
+    if (e.day > day) continue;
+    if (e.beat === 'landlord:1') delta = LANDLORD_RAISE;
+    else if (e.beat === 'landlord:2' && e.choice === 'prepay') delta = LANDLORD_RAISE_HALF;
+    else if (e.beat === 'landlord:2' && e.choice === 'movein') delta = -LANDLORD_MOVE_SAVE;
+  }
+  return delta;
+}
 
 export const STORYLINES: Storyline[] = [FRIEND, PROJECT, HEALTH, LANDLORD];
 export const STORIES_PER_RUN = 2;
@@ -569,6 +592,8 @@ export interface StoryEpiloguePrimitive {
   title: string;
   /** Đã chơi hết các chương */
   finished: boolean;
+  /** Sắc thái phần kết (mạch chưa xong luôn là 'mixed') */
+  tone: StoryTone;
   headline: string;
   text: string;
 }
@@ -580,12 +605,40 @@ export function storyEpilogues(storyIds: string[], log: StoryLog): StoryEpilogue
     if (!line) return [];
     const played = playedCount(log, id);
     if (played === 0) {
-      return [{ id, emoji: line.emoji, title: line.title, finished: false, headline: 'Chưa kịp bắt đầu', text: `${line.blurb} Nhưng tuần này bạn bận quá nên câu chuyện chưa bao giờ mở ra.` }];
+      return [{ id, emoji: line.emoji, title: line.title, finished: false, tone: 'mixed', headline: 'Chưa kịp bắt đầu', text: `${line.blurb} Nhưng tuần này bạn bận quá nên câu chuyện chưa bao giờ mở ra.` }];
     }
     if (played < line.beats.length) {
-      return [{ id, emoji: line.emoji, title: line.title, finished: false, headline: 'Còn dang dở', text: 'Câu chuyện chưa kịp đi đến hồi kết. Có những chuyện cứ dang dở như thế.' }];
+      return [{ id, emoji: line.emoji, title: line.title, finished: false, tone: 'mixed', headline: 'Còn dang dở', text: 'Câu chuyện chưa kịp đi đến hồi kết. Có những chuyện cứ dang dở như thế.' }];
     }
     const ep = line.epilogues[line.outcome(log)];
-    return ep ? [{ id, emoji: line.emoji, title: line.title, finished: true, headline: ep.title, text: ep.text }] : [];
+    return ep ? [{ id, emoji: line.emoji, title: line.title, finished: true, tone: ep.tone, headline: ep.title, text: ep.text }] : [];
   });
+}
+
+/** Điểm cộng cho kết cục: mỗi mạch đã khép lại đẹp +4, vừa +2, buồn +0 (mạch dang dở không có điểm) */
+export function storyScoreBonus(storyIds: string[], log: StoryLog): number {
+  return storyEpilogues(storyIds, log).reduce((s, e) => s + (!e.finished ? 0 : e.tone === 'good' ? 4 : e.tone === 'mixed' ? 2 : 0), 0);
+}
+
+export interface StoryBadgePrimitive {
+  emoji: string;
+  title: string;
+  tagline: string;
+}
+
+/** Danh hiệu phụ cho kết cục theo cách bạn khép các mạch truyện (null = không có gì đặc biệt) */
+export function storyBadge(storyIds: string[], log: StoryLog): StoryBadgePrimitive | null {
+  const eps = storyEpilogues(storyIds, log);
+  if (eps.length === 0) return null;
+  const finished = eps.filter((e) => e.finished);
+  if (finished.length === eps.length && eps.length >= 2 && finished.every((e) => e.tone === 'good')) {
+    return { emoji: '🌟', title: 'Trọn Vẹn Từng Chương', tagline: 'Các câu chuyện của bạn đều kết thúc đẹp.' };
+  }
+  if (finished.filter((e) => e.tone === 'bad').length >= 2) {
+    return { emoji: '🍂', title: 'Những Cánh Cửa Chưa Mở', tagline: 'Tuần này bạn bỏ lỡ nhiều hơn là giữ lại.' };
+  }
+  if (log.length === 0) {
+    return { emoji: '🔇', title: 'Bận Đến Mức Quên Sống', tagline: 'Không câu chuyện nào kịp bắt đầu.' };
+  }
+  return null;
 }

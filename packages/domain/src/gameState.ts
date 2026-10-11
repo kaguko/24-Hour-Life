@@ -20,7 +20,8 @@ import { pickGoalIds } from './goals.js';
 import { pickTraitIds, traitIntrusionMult } from './traits.js';
 import { cravingLevel } from './craving.js';
 import { itemById, itemBuyBlock, itemIntrusionMult } from './shop.js';
-import { dueStoryEvent, isStoryEventId, pickStoryIds, resolveStoryChoice } from './story.js';
+import { dueStoryEvent, isStoryEventId, pickStoryIds, resolveStoryChoice, storyRentDelta } from './story.js';
+import { DAILY_RENT_COST } from './stats.js';
 import type { StoryLog } from './story.js';
 import type { DayGrade } from './dayRecap.js';
 import type { Rng } from './rng.js';
@@ -222,7 +223,8 @@ export function endDay(state: PlayerState, rng: Rng): { state: PlayerState; nigh
     state.sleepDebt,
     state.day,
     state.dayStartStats,
-    rng
+    rng,
+    DAILY_RENT_COST + storyRentDelta(state.storyLog, state.day)
   );
   const grade = night.recap?.grade;
   return {

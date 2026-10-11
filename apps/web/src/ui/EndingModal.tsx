@@ -96,6 +96,11 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals
           </p>
           <h2 className="text-3xl font-extrabold tracking-tight mt-1">{ending.title}</h2>
           <p className="italic text-white/90 text-sm mt-2">&ldquo;{ending.tagline}&rdquo;</p>
+          {ending.badge && (
+            <p className="mt-2 inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-bold" title={ending.badge.tagline}>
+              {ending.badge.emoji} {ending.badge.title}
+            </p>
+          )}
 
           <div className="mt-5 grid grid-cols-2 gap-3 bg-black/25 rounded-2xl p-3">
             <div>
