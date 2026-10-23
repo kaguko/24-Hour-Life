@@ -1,7 +1,7 @@
 import { PlayerStatsPrimitive, NightResultPrimitive } from './types.js';
 import { DAILY_RENT_COST, MIN_SLEEP_HOURS, applyStatDeltas } from './stats.js';
 import type { Rng } from './rng.js';
-import { DOMAIN_ACTIONS } from './actions.js';
+import { DOMAIN_ACTIONS, isNightSleepId } from './actions.js';
 import { PhilosophicalQuote, getContextualQuote } from './quotes.js';
 import { summarizeFastDopamine } from './dopamine.js';
 import { sleepSegments } from './circadian.js';
@@ -52,7 +52,7 @@ export function processOvernightCycle(
     .reduce((sum, a) => sum + a.hours, 0);
 
   const slowDopamineHours = actionsToday
-    .filter((a) => a.dopaminePathway === 'slow' && a.id !== 'sleep_deep')
+    .filter((a) => a.dopaminePathway === 'slow' && !isNightSleepId(a.id))
     .reduce((sum, a) => sum + a.hours, 0);
 
   // 2. Tính nợ ngủ (theo nhịp sinh học: ngủ ngày chỉ tính một phần)

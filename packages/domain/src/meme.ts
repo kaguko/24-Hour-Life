@@ -135,6 +135,8 @@ export function pickReaction(kind: ReactionKind, seed = 0): string {
 }
 
 export function memeAction(id: string, fallbackTitle: string): MemeLine {
+  const short = /^sleep_h(\d)$/.exec(id);
+  if (short) return { e: '🥱', line: `Ngủ có ${short[1]} tiếng, mai tính` };
   return MEME_ACTIONS[id] ?? { e: '❓', line: fallbackTitle };
 }
 

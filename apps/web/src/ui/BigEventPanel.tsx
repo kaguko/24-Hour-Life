@@ -1,5 +1,5 @@
 import React from 'react';
-import { BigEventState, BigEventTier, TIER_LABEL, bigEventDef, BIG_EVENT_DAY, BIG_EVENT_AFTER_HOURS } from '@24h/domain';
+import { BigEventState, BigEventTier, TIER_LABEL, bigEventDef, BIG_EVENT_DAY, BIG_EVENT_AFTER_HOURS, BOSS_NEED, LOSE_AT } from '@24h/domain';
 
 interface BigEventPanelProps {
   state: BigEventState;
@@ -16,7 +16,7 @@ const TIER_TONE: Record<BigEventTier, string> = {
   fail: 'text-rose-300',
 };
 
-/** Sự kiện lớn của tuần: đếm ngược, thanh chuẩn bị không lộ con số, tin đồn về độ khó. */
+/** Mục tiêu của ván: sống qua 7 ngày + Boss Thứ Bảy (đếm ngược, cần gì, thanh chuẩn bị) + điều kiện thua. */
 export const BigEventPanel: React.FC<BigEventPanelProps> = ({ state, day, hoursUsed, prep, rumor }) => {
   const def = bigEventDef(state.id);
   const done = !!state.result;
@@ -42,10 +42,11 @@ export const BigEventPanel: React.FC<BigEventPanelProps> = ({ state, day, hoursU
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300">Boss cuối tuần 🔥</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300">🎯 Mục tiêu: sống qua 7 ngày & thắng Boss</span>
             <span className={`text-[11px] font-bold tabular-nums ${done ? (TIER_TONE[state.result!.tier]) : urgent ? 'text-amber-200 animate-pulse' : 'text-indigo-200'}`}>{when}</span>
           </div>
-          <div className="text-sm font-extrabold leading-snug">{def.title}</div>
+          <div className="text-sm font-extrabold leading-snug">Boss: {def.title}</div>
+          {!done && <div className="text-[11px] text-indigo-100/90 leading-snug mt-0.5">Cần: {BOSS_NEED[state.id]}. Lá có 🎯 là lá giúp chuẩn bị.</div>}
         </div>
       </div>
       {!done && (
@@ -54,11 +55,16 @@ export const BigEventPanel: React.FC<BigEventPanelProps> = ({ state, day, hoursU
             <span className="text-indigo-200">Độ sẵn sàng: <strong className="text-white">{prep.label}</strong></span>
             <span className="text-indigo-300/80 italic">{rumor}</span>
           </div>
-          <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+          <div className="relative h-1.5 rounded-full bg-white/10 overflow-hidden">
             <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-500 transition-[width] duration-500" style={{ width: `${Math.max(3, Math.round(prep.fill * 100))}%` }} />
+            {/* Vạch tiến độ nên có tới hôm nay */}
+            {day <= BIG_EVENT_DAY && <div aria-hidden title="Nên đạt tới đây hôm nay" className="absolute top-0 bottom-0 w-0.5 bg-white/70" style={{ left: `${Math.round((Math.min(day, BIG_EVENT_DAY) / BIG_EVENT_DAY) * 100)}%` }} />}
           </div>
         </div>
       )}
+      <div className="mt-2 text-[10.5px] text-rose-200/90">
+        ☠️ Thua nếu sáng thức dậy mà: ⚡ Năng lượng ≤ {LOSE_AT.energy} · 🧠 Tinh thần ≤ {LOSE_AT.mental} · 💰 Tiền âm
+      </div>
     </div>
   );
 };

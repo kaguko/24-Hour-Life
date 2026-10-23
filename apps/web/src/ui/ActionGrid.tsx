@@ -14,9 +14,11 @@ interface ActionGridProps {
   habitTags?: Record<string, string>;
   /** Đặt trong bảng hẹp (bên phải cảnh 3D): màn hình rộng chỉ một cột */
   compact?: boolean;
+  /** Hành vi giúp chuẩn bị Boss cuối tuần */
+  bossPrepIds?: Set<string>;
 }
 
-type FilterView = 'all' | 'slow_dopamine' | 'fast_dopamine' | 'work' | 'social' | 'rest';
+type FilterView = 'all' | 'boss' | 'slow_dopamine' | 'fast_dopamine' | 'work' | 'social' | 'rest';
 
 export const ActionGrid: React.FC<ActionGridProps> = ({
   actions,
@@ -26,13 +28,15 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
   lockReasons = {},
   habitTags = {},
   compact = false,
+  bossPrepIds = new Set<string>(),
 }) => {
   const [filter, setFilter] = useState<FilterView>('all');
 
   const filterTabs: Array<{ id: FilterView; label: string; icon: React.ElementType }> = [
     { id: 'all', label: `Tất cả ${actions.length}`, icon: LayoutGrid },
-    { id: 'slow_dopamine', label: '🌱 Chậm', icon: Sprout },
-    { id: 'fast_dopamine', label: '⚡ Nhanh', icon: Zap },
+    { id: 'boss', label: '🎯 Boss', icon: Sprout },
+    { id: 'slow_dopamine', label: '🌱 Lành mạnh', icon: Sprout },
+    { id: 'fast_dopamine', label: '⚡ Cám dỗ', icon: Zap },
     { id: 'work', label: '💼 Việc', icon: Briefcase },
     { id: 'social', label: '🤝 Hội', icon: Users },
     { id: 'rest', label: '🌙 Nghỉ', icon: Moon },
@@ -40,6 +44,7 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
 
   const filteredActions = actions.filter((a) => {
     if (filter === 'all') return true;
+    if (filter === 'boss') return bossPrepIds.has(a.id);
     if (filter === 'slow_dopamine') return a.dopaminePathway === 'slow' && a.id !== 'sleep_deep';
     if (filter === 'fast_dopamine') return a.dopaminePathway === 'fast';
     if (filter === 'work') return a.category === 'work';
@@ -88,6 +93,7 @@ export const ActionGrid: React.FC<ActionGridProps> = ({
             onSelect={onSelectAction}
             lockReason={lockReasons[action.id] ?? null}
             habitTag={habitTags[action.id] ?? null}
+            bossPrep={bossPrepIds.has(action.id)}
           />
         ))}
       </div>

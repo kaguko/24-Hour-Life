@@ -128,6 +128,8 @@ export const ACTION_VISUALS: Record<string, ActionVisual> = {
   work_overtime: { station: 'register', mood: 'work' },
   sleep_deep: { station: 'bed', mood: 'sleep' },
   sleep_nap: { station: 'bed', mood: 'sleep' },
+  // Giấc ngủ ngắn khi bấm "Đi ngủ" muộn
+  ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((h) => [`sleep_h${h}`, { station: 'bed' as const, mood: 'sleep' as const }])),
 };
 
 /**

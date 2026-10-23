@@ -25,7 +25,8 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
 const hud = () => page.evaluate(() => {
   const t = document.body.innerText;
-  return { clock: t.match(/\b\d\d:\d\d\b/)?.[0], remaining: t.match(/(\d+(?:\.\d+)?)h\s*\n?\s*$/m)?.[0], day: t.match(/Ngày \d+ \/ \d+/)?.[0] };
+  // Đồng hồ ở dòng "Ngày N · HH:MM" (thẻ Mục tiêu có "Thứ Bảy 14:00" nên không lấy giờ đầu tiên trên trang)
+  return { clock: (t.match(/Ngày \d+ · (\d\d:\d\d)/i) ?? t.match(/(\d\d:\d\d)\s*\n\s*(?:Buổi|Đêm)/))?.[1], remaining: t.match(/(\d+(?:\.\d+)?)h\s*\n?\s*$/m)?.[0], day: t.match(/Ngày \d+ \/ \d+/)?.[0] };
 });
 const results = [];
 const check = (name, ok, extra = '') => { results.push({ name, ok, extra }); console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`); };
@@ -59,7 +60,7 @@ if (cmd === 'shot') {
   await page.screenshot({ path: join(outDir, 'smoke-2-after-action.png') });
 
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('24h_life_clean_architecture_state_v2') ?? 'null'));
-  check('state persisted to localStorage', !!saved && saved.actionsTodayIds?.length === 1, saved ? `actions=${saved.actionsTodayIds} hoursUsed=${saved.hoursUsed} stats=${JSON.stringify(saved.stats)}` : 'null');
+  check('state persisted to localStorage', !!saved && saved.actionsTodayIds?.length >= 1 && saved.hoursUsed > 0, saved ? `actions=${saved.actionsTodayIds} hoursUsed=${saved.hoursUsed} stats=${JSON.stringify(saved.stats)}` : 'null');
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 }
 await browser.close();

@@ -147,6 +147,16 @@ Mục tiêu: mỗi ván kết thúc bằng một khoảnh khắc đáng khoe, kh
 - [x] **Nội dung cho địa điểm mới**: 6 sự kiện theo địa điểm (`placeEvents.ts`: lời dặn của bác sĩ, combo bắp nước, gánh hàng rong chợ đêm, người câu cá bắt chuyện, gió sông, tiếng chuông chùa) và 2 mạch truyện mới (`fisher` Bác Tư câu cá 🎣, `quiet` Một buổi chiều yên tĩnh 🙏) nâng tổng lên 6 mạch (mỗi ván bốc 2). Test duyệt mọi đường đi của cả 6 mạch.
 - [ ] Chưa làm: mở rộng thành phố **3D** (multiplayer) với toà nhà mới; việc này cần dựng lại `city.glb` + `city_details.glb` bằng Blender chạy nền (lưu ý `build_city.py` xoá mọi object trong file Blender đang mở, không chạy qua MCP trên file đang dùng).
 
+### ✅ RÕ RÀNG CHO NGƯỜI CHƠI MỚI, BƯỚC 1 (ĐÃ HOÀN THÀNH)
+Vấn đề: người chơi không biết mục tiêu, không biết làm gì, và chết ngày 2. Mô phỏng người chơi bấm bừa: 0% sống; kể cả làm theo hướng dẫn: 25%.
+- [x] **Bug giấc ngủ**: nút cũ "Đi ngủ, sang ngày mới" kết thúc ngày mà không ngủ giờ nào; ngủ 8h là một lá phải tự chừa đủ giờ, lỡ tay là không ngủ được. Nay **😴 Đi ngủ** = về nhà + ngủ lâu nhất có thể (tối đa 8h, `planBedtime`, `SHORT_SLEEP_ACTIONS` `sleep_h1..h7` hiệu quả tỉ lệ). Lá nào lấn giờ ngủ hiện "😴 Mất Xh ngủ đêm nay" (`sleepCutHours`).
+- [x] **Huấn luyện viên** `domain/coach.ts` → `nextAdvice`: một việc nên làm ngay + lý do (sắp thua > giờ ngủ > dopamine rẻ > ý chí > hưng phấn cạn > Boss > cô đơn > tiền). Lá được gợi ý luôn có mặt trên feed, viền xanh "👍 Gợi ý".
+- [x] **Mục tiêu rõ**: thẻ trên cùng "Sống qua 7 ngày & thắng Boss", Boss cần gì (`BOSS_NEED`), vạch tiến độ nên đạt hôm nay, điều kiện thua (`LOSE_AT`). Lá giúp Boss có nhãn 🎯 (`bossPrepActionIds`), danh sách hành vi có bộ lọc 🎯 Boss.
+- [x] Chỉ số có tên + vạch thua, đỏ khi gần ngưỡng; tiền là một ô riêng. Lá có nhãn loại (⚡ Cám dỗ / 🌱 Lành mạnh / 💼 Kiếm tiền / 😴 Nghỉ / 📚 Cày).
+- [x] Màn giới thiệu: Mục tiêu / Cách chơi / Thua khi, kèm Boss của ván. Tính cách, cốt truyện, nhiệm vụ phụ gom vào mục thu gọn "📖 Tuần của bạn". Tab "Mô phỏng 1000 lần" chuyển vào "Luật & Bài học".
+- [x] Kết quả (`coachsim.ts`, 300 ván): nghe lời 100% → 99–100% sống, ~99% qua Boss; nghe lời 50% → 77% sống; bấm bừa → 3%. Cân bằng 5 chiến lược cũ không đổi. `coachplay.mjs` chơi trọn 7 ngày trên trình duyệt chỉ bằng gợi ý.
+- [ ] Bước 2 (đề xuất): Boss quá dễ khi nghe lời 100% (90% xuất sắc), cần độ căng; màn kết cục so sánh "bạn vs huấn luyện viên"; phản hồi tức thì (số bay lên khi chỉ số đổi).
+
 ### ✅ NHIỆM VỤ TRÊN BẢN ĐỒ MULTIPLAYER, BƯỚC 1 (ĐÃ HOÀN THÀNH)
 - [x] Server đã giữ `PlayerState` đầy đủ của domain (có `goalIds`), nên `private_state` nay kèm `goals: GoalResultPrimitive[]` do `evaluateGoals` tính ngay trên server (`LifeRoom.pushPrivate`). Mỗi mục tiêu có `places` (nơi tiến gần mục tiêu; rỗng = làm ở đâu cũng được).
 - [x] Client: `QuestRail` (cột trái trên cảnh 3D, thu gọn được, hiện nơi cần đến), `QuestStrip` (điện thoại, ngay dưới dải chỉ số, không phải cuộn), và dấu **🎯 trên cửa toà nhà** (`CityRenderer.setQuestMarkers`, DOM label phía trên bảng hiệu; nhiều nhiệm vụ cùng một nơi thì nối lại). Địa điểm mới không có toà nhà 3D dùng cửa tạm (xem `city_nav.json` → `locations`).

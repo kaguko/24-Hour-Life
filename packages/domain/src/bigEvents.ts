@@ -50,8 +50,8 @@ interface BigEventDef {
 const hoursOf = (ids: string[], list: string[]) =>
   ids.reduce((s, id) => (list.includes(id) ? s + (DOMAIN_ACTIONS.find((a) => a.id === id)?.hours ?? 0) : s), 0);
 
-const EXAM_IDS = ['study_deep', 'deep_research', 'online_course', 'read_book', 'learn_skill'];
-const WORK_IDS = ['work_focused', 'work_overtime', 'part_time_shift', 'freelance_gig', 'side_project'];
+export const EXAM_IDS = ['study_deep', 'deep_research', 'online_course', 'read_book', 'learn_skill'];
+export const WORK_IDS = ['work_focused', 'work_overtime', 'part_time_shift', 'freelance_gig', 'side_project'];
 
 const BIG_EVENTS: BigEventDef[] = [
   {
@@ -151,7 +151,7 @@ export function bigEventPrepDisplay(state: BigEventState, ctx: BigEventContext):
 
 /** Tin đồn về độ khó, chỉ hé lộ từ ngày 3: thông tin ẩn được lộ dần */
 export function bigEventRumor(state: BigEventState, day: number): string {
-  if (day < 3) return 'Chưa ai biết yêu cầu cụ thể.';
+  if (day < 3) return 'Độ khó: chưa rõ (có tin đồn từ ngày 3).';
   if (state.difficulty < 0.95) return 'Tin đồn: lần này nghe nói khá nhẹ nhàng.';
   if (state.difficulty > 1.1) return 'Tin đồn: lần này nghe nói rất khắt khe.';
   return 'Tin đồn: độ khó vào mức bình thường.';

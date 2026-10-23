@@ -365,8 +365,31 @@ const CORE_ACTIONS: ActionPrimitive[] = [
 /** Hành vi người chơi chọn được (không gồm các bước di chuyển) */
 export const PLAYABLE_ACTIONS: ActionPrimitive[] = [...CORE_ACTIONS, ...EXTRA_ACTIONS];
 
+/**
+ * Giấc ngủ ngắn hơn 8 tiếng (1..7 giờ): dùng khi bấm "Đi ngủ" mà không còn đủ 8 tiếng trong ngày.
+ * Hiệu quả tỉ lệ với số giờ so với giấc 8 tiếng; nợ ngủ do consequence.ts tự tính. Không nằm trong PLAYABLE_ACTIONS.
+ */
+const FULL_SLEEP = CORE_ACTIONS.find((a) => a.id === 'sleep_deep')!;
+export const SHORT_SLEEP_ACTIONS: ActionPrimitive[] = [7, 6, 5, 4, 3, 2, 1].map((h) => {
+  const k = h / FULL_SLEEP.hours;
+  return {
+    ...FULL_SLEEP,
+    id: `sleep_h${h}`,
+    title: `Ngủ ${h} tiếng (${h} giờ)`,
+    hours: h,
+    description: `Chỉ còn ${h} tiếng để ngủ. Đỡ hơn thức trắng, nhưng sáng mai sẽ mang nợ ngủ.`,
+    baseEnergy: Math.round((FULL_SLEEP.baseEnergy ?? 0) * k),
+    baseMental: Math.round((FULL_SLEEP.baseMental ?? 0) * k),
+    baseWillpower: Math.round((FULL_SLEEP.baseWillpower ?? 0) * k),
+    baseDopamine: Math.round((FULL_SLEEP.baseDopamine ?? 0) * k),
+  };
+});
+
+/** Giấc ngủ đêm (đủ 8 tiếng hoặc ngắn hơn khi bấm "Đi ngủ" muộn) */
+export const isNightSleepId = (id: string) => id === 'sleep_deep' || /^sleep_h\d$/.test(id);
+
 /** Mọi hành vi có thể xuất hiện trong lịch sử ngày, kể cả di chuyển và cám dỗ xâm nhập */
-export const DOMAIN_ACTIONS: ActionPrimitive[] = [...PLAYABLE_ACTIONS, ...JOINT_ACTIONS, ...TRAVEL_ACTIONS, ...INTRUSION_ACTIONS, BIG_EVENT_ACTION];
+export const DOMAIN_ACTIONS: ActionPrimitive[] = [...PLAYABLE_ACTIONS, ...SHORT_SLEEP_ACTIONS, ...JOINT_ACTIONS, ...TRAVEL_ACTIONS, ...INTRUSION_ACTIONS, BIG_EVENT_ACTION];
 
 const NAPS_BEFORE_DIMINISHING = 4;
 const NAP_DIMINISHED_FACTOR = 0.25;

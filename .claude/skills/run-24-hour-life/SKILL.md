@@ -48,6 +48,12 @@ npx tsx .claude/skills/run-24-hour-life/sim.ts <strategyId> 500
 ```
 Baseline seen: Balanced Realist 100% survive; Dopamine Chaser / Workaholic / Pure Sleeper ~0% (burnout); Party Animal ~94%.
 
+Người chơi "nghe lời huấn luyện viên" (lá 👍 + nút Đi ngủ):
+```bash
+npx tsx .claude/skills/run-24-hour-life/coachsim.ts 300 1     # obey 0..1; baseline: 1 → ~100% sống, 0.5 → ~77%, 0 → ~3%
+node .claude/skills/run-24-hour-life/coachplay.mjs "$TEMP/cp"  # trình duyệt, trọn 7 ngày tới màn kết cục (~4 phút)
+```
+
 ## Test / check
 Monorepo (npm workspaces: `packages/domain`, `apps/web`, `apps/server`). Use `npm test` (domain determinism tests), `npm run lint` (tsc, all workspaces) and `npm run build` (OK; chunk-size warning is expected).
 

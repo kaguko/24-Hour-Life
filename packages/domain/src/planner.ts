@@ -66,3 +66,18 @@ export function planTravel(from: LocationId, to: LocationId, hoursRemaining: num
   }
   return { ok: true, steps: [travelActionId(from, to)], travelHours: travel, totalHours: travel, endLocation: to };
 }
+
+/** Thứ tự thử khi đi ngủ: đủ 8 tiếng, rồi ngắn dần */
+const BEDTIME_IDS = ['sleep_deep', 'sleep_h7', 'sleep_h6', 'sleep_h5', 'sleep_h4', 'sleep_h3', 'sleep_h2', 'sleep_h1'];
+
+/**
+ * "Đi ngủ": về nhà (nếu đang ở ngoài) rồi ngủ lâu nhất có thể, tối đa 8 tiếng. Giờ còn thừa sau đó bỏ qua (dậy sớm).
+ * Không còn nổi 1 tiếng thì trả null (thức trắng).
+ */
+export function planBedtime(from: LocationId, hoursRemaining: number, ctx: PlanContext): { actionId: string; plan: Extract<PlanResult, { ok: true }> } | null {
+  for (const id of BEDTIME_IDS) {
+    const plan = planAction(id, from, hoursRemaining, ctx);
+    if (plan.ok) return { actionId: id, plan };
+  }
+  return null;
+}

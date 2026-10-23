@@ -22,6 +22,7 @@ export * from './planner.js';
 export * from './intrusion.js';
 export * from './bigEventAction.js';
 export * from './bigEvents.js';
+export * from './coach.js';
 export * from './dopamine.js';
 export * from './consequence.js';
 export * from './events.js';

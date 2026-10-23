@@ -68,7 +68,7 @@ export const EndingModal: React.FC<EndingModalProps> = ({ ending, journey, goals
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/70 backdrop-blur-xs flex items-start sm:items-center justify-center p-3 overflow-y-auto">
+    <div role="dialog" aria-modal="true" aria-label="Kết cục" className="fixed inset-0 z-50 bg-stone-900/70 backdrop-blur-xs flex items-start sm:items-center justify-center p-3 overflow-y-auto">
       <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Thẻ kết cục - giống ảnh chia sẻ */}
         <div

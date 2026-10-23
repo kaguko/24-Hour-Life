@@ -1,9 +1,9 @@
 import React from 'react';
 import { getWeekdayLabel } from '@24h/domain';
 import { AvatarId, avatarUrl } from '../lib/avatars';
-import { Volume2, VolumeX, RotateCcw, Activity, Gamepad2, HelpCircle, Users } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Gamepad2, HelpCircle, Users } from 'lucide-react';
 
-type Tab = 'game' | 'multi' | 'simulate' | 'guide';
+type Tab = 'game' | 'multi' | 'guide';
 
 interface TopNavProps {
   currentTab: Tab;
@@ -16,9 +16,8 @@ interface TopNavProps {
 }
 
 const TABS: Array<{ id: Tab; icon: React.ElementType; short: string; label: string; testId?: string }> = [
-  { id: 'game', icon: Gamepad2, short: 'Chơi', label: 'Chơi thực tế' },
+  { id: 'game', icon: Gamepad2, short: 'Chơi', label: 'Chơi một mình' },
   { id: 'multi', icon: Users, short: 'Nhóm', label: 'Chơi cùng bạn', testId: 'tab-multi' },
-  { id: 'simulate', icon: Activity, short: 'Thí nghiệm', label: 'Mô phỏng 1000 lần' },
   { id: 'guide', icon: HelpCircle, short: 'Luật', label: 'Luật & Bài học' },
 ];
 

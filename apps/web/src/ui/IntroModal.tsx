@@ -1,21 +1,27 @@
 import React from 'react';
 import { Sticker } from './Sticker';
 import { AVATAR_IDS, AvatarId, avatarUrl } from '../lib/avatars';
+import { BigEventId, BOSS_NEED, LOSE_AT, bigEventDef } from '@24h/domain';
 
 interface IntroModalProps {
   avatarId: AvatarId;
   onSelectAvatar: (id: AvatarId) => void;
   onStart: () => void;
+  /** Boss của ván này (Thứ Bảy 14:00) */
+  bossId: BigEventId;
 }
 
-const POINTS: Array<{ emoji: string; body: React.ReactNode }> = [
-  { emoji: '⏰', body: <><b>7 ngày × 24h.</b> Việc nào cũng tốn giờ.</> },
-  { emoji: '📱', body: <><b>Lướt mạng = sướng liền</b>, mai trả giá. Cooked 💀</> },
-  { emoji: '🌱', body: <><b>Chạy bộ, học, tâm sự</b> = chậm mà lên level.</> },
-  { emoji: '🛡️', body: <><b>Hết ý chí</b> là cám dỗ tự tới tìm. Brainrot warning.</> },
-];
+/** Ba câu trả lời người chơi mới cần: chơi để làm gì, chơi thế nào, thua khi nào */
+const Section: React.FC<{ tag: string; tone: string; children: React.ReactNode }> = ({ tag, tone, children }) => (
+  <div className="bg-[#211c33] rounded-xl px-3 py-2.5">
+    <div className={`font-label text-[10.5px] font-bold uppercase tracking-wider mb-1 ${tone}`}>{tag}</div>
+    <div className="text-[13px] leading-snug text-[#e6defd]/90 space-y-1">{children}</div>
+  </div>
+);
 
-export const IntroModal: React.FC<IntroModalProps> = ({ avatarId, onSelectAvatar, onStart }) => (
+export const IntroModal: React.FC<IntroModalProps> = ({ avatarId, onSelectAvatar, onStart, bossId }) => {
+  const boss = bigEventDef(bossId);
+  return (
   <div
     role="dialog"
     aria-modal="true"
@@ -27,19 +33,25 @@ export const IntroModal: React.FC<IntroModalProps> = ({ avatarId, onSelectAvatar
       style={{ boxShadow: '0 0 40px -6px rgba(245,158,11,0.28), 0 24px 60px -12px rgba(0,0,0,0.7)' }}
     >
       <div className="text-center space-y-1">
-        <Sticker kind="lockedin" size={120} caption={false} />
+        <Sticker kind="lockedin" size={96} caption={false} />
         <h2 className="font-display text-2xl font-extrabold tracking-tight">Cuộc Sống 24 Giờ</h2>
-        <p className="text-sm text-[#d8c3ad]">7 ngày. Sống sót đi, đừng cooked.</p>
+        <p className="text-sm text-[#d8c3ad]">24 giờ mỗi ngày. Não bạn thì chỉ muốn lướt TikTok.</p>
       </div>
 
-      <ul className="space-y-2 text-sm leading-snug">
-        {POINTS.map(({ emoji, body }, i) => (
-          <li key={i} className="flex gap-3 items-center bg-[#211c33] rounded-xl px-3 py-2">
-            <span className="text-xl shrink-0" aria-hidden>{emoji}</span>
-            <span className="text-[#e6defd]/90">{body}</span>
-          </li>
-        ))}
-      </ul>
+      <div className="space-y-2">
+        <Section tag="🎯 Mục tiêu" tone="text-amber-300">
+          <p>Sống qua <b>7 ngày</b> và thắng <b>Boss Thứ Bảy 14:00</b>:</p>
+          <p className="font-bold text-white">{boss.emoji} {boss.title}</p>
+          <p className="text-[12px] text-[#d8c3ad]">Cần: {BOSS_NEED[bossId]}</p>
+        </Section>
+        <Section tag="🎮 Cách chơi" tone="text-emerald-300">
+          <p>Mỗi ngày có <b>24 giờ</b>. Bấm <b>Làm!</b> trên một lá để tiêu giờ. Nhớ chừa <b>8 tiếng ngủ</b>, hết giờ là qua đêm.</p>
+          <p>Không biết làm gì? Đọc khung gợi ý và chọn lá <b>👍</b>. Lá <b>⚡ Cám dỗ</b> sướng liền nhưng sáng mai trả giá.</p>
+        </Section>
+        <Section tag="☠️ Thua nếu sáng thức dậy mà" tone="text-rose-300">
+          <p>⚡ Năng lượng ≤ {LOSE_AT.energy} · 🧠 Tinh thần ≤ {LOSE_AT.mental} · 💰 Tiền âm (trọ −120k mỗi đêm)</p>
+        </Section>
+      </div>
 
       <div>
         <p className="font-label text-[11px] font-semibold tracking-wider uppercase text-[#d8c3ad] mb-2 text-center">Chọn nhân vật</p>
@@ -71,4 +83,5 @@ export const IntroModal: React.FC<IntroModalProps> = ({ avatarId, onSelectAvatar
       <p className="text-center text-[11px] text-[#d8c3ad]/80">Không quảng cáo · Không đăng nhập</p>
     </div>
   </div>
-);
+  );
+};

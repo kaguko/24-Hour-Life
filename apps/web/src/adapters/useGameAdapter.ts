@@ -42,6 +42,7 @@ import {
   applyIntrusionAnswer,
   applyBigEventOutcome,
   hoursLeftOf,
+  planBedtime,
 } from '@24h/domain';
 import { storageAdapter } from './storageAdapter';
 import { audioAdapter } from './audioAdapter';
@@ -254,6 +255,19 @@ export function useGameAdapter() {
     [location, game, day, actionsTodayIds, history, runSteps]
   );
 
+  // Đi ngủ: về nhà nếu cần, ngủ lâu nhất có thể (tối đa 8 tiếng), rồi qua đêm. Giờ còn thừa bỏ qua (dậy sớm).
+  const goToBed = useCallback(() => {
+    const b = planBedtime(location, hoursLeftOf(game), { day, actionsTodayIds, history });
+    const res = b ? applyAction(game, b.plan.steps, b.actionId, b.plan.endLocation, rng) : null;
+    if (!b || !res?.applied) {
+      finishDay(); // không còn nổi 1 tiếng: thức trắng
+      return;
+    }
+    commit(res.state);
+    setLastAction((prev) => ({ id: b.actionId, n: (prev?.n ?? 0) + 1 }));
+    setTimeout(() => finishDay(res.state.stats, res.state.actionsTodayIds), 400);
+  }, [location, game, day, actionsTodayIds, history, commit, finishDay]);
+
   // Chỉ di chuyển đến một nơi (ví dụ về nhà)
   const travelTo = useCallback(
     (to: LocationId) => {
@@ -383,7 +397,7 @@ export function useGameAdapter() {
     isIntroOpen,
     soundEnabled,
     takeAction,
-    endDayEarly: () => finishDay(stats, actionsTodayIds),
+    goToBed,
     advanceToNextDay,
     resolveEvent,
     resetGame,

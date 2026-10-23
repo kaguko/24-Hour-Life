@@ -14,7 +14,8 @@ interface ActivitySegment {
 interface TimeTrackProps {
   hoursUsed: number;
   actionsToday: ActivitySegment[];
-  onEndDayEarly: () => void;
+  /** Đi ngủ: ngủ hết giờ còn lại (tối đa 8 tiếng) rồi qua đêm */
+  onGoToBed: () => void;
 }
 
 const WAKE_HOUR = 7;
@@ -46,7 +47,7 @@ const periodOf = (clock: number) => {
 // Các mốc giờ dọc thanh (ngày bắt đầu 07:00 nên thanh chạy 07 → 07)
 const TICKS = [0, 4, 8, 12, 16, 20, 24].map((off) => ({ off, label: `${String((WAKE_HOUR + off) % 24).padStart(2, '0')}h` }));
 
-export const TimeTrack: React.FC<TimeTrackProps> = ({ hoursUsed, actionsToday, onEndDayEarly }) => {
+export const TimeTrack: React.FC<TimeTrackProps> = ({ hoursUsed, actionsToday, onGoToBed }) => {
   const hoursRemaining = Math.max(0, 24 - hoursUsed);
   const percentUsed = Math.min(100, (hoursUsed / 24) * 100);
   const period = periodOf(WAKE_HOUR + hoursUsed);
@@ -70,13 +71,13 @@ export const TimeTrack: React.FC<TimeTrackProps> = ({ hoursUsed, actionsToday, o
             <div className="text-[11px] text-indigo-200">Còn lại</div>
             <div className="text-lg font-extrabold tabular-nums text-emerald-300">{hoursRemaining.toFixed(1)}h</div>
           </div>
-          {hoursUsed >= 16 && (
+          {hoursUsed >= 12 && (
             <button
-              onClick={onEndDayEarly}
+              onClick={onGoToBed}
               className="px-3 py-2 text-xs font-bold bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl transition-colors flex items-center gap-1.5 shadow-md ring-1 ring-white/20"
             >
               <Moon className="w-3.5 h-3.5" />
-              <span>Đi ngủ, sang ngày mới</span>
+              <span>Đi ngủ ({Math.min(8, Math.floor(hoursRemaining))}h)</span>
             </button>
           )}
         </div>

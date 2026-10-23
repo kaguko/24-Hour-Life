@@ -18,6 +18,9 @@ import {
   storyProgress,
   storyEpilogues,
   DOMAIN_ACTIONS,
+  nextAdvice,
+  bossPrepActionIds,
+  bigEventReadinessRatio,
 } from '@24h/domain';
 import { SkillsPanel } from './ui/SkillsPanel';
 import { GoalsPanel } from './ui/GoalsPanel';
@@ -48,7 +51,7 @@ const RoomScene = lazy(() => import('./ui/RoomScene'));
 const MultiplayerView = lazy(() => import('./ui/multi/MultiplayerView'));
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'game' | 'multi' | 'simulate' | 'guide'>('game');
+  const [currentTab, setCurrentTab] = useState<'game' | 'multi' | 'guide'>('game');
   // Danh sách thẻ chữ: thu gọn mặc định, chọn hành vi chính bằng cách bấm trong phòng 3D
   const [showCards, setShowCards] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -75,7 +78,7 @@ export default function App() {
     dismissIntro,
     soundEnabled,
     takeAction,
-    endDayEarly,
+    goToBed,
     advanceToNextDay,
     resolveEvent,
     resetGame,
@@ -151,6 +154,18 @@ export default function App() {
   const bigEventCtx = { history, todayIds: actionsToday.map((a) => a.id), stats };
   const bigPrep = bigEventPrepDisplay(bigEvent, bigEventCtx);
   const bigRumor = bigEventRumor(bigEvent, day);
+  const bossPrepIds = useMemo(() => new Set(bossPrepActionIds(bigEvent.id)), [bigEvent.id]);
+  // Huấn luyện viên: một việc nên làm ngay bây giờ
+  const advice = nextAdvice({
+    stats,
+    day,
+    hoursUsed,
+    todayIds: actionsToday.map((a) => a.id),
+    bossId: bigEvent.id,
+    bossRatio: bigEventReadinessRatio(bigEvent, bigEventCtx),
+    bossDone: !!bigEvent.result,
+    crashRisk,
+  });
 
   // Mục tiêu trong tuần: tiến độ tính từ lịch sử + chỉ số hiện tại
   const goals = useMemo(
@@ -260,6 +275,7 @@ export default function App() {
             <div className="space-y-4 land:space-y-0 land:grid land:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] land:gap-2 land:items-start">
                 {/* Căn phòng 3D: bấm đồ vật để hành động */}
                 <div className="space-y-2 land:space-y-1.5">
+                  <BigEventPanel state={bigEvent} day={day} hoursUsed={hoursUsed} prep={bigPrep} rumor={bigRumor} />
                   <div className="flex items-center gap-1.5">
                     {([
                       ['feed', '🔥 Feed'],
@@ -293,6 +309,10 @@ export default function App() {
                       habitTags={habitTags}
                       onSelectAction={takeAction}
                       onShowAll={() => setShowCards(true)}
+                      advice={advice}
+                      bossPrepIds={bossPrepIds}
+                      onGoToBed={goToBed}
+                      todayIds={actionsToday.map((a) => a.id)}
                     />
                   ) : view === 'map' ? (
                     <CityMap
@@ -328,13 +348,18 @@ export default function App() {
                 </div>
 
                 <div className="space-y-4 land:space-y-2 land:max-h-[calc(100dvh-3.5rem)] land:overflow-y-auto land:overscroll-contain land:pr-1 scrollbar-thin">
-                <BigEventPanel state={bigEvent} day={day} hoursUsed={hoursUsed} prep={bigPrep} rumor={bigRumor} />
-
-                <TraitsPanel traitIds={traitIds} cravings={cravings} />
-
-                <StoryPanel stories={storyProgressList} day={day} />
-
-                <GoalsPanel goals={goals} />
+                {/* Chi tiết của tuần: thu gọn để người chơi mới không bị ngợp */}
+                <details className="group rounded-2xl bg-white/[0.04] ring-1 ring-white/10 open:pb-3">
+                  <summary className="cursor-pointer list-none px-3.5 py-2.5 flex items-center justify-between text-xs font-bold text-[var(--ink-dim)] hover:text-white">
+                    <span>📖 Tuần của bạn: tính cách, cốt truyện, nhiệm vụ phụ{cravings.length > 0 && <span className="ml-1.5 text-pink-300">· {cravings.length} cơn thèm</span>}</span>
+                    <span className="transition-transform group-open:rotate-180" aria-hidden>▾</span>
+                  </summary>
+                  <div className="px-2 space-y-3">
+                    <TraitsPanel traitIds={traitIds} cravings={cravings} />
+                    <StoryPanel stories={storyProgressList} day={day} />
+                    <GoalsPanel goals={goals} />
+                  </div>
+                </details>
 
                 {/* Visual 24h Time Track */}
                 <TimeTrack
@@ -355,7 +380,7 @@ export default function App() {
                         ? ('slow' as const)
                         : ('other' as const),
                   }))}
-                  onEndDayEarly={endDayEarly}
+                  onGoToBed={goToBed}
                 />
 
                 {/* Chi tiết: mở khi cần */}
@@ -397,6 +422,7 @@ export default function App() {
                     onSelectAction={takeAction}
                     lockReasons={lockReasons}
                     habitTags={habitTags}
+                    bossPrepIds={bossPrepIds}
                   />
                 )}
                 </div>
@@ -410,15 +436,14 @@ export default function App() {
           </Suspense>
         )}
 
-        {currentTab === 'simulate' && (
-          <div className="paper p-4 sm:p-6 anim-rise">
-            <SimulationBench />
-          </div>
-        )}
-
         {currentTab === 'guide' && (
-          <div className="paper p-4 sm:p-6 anim-rise">
+          <div className="paper p-4 sm:p-6 anim-rise space-y-6">
             <GuideModal />
+            {/* Công cụ cân bằng cho người tò mò: không phải phần chơi chính */}
+            <details className="rounded-2xl ring-1 ring-white/10 p-3">
+              <summary className="cursor-pointer text-sm font-bold">🧪 Phòng thí nghiệm: mô phỏng 1000 ván</summary>
+              <div className="mt-3"><SimulationBench /></div>
+            </details>
           </div>
         )}
       </main>
@@ -488,7 +513,7 @@ export default function App() {
         />
       )}
 
-      {isIntroOpen && !ending && <IntroModal avatarId={avatarId} onSelectAvatar={setAvatarId} onStart={dismissIntro} />}
+      {isIntroOpen && !ending && <IntroModal avatarId={avatarId} onSelectAvatar={setAvatarId} onStart={dismissIntro} bossId={bigEvent.id} />}
     </div>
   );
 }
